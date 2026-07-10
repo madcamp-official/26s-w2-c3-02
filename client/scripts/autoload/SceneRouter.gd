@@ -20,6 +20,9 @@ func go_to(screen: String) -> void:
 
 	for path in SCENES.get(screen, []):
 		var packed: PackedScene = load(path)
+		if packed == null:
+			push_error("SceneRouter failed to load scene: %s" % path)
+			continue
 		var instance := packed.instantiate()
 		screen_root.add_child(instance)
 		_current_children.append(instance)
