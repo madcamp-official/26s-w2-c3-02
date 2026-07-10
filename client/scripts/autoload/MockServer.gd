@@ -19,7 +19,7 @@ const MOVING_SPEED_THRESHOLD := 1.0 # player speed (units/sec) above which it's 
 const CIRCLE_RADIUS := 2.2
 const CIRCLE_LERP_SPEED := 4.0
 const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
-const ROOM_CODE_CHARS := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
 
 var _broadcast_timer := 0.0
@@ -45,15 +45,26 @@ func create_room(nickname: String) -> void:
 	_prepare_lobby(nickname, _generate_room_code())
 
 func join_room(nickname: String, room_id: String) -> void:
-	var normalized_room_id := room_id.strip_edges().to_upper()
-	if normalized_room_id == "":
+	var normalized_room_id := _normalize_room_code(room_id)
+	if normalized_room_id.length() != ROOM_CODE_LENGTH:
 		normalized_room_id = _generate_room_code()
 	_prepare_lobby(nickname, normalized_room_id)
 
 func _generate_room_code() -> String:
 	var code := ""
 	for i in range(ROOM_CODE_LENGTH):
-		code += ROOM_CODE_CHARS[randi() % ROOM_CODE_CHARS.length()]
+		var index := randi() % ROOM_CODE_CHARS.length()
+		code += ROOM_CODE_CHARS.substr(index, 1)
+	return code
+
+func _normalize_room_code(room_id: String) -> String:
+	var code := ""
+	for i in range(room_id.length()):
+		var c := room_id.substr(i, 1)
+		if c >= "0" and c <= "9":
+			code += c
+		if code.length() >= ROOM_CODE_LENGTH:
+			break
 	return code
 
 func _prepare_lobby(nickname: String, room_id: String) -> void:

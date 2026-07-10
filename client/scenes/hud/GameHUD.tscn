@@ -65,4 +65,39 @@ grow_horizontal = 0
 grow_vertical = 0
 text = "종료 테스트"
 
+[node name="DebugModeButton" type="Button" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -168.0
+offset_top = -128.0
+offset_right = -24.0
+offset_bottom = -80.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "디버그 OFF"
+
+[node name="DebugPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -344.0
+offset_top = 88.0
+offset_right = -24.0
+offset_bottom = 248.0
+grow_horizontal = 0
+
+[node name="DebugSummaryLabel" type="Label" parent="Root/DebugPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "phase: playing"
+
 [connection signal="pressed" from="Root/EndTestButton" to="." method="_on_end_test_button_pressed"]
+[connection signal="pressed" from="Root/DebugModeButton" to="." method="_on_debug_mode_button_pressed"]
