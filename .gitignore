@@ -15,5 +15,12 @@ data_*/
 .DS_Store
 Thumbs.db
 
-# Oversized assets pending compression (GitHub 100MB limit) — see Docs/Plan.md
-client/assets/Nest/Nest.glb
+# Loose source textures bundled with 3D asset packs (Sketchfab/Poly Pizza downloads).
+# The .glb already embeds these textures (gltf/embedded_image_handling=1), so these
+# files are unused by Godot's import and just add repo weight. assets/ui/ is exempt
+# since those icons/buttons ARE referenced directly by UI scenes.
+client/assets/*/*.jpg
+client/assets/*/*.jpg.import
+client/assets/*/*.png
+client/assets/*/*.png.import
+!client/assets/ui/**
