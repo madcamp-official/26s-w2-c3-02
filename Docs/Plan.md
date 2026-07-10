@@ -1,267 +1,174 @@
-# MVP Implementation Plan
+# 클라이언트 병렬 개발 계획 (2인)
 
-## 목표
+## 이 계획의 범위
 
-이 문서는 **경찰과 오리 MVP 구현**을 위한 2인 개발 계획이다. 전체 서비스 확장보다, 먼저 아래 플레이가 실제로 가능한 상태를 목표로 한다.
+- **대상:** Godot 클라이언트만. **서버(Node.js)는 이 계획의 범위 밖**이다.
+- **서버 공백 처리:** 서버가 채워야 할 상태(플레이어 위치, 새끼오리, 점수, 타이머, 감옥)는 **Mock 데이터**로 대체한다. 목표는 *서버 없이도 클라이언트를 끝까지 개발하고 시연할 수 있는 상태*를 만드는 것이다.
+- **나중에 서버가 붙을 때:** Mock을 실제 네트워크 클라이언트로 교체만 하면 되도록, 데이터 계약(`GameData`)을 `api-spec.md`의 필드 이름과 동일하게 맞춘다.
 
-```text
-두 명 이상이 같은 방에 접속한다.
-오리 팀은 새끼오리를 둥지로 옮긴다.
-술래 팀은 오리를 잡아 감옥에 보낸다.
-제한 시간 또는 목표 점수에 따라 승패가 결정된다.
-```
-
-## 개발 방식
-
-초반에는 두 명이 함께 핵심 연결 구조를 만든 뒤, 이후 역할을 나눈다.
+### 목표 화면 흐름
 
 ```text
-1단계: 페어 개발로 Godot ↔ Node.js WebSocket 연결 완성
-2단계: 클라이언트 담당 / 서버 담당으로 분리
-3단계: 매일 실제 2인 접속 테스트
+메인 화면 → 로비(방 생성/입장·준비·시작) → 인게임(이동·새끼오리 인솔·잡기/감옥) → 결과 화면 → 메인
 ```
 
-이 방식의 핵심은 **멀티플레이 뼈대를 가장 먼저 검증하는 것**이다. 맵, 에셋, UI를 예쁘게 다듬기 전에 서로의 움직임이 같은 방에서 보이는 상태를 만든다.
+---
 
-## 역할 분담
+## 병렬 작업 핵심 원칙 (Godot 충돌 방지)
 
-### 공통 담당
+Godot에서 머지 충돌은 거의 항상 **같은 파일을 두 명이 동시에 편집**할 때 난다. 특히 `.tscn`(노드 ID·`load_steps`·`ext_resource` 번호)과 `project.godot`이 위험하다. 그래서 다음을 규칙으로 한다.
 
-- Godot 프로젝트와 Node.js 서버의 초기 연결 구조 만들기
-- `api-spec.md` 기준으로 메시지 이름과 payload 맞추기
-- 매일 마지막에 실제 2인 접속 테스트 진행
-- 테스트 중 발견한 버그와 다음 작업 우선순위 정리
+1. **디렉터리 단위로 파일을 소유한다.** 자기 디렉터리 밖의 파일은 편집하지 않는다. (Git 충돌은 파일 단위 → 서로 다른 디렉터리는 거의 안 부딪힌다.)
+2. **하나의 `.tscn`은 한 사람만 편집한다.** 같은 씬을 둘이 동시에 열지 않는다.
+3. **`project.godot`은 Day 0에 함께 세팅하고 그 뒤로 동결한다.** InputMap·창 설정·오토로드 등록·메인 씬을 한 번에 다 넣어두고, 이후에는 원칙적으로 건드리지 않는다.
+4. **씬 합성(화면 조립)은 `SceneRouter` 한 곳에서만 한다.** 씬끼리 서로 `instance` 하지 않는다. (예: 월드 씬이 HUD 씬을 품지 않는다. Router가 둘을 나란히 올린다.)
+5. **공유 상태는 `GameData` 오토로드 인터페이스로만 주고받는다.** Day 0에 필드·시그널을 확정한 뒤, B는 이 파일을 **읽기만** 하고 편집하지 않는다.
+6. **단독 테스트는 F6(현재 씬 실행)로 한다.** 자기 씬만 바로 실행하면 `project.godot`의 `main_scene`을 바꿀 필요가 없다.
 
-### A: Godot 클라이언트 담당
+---
 
-- 로비 화면
-  - 닉네임 입력
-  - 방 생성
-  - 방 코드 입장
-  - 게임 시작 버튼
-- 게임 화면
-  - 플레이어 이동
-  - 카메라
-  - 연못 맵
-  - 오리, 술래, 새끼오리 표시
-  - 둥지와 감옥 표시
-- UI
-  - 남은 시간
-  - 현재 점수 / 목표 점수
-  - 감옥 상태
-  - 승패 결과 화면
-- 네트워크 반영
-  - 서버의 `room:state`, `game:state`, `game:event`를 화면에 반영
-  - 다른 플레이어 위치 보간 처리
-
-### B: Node.js 서버 담당
-
-- WebSocket 서버
-  - 접속 관리
-  - 메시지 라우팅
-  - 에러 응답
-- 방 관리
-  - 방 생성
-  - 방 입장
-  - 플레이어 퇴장
-  - 호스트 관리
-- 게임 룰
-  - 팀 배정
-  - 게임 시작/종료
-  - 타이머
-  - 새끼오리 스폰
-  - 새끼오리 획득/반납 판정
-  - 술래 잡기 판정
-  - 감옥 이동
-  - 감옥 자동 탈출
-  - 감옥 구출
-- 상태 브로드캐스트
-  - `room:state`
-  - `game:state`
-  - `game:event`
-
-## MVP 구현 순서
-
-### 1. 프로젝트 뼈대 생성
-
-목표: 클라이언트와 서버를 각각 실행할 수 있는 상태를 만든다.
-
-- `client/godot/` Godot 프로젝트 생성
-- `server/` Node.js 프로젝트 생성
-- `ws` 라이브러리 설치
-- 서버 실행 스크립트 작성
-- Godot에서 서버 URL 설정값 관리
-
-완료 기준:
-
-- Node.js WebSocket 서버가 실행된다.
-- Godot 프로젝트가 실행된다.
-- Godot에서 서버 연결 성공 로그를 볼 수 있다.
-
-### 2. 방 생성/입장
-
-목표: 같은 방에 여러 플레이어가 들어갈 수 있게 한다.
-
-- `room:create` 구현
-- `room:join` 구현
-- `room:joined` 응답 구현
-- `room:state` 브로드캐스트 구현
-- 로비 UI에서 방 코드 표시/입력
-
-완료 기준:
-
-- 한 명이 방을 만들 수 있다.
-- 다른 한 명이 방 코드로 입장할 수 있다.
-- 두 클라이언트 모두 같은 플레이어 목록을 본다.
-
-### 3. 플레이어 이동과 위치 동기화
-
-목표: 한 플레이어가 움직이면 다른 화면에서도 움직임이 보이게 한다.
-
-- Godot 플레이어 이동 구현
-- 데스크탑 클릭/모바일 터치 입력을 이동 방향으로 변환
-- `player:input` 송신
-- 서버에서 플레이어 위치 갱신
-- `game:state`로 플레이어 위치 브로드캐스트
-- 클라이언트에서 다른 플레이어 위치 반영
-
-완료 기준:
-
-- 2개 클라이언트에서 서로의 위치가 보인다.
-- 한 명이 움직이면 다른 화면에서도 따라 움직인다.
-- 끊김이 심하지 않도록 기본 보간이 적용된다.
-
-### 4. 게임 시작과 타이머
-
-목표: 로비에서 게임을 시작하고 제한 시간을 진행한다.
-
-- 호스트의 `game:start` 구현
-- 서버에서 `phase`를 `playing`으로 변경
-- 제한 시간 카운트다운
-- 남은 시간 브로드캐스트
-- 클라이언트 UI에 타이머 표시
-
-완료 기준:
-
-- 호스트가 게임을 시작할 수 있다.
-- 모든 클라이언트가 같은 타이머를 본다.
-- 시간이 끝나면 게임이 종료된다.
-
-### 5. 새끼오리 스폰/획득/반납
-
-목표: 오리 팀의 기본 승리 루프를 만든다.
-
-- 서버에 새끼오리 스폰 위치 후보 정의
-- 게임 중 새끼오리 생성
-- `duckling:pickup` 판정
-- 새끼오리 운반 상태 반영
-- 둥지 위치 정의
-- `duckling:deliver` 판정
-- 점수 증가
-- 목표 점수 도달 시 오리 팀 승리
-
-완료 기준:
-
-- 새끼오리가 맵에 나타난다.
-- 오리가 가까이 가면 새끼오리를 획득할 수 있다.
-- 둥지에 도착하면 점수가 오른다.
-- 목표 점수에 도달하면 게임이 끝난다.
-
-### 6. 술래 잡기와 감옥
-
-목표: 술래 팀의 방해 루프를 만든다.
-
-- 술래 팀 플레이어 구분
-- `player:tag` 판정
-- 잡힌 오리를 감옥 위치로 이동
-- 감옥 상태에서는 이동 제한
-- `player_jailed` 이벤트 전송
-- 감옥 시간 UI 표시
-
-완료 기준:
-
-- 술래가 가까운 오리를 잡을 수 있다.
-- 잡힌 오리는 감옥으로 이동한다.
-- 감옥 상태의 오리는 일정 시간 움직일 수 없다.
-
-### 7. 감옥 탈출/구출
-
-목표: 감옥 시스템을 MVP 규칙에 맞게 완성한다.
-
-- 감옥 유지 시간 종료 시 자동 탈출
-- 자동 탈출 위치를 랜덤 스폰 위치로 지정
-- 다른 오리가 감옥 근처에 접근하면 구출 가능
-- `player_released` 이벤트 전송
-
-완료 기준:
-
-- 감옥 시간이 끝나면 오리가 자동으로 탈출한다.
-- 다른 오리가 감옥 근처에서 구출할 수 있다.
-- 탈출/구출 결과가 모든 클라이언트에 반영된다.
-
-### 8. 승패와 결과 화면
-
-목표: 한 판이 명확하게 끝나고 다시 로비 흐름으로 돌아간다.
-
-- 오리 팀 목표 점수 달성 시 승리
-- 제한 시간 종료 시 술래 팀 승리
-- `game_ended` 이벤트 전송
-- 결과 화면 표시
-- 결과 후 방 코드 입력 화면으로 이동
-
-완료 기준:
-
-- 승리 팀이 명확하게 표시된다.
-- 게임 종료 후 더 이상 이동/판정이 진행되지 않는다.
-- 결과 확인 후 다시 입장 화면으로 돌아간다.
-
-## 매일 통합 체크리스트
-
-매일 개발 종료 전 아래 항목을 확인한다.
-
-- 서버를 새로 켠 뒤 방 생성/입장이 되는가?
-- 두 클라이언트가 같은 방에 접속되는가?
-- 위치 동기화가 깨지지 않는가?
-- 새로 추가한 기능이 두 클라이언트 모두에 반영되는가?
-- `api-spec.md`와 실제 메시지 형식이 같은가?
-- 모바일 가로 화면에서 UI가 겹치지 않는가?
-
-## 우선순위 원칙
-
-- 예쁜 맵보다 먼저 멀티플레이 연결을 완성한다.
-- 에셋보다 먼저 박스/캡슐 형태 더미 오브젝트로 규칙을 검증한다.
-- 클라이언트가 예측할 수 있어도 최종 판정은 서버가 한다.
-- 새로운 기능을 추가하기 전에 현재 한 판이 끝까지 진행되는지 확인한다.
-- 기능이 애매하면 MVP에서 제외하고 선택 기능으로 미룬다.
-
-## MVP 제외 항목
-
-다음 기능은 MVP 완료 전에는 구현하지 않는다.
-
-- 회원가입/로그인
-- 방 목록 화면
-- 유저별 전적
-- 영구 랭킹
-- 재화/성장 시스템
-- 복잡한 매치메이킹
-- 캐릭터 스킨 선택
-- 아이템
-- 봇 AI
-- 대규모 동시 접속 대응
-
-## 최종 MVP 완료 기준
-
-아래 시나리오가 끊기지 않고 동작하면 MVP 완료로 본다.
+## 폴더 & 소유권 맵
 
 ```text
-1. 플레이어 A가 방을 생성한다.
-2. 플레이어 B가 방 코드로 입장한다.
-3. A와 B가 같은 맵에서 서로의 움직임을 본다.
-4. 게임을 시작한다.
-5. 새끼오리가 스폰된다.
-6. 오리가 새끼오리를 획득해 둥지에 반납한다.
-7. 술래가 오리를 잡아 감옥에 보낸다.
-8. 오리는 자동 탈출하거나 다른 오리에게 구출된다.
-9. 목표 점수 또는 제한 시간으로 승패가 결정된다.
-10. 결과 화면이 표시되고 방 코드 입력 화면으로 돌아간다.
+client/
+├─ project.godot                  [공동] Day 0 세팅 후 동결
+├─ scenes/
+│  ├─ boot/        Boot.tscn       [공동] Day 0 생성, 이후 거의 안 건드림
+│  ├─ menu/        MainMenu / Lobby / Result .tscn      [A]
+│  ├─ hud/         GameHUD.tscn                          [A]
+│  ├─ world/       Game / Pond .tscn                     [B]
+│  ├─ player/      Player.tscn                           [B]
+│  └─ duckling/    Duckling.tscn                         [B]
+├─ scripts/
+│  ├─ autoload/    GameData / SceneRouter / MockServer .gd   [공동 정의 → A 소유, B 읽기만]
+│  ├─ menu/                                              [A]
+│  ├─ hud/                                               [A]
+│  ├─ world/                                             [B]
+│  ├─ player/                                            [B]
+│  └─ duckling/                                          [B]
+└─ assets/
+   ├─ duck/  aligator/                                   [B]
+   └─ ui/    (아이콘·폰트·버튼 이미지)                    [A]
 ```
+
+| 영역 | 담당 | 편집 파일 | 공유 파일 접근 |
+|---|---|---|---|
+| 화면 흐름·메뉴·HUD·반응형 UI | **A** | `scenes/menu`, `scenes/hud`, `scripts/menu`, `scripts/hud`, `assets/ui`, `scripts/autoload` | `GameData` 읽기+시그널, `SceneRouter`·`MockServer` 소유 |
+| 인게임 월드·캐릭터·새끼오리 | **B** | `scenes/world`, `scenes/player`, `scenes/duckling`, `scripts/world`, `scripts/player`, `scripts/duckling`, `assets/duck`, `assets/aligator` | `GameData` **읽기만** |
+
+> 핵심: **B는 병렬 작업 중 공유 파일(`project.godot`, `autoload/`)을 편집하지 않는다.** 새 입력 액션·오토로드가 필요하면 Day 0에 미리 다 넣거나, A에게 요청해 A가 반영한다. 이렇게 하면 B의 커밋은 항상 자기 디렉터리 안에서만 발생한다.
+
+---
+
+## Day 0 — 공동 선행 작업 (페어, 1회)
+
+이 단계만 함께 앉아서 하고, 끝나면 계약을 커밋·동결한 뒤 갈라진다.
+
+1. **폴더 구조 생성** — 위 소유권 맵대로 빈 디렉터리를 만든다.
+2. **`project.godot` 세팅 (이후 동결)**
+   - **InputMap:** `move_up` `move_down` `move_left` `move_right`(WASD+방향키+터치), `interact`(획득/반납/잡기/구출 공용 액션), `pause`.
+   - **창/표시:** 가로 모드 고정, 뷰포트 스트레치(`canvas_items`), 최소 해상도, 모바일 `sensor_landscape`.
+   - **오토로드 등록:** `GameData`, `SceneRouter`, `MockServer`.
+   - **메인 씬:** `scenes/boot/Boot.tscn`.
+3. **`GameData` 계약 확정 (동결)** — `api-spec.md`와 같은 필드로 정의. 이후 B는 읽기만.
+
+   ```gdscript
+   # scripts/autoload/GameData.gd (autoload: GameData)
+   extends Node
+
+   var local_player_id: String = ""
+   var phase: String = "lobby"          # lobby | countdown | playing | ended
+   var remaining_seconds: int = 0
+   var score: int = 0
+   var target_score: int = 5
+   var winner = null                    # "duck" | "tagger" | null
+   var players: Array = []              # {playerId, team, character, position{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}
+   var ducklings: Array = []            # {ducklingId, position{x,y,z}, state, carrierPlayerId}
+
+   signal room_state_changed
+   signal game_state_changed
+   signal game_event(event: String, data: Dictionary)
+   ```
+
+4. **`MockServer` 스켈레톤** — 타이머로 가짜 `game:state`/`game:event`를 만들어 `GameData`를 채우고 시그널을 쏜다. (예: 새끼오리 몇 마리 스폰, 타이머 감소, 가상 플레이어 1명이 원을 그리며 이동.) 서버 자리를 이 파일이 대신한다.
+5. **`SceneRouter` 스켈레톤** — 화면 전환 담당. 인게임 진입 시 **B의 `Game.tscn`과 A의 `GameHUD.tscn`을 나란히 올려** 합성한다. (씬끼리 서로 참조하지 않게 하는 유일한 합성 지점.)
+
+   ```gdscript
+   # scripts/autoload/SceneRouter.gd (autoload: SceneRouter)
+   extends Node
+   # go_to("main_menu" | "lobby" | "game" | "result")
+   # "game" 진입 시 world(3D) + hud(CanvasLayer)를 한 스크린 노드 아래 형제로 add_child
+   ```
+
+**Day 0 완료 기준:** Boot 실행 → MainMenu 표시 → (더미 버튼으로) 인게임 진입 시 B의 빈 월드와 A의 빈 HUD가 동시에 올라온다. 이 뼈대가 서면 갈라진다.
+
+---
+
+## A 트랙 — 화면 흐름 & UI
+
+**소유:** `scenes/menu`, `scenes/hud`, `scripts/menu`, `scripts/hud`, `assets/ui` + 오토로드(`SceneRouter`/`MockServer`/`GameData`).
+
+- **메인 화면** (`MainMenu.tscn`): 닉네임 입력, 방 만들기 / 방 코드 입장 버튼 → `SceneRouter.go_to("lobby")`.
+- **로비** (`Lobby.tscn`): 참가자 목록·준비 상태·방 코드 표시, 게임 시작 버튼. `GameData.room_state_changed`를 구독해 목록을 갱신(초기엔 MockServer가 가짜 참가자 제공).
+- **결과 화면** (`Result.tscn`): 승패·개인 기록 표시, 다시 하기 / 메인으로.
+- **인게임 HUD** (`GameHUD.tscn`, CanvasLayer): 남은 시간, 점수/목표, 감옥 상태, 모바일 조작 버튼(이동 패드·`interact` 버튼). `GameData.game_state_changed`/`game_event` 구독으로 갱신.
+- **반응형 UI:** 가로 모드 고정, Anchor/Safe Area 기준 배치, PC·모바일 공통. (창 설정은 Day 0에 잡힌 값 사용.)
+- **흐름 연결:** 모든 화면 전환을 `SceneRouter`로 처리. 버튼 → Router 호출만 하고, 실제 판정은 (나중에) 서버가 하므로 지금은 MockServer가 대신.
+
+**A 단독 테스트:** 각 메뉴/HUD 씬을 F6로 실행, MockServer 데이터로 UI 갱신 확인.
+
+---
+
+## B 트랙 — 인게임 월드 & 캐릭터
+
+**소유:** `scenes/world`, `scenes/player`, `scenes/duckling`, `scripts/world`, `scripts/player`, `scripts/duckling`, `assets/duck`, `assets/aligator`. **공유 파일은 읽기만.**
+
+- **기존 `main.tscn` 리팩터링:** 현재 한 씬에 뭉쳐 있는 것을 분리한다.
+  - `Pond.tscn`(연못 바닥·둥지·감옥·장애물) / `Player.tscn`(오리·악어 이동+카메라) / `Duckling.tscn`(새끼오리) / `Game.tscn`(월드 루트, 위 씬들을 조합).
+  - 현재 [player.gd](client/scripts/player.gd)는 `scripts/player/`로 옮겨 재사용.
+- **플레이어 캐릭터** (`Player.tscn`): WASD/방향 이동(이미 구현됨), 카메라, 오리/악어 모델 스왑. 로컬 조작은 즉시 반응.
+- **원격 플레이어 표시:** `GameData.players`를 읽어 다른 플레이어를 스폰/이동. 위치는 보간(lerp)으로 부드럽게. (초기엔 MockServer의 가짜 플레이어로 검증.)
+- **연못 맵** (`Pond.tscn`): 둥지·감옥 위치 마커, 이동 가능 영역, 장애물. 좌표는 서버와 공유할 `{x,y,z}` 기준.
+- **새끼오리** (`Duckling.tscn`): `GameData.ducklings`를 읽어 스폰/획득/반납 상태를 시각화(있음/운반 중/반납됨). 판정 로직은 서버 몫이므로 지금은 상태 표시만.
+
+**B 단독 테스트:** `Game.tscn`을 F6로 실행 → MockServer 데이터로 캐릭터·새끼오리가 움직이는지 확인. `project.godot`은 건드리지 않는다.
+
+---
+
+## 통합 지점 (충돌이 날 수 있는 유일한 곳)
+
+1. **인게임 합성:** `SceneRouter`가 `Game.tscn`(3D) + `GameHUD.tscn`(CanvasLayer)을 한 스크린 노드의 형제로 올린다. → **A만** Router를 편집하고, B는 `Game.tscn` 경로만 A에게 알려준다. 씬 파일 자체는 서로 편집하지 않는다.
+2. **데이터 계약:** 둘 다 `GameData`를 통해서만 상태를 읽는다. 필드가 바뀌어야 하면 **함께** 수정하고 즉시 공유한다(드물어야 정상).
+3. **`project.godot`:** 새 InputMap 액션/오토로드가 필요하면 A가 반영하고 커밋을 먼저 푸시 → B가 pull. 같은 커밋에서 둘이 동시에 편집하지 않는다.
+
+> 나머지 파일은 디렉터리로 분리돼 있어 병렬로 자유롭게 작업해도 충돌이 나지 않는다.
+
+---
+
+## 진행 순서 / 마일스톤
+
+| 단계 | 내용 | A | B |
+|---|---|---|---|
+| **M0 (페어)** | Day 0 뼈대: 폴더·`project.godot`·`GameData`·`MockServer`·`SceneRouter`·`Boot` | 함께 | 함께 |
+| **M1** | 화면 뼈대 서기 | MainMenu·Lobby·Result 전환 완성 | `main.tscn` → Pond/Player/Duckling/Game 분리 |
+| **M2** | Mock 데이터로 채우기 | HUD가 타이머·점수·감옥 표시 | 캐릭터·새끼오리가 GameData 따라 움직임 |
+| **M3** | 인게임 합성 통합 | Router가 Game+HUD 동시 로드 | Game.tscn을 통합 대상으로 정리 |
+| **M4** | 반응형·마감 | 가로모드·Safe Area·모바일 조작 버튼 | 카메라·모델·맵 디테일, 보간 튜닝 |
+
+**매 단계 끝:** 각자 자기 디렉터리 커밋 → 푸시 → 상대가 pull → F6로 상대 씬 한번 실행해 깨지지 않는지 확인.
+
+---
+
+## 체크리스트 (매일 종료 전)
+
+- 내 커밋이 **내 디렉터리 밖 파일**을 건드리지 않았는가? (`git status`로 확인)
+- `Game.tscn`/`GameHUD.tscn`을 각각 F6로 단독 실행했을 때 정상인가?
+- Boot → 메뉴 → 인게임 진입 시 월드와 HUD가 함께 올라오는가?
+- `GameData` 필드가 `api-spec.md`와 여전히 일치하는가?
+- MockServer만으로 한 판 흐름(로비→인게임→결과)이 끊기지 않는가?
+
+---
+
+## 서버 연동 (범위 밖 / 추후)
+
+이 계획은 클라이언트만 다룬다. 서버가 준비되면 **`MockServer`를 실제 `NetworkClient`(WebSocket)로 교체**하고, 동일한 `GameData` 필드/시그널을 채우게 한다. 클라이언트 코드(A·B의 화면·월드)는 `GameData`만 바라보므로 수정이 거의 필요 없다. 서버 메시지 규약은 `api-spec.md`를 기준으로 한다.

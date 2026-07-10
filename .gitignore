@@ -14,3 +14,6 @@ data_*/
 # System/tool-specific ignores
 .DS_Store
 Thumbs.db
+
+# Oversized assets pending compression (GitHub 100MB limit) — see Docs/Plan.md
+client/assets/Nest/Nest.glb
