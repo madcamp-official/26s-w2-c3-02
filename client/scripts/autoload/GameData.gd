@@ -12,10 +12,12 @@ var target_score: int = 5
 var winner = null # "duck" | "tagger" | null
 var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
+var debug_mode_enabled: bool = false
 
 signal room_state_changed
 signal game_state_changed
 signal game_event(event: String, data: Dictionary)
+signal debug_mode_changed(enabled: bool)
 
 func register_local_player(team: String, character: String, nickname: String = "") -> void:
 	for p in players:
@@ -43,3 +45,9 @@ func update_local_player_transform(pos: Vector3, rotation_y: float) -> void:
 			p["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
 			p["rotationY"] = rotation_y
 			return
+
+func set_debug_mode(enabled: bool) -> void:
+	if debug_mode_enabled == enabled:
+		return
+	debug_mode_enabled = enabled
+	debug_mode_changed.emit(debug_mode_enabled)

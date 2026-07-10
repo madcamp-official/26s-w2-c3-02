@@ -52,8 +52,9 @@ text = "Player"
 [node name="RoomCodeInput" type="LineEdit" parent="MarginContainer/CenterContainer/Panel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-placeholder_text = "방 코드"
-text = "DUCK"
+placeholder_text = "방 코드 4자리 숫자"
+max_length = 4
+text = "1234"
 
 [node name="Buttons" type="HBoxContainer" parent="MarginContainer/CenterContainer/Panel/Content"]
 layout_mode = 2
@@ -65,6 +66,7 @@ size_flags_horizontal = 3
 text = "방 만들기"
 
 [node name="JoinRoomButton" type="Button" parent="MarginContainer/CenterContainer/Panel/Content/Buttons"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 text = "방 입장"
