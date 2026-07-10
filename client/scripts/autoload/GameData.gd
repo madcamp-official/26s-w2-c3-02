@@ -3,24 +3,31 @@ extends Node
 # Field names mirror Docs/api-spec.md so MockServer can be swapped for a real NetworkClient later.
 
 var local_player_id: String = "local"
+var room_id: String = ""
+var local_nickname: String = "Player"
 var phase: String = "lobby" # lobby | countdown | playing | ended
 var remaining_seconds: int = 0
 var score: int = 0
 var target_score: int = 5
 var winner = null # "duck" | "tagger" | null
-var players: Array = [] # [{playerId, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
+var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
 
 signal room_state_changed
 signal game_state_changed
 signal game_event(event: String, data: Dictionary)
 
-func register_local_player(team: String, character: String) -> void:
+func register_local_player(team: String, character: String, nickname: String = "") -> void:
 	for p in players:
 		if p["playerId"] == local_player_id:
+			if nickname != "":
+				p["nickname"] = nickname
 			return
+	if nickname != "":
+		local_nickname = nickname
 	players.append({
 		"playerId": local_player_id,
+		"nickname": local_nickname,
 		"team": team,
 		"character": character,
 		"position": {"x": 0.0, "y": 0.0, "z": 0.0},
