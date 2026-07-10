@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://bre7ljt1ufrql"
-path="res://.godot/imported/lilypad_flower.glb-8b099640d3ecc9e4d63293ab5c54e117.scn"
+uid="uid://dcd8i1cuandl3"
+path="res://.godot/imported/bush.glb-0168a015243d81c5f4d189a8815a759b.scn"
 
 [deps]
 
-source_file="res://assets/lilypad/lilypad_flower.glb"
-dest_files=["res://.godot/imported/lilypad_flower.glb-8b099640d3ecc9e4d63293ab5c54e117.scn"]
+source_file="res://assets/bush/bush.glb"
+dest_files=["res://.godot/imported/bush.glb-0168a015243d81c5f4d189a8815a759b.scn"]
 
 [params]
 

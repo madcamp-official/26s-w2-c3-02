@@ -1,0 +1,42 @@
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="CylinderMesh" id="Mesh_base"]
+top_radius = 3.0
+bottom_radius = 3.0
+height = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_base"]
+albedo_color = Color(0.25, 0.08, 0.08, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_post"]
+size = Vector3(0.25, 3.0, 0.25)
+
+[sub_resource type="StandardMaterial3D" id="Mat_post"]
+albedo_color = Color(0.08, 0.08, 0.08, 1)
+
+[node name="Jail" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.15, 0)
+mesh = SubResource("Mesh_base")
+surface_material_override/0 = SubResource("Mat_base")
+
+[node name="PostNorth" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, -2.8)
+mesh = SubResource("Mesh_post")
+surface_material_override/0 = SubResource("Mat_post")
+
+[node name="PostSouth" type="MeshInstance3D" parent="."]
+position = Vector3(0, 1.5, 2.8)
+mesh = SubResource("Mesh_post")
+surface_material_override/0 = SubResource("Mat_post")
+
+[node name="PostEast" type="MeshInstance3D" parent="."]
+position = Vector3(2.8, 1.5, 0)
+mesh = SubResource("Mesh_post")
+surface_material_override/0 = SubResource("Mat_post")
+
+[node name="PostWest" type="MeshInstance3D" parent="."]
+position = Vector3(-2.8, 1.5, 0)
+mesh = SubResource("Mesh_post")
+surface_material_override/0 = SubResource("Mat_post")
