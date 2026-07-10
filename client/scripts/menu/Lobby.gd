@@ -21,8 +21,7 @@ func _refresh() -> void:
 		var label := Label.new()
 		var nickname := str(player.get("nickname", player.get("playerId", "Unknown")))
 		var team := _team_label(str(player.get("team", "")))
-		var character := str(player.get("character", ""))
-		label.text = "%s  |  %s  |  %s" % [nickname, team, character]
+		label.text = "%s        %s" % [nickname, team]
 		players_list.add_child(label)
 
 func _team_label(team: String) -> String:
