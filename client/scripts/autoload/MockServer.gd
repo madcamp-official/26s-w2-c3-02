@@ -4,8 +4,12 @@ const TICK_HZ := 10.0 # api-spec.md STATE_TICK_RATE
 const GAME_DURATION := 180 # api-spec.md GAME_DURATION_SECONDS
 const TARGET_SCORE := 5
 const PICKUP_DISTANCE := 1.2 # api-spec.md PICKUP_DISTANCE
-const DELIVER_DISTANCE := 1.8 # api-spec.md DELIVER_DISTANCE
+const DELIVER_DISTANCE := 6.0 # covers the scale-4 Nest footprint (~4.6u radius) so
+# standing anywhere on/next to the visible nest triggers delivery
 const NEST_POSITION := Vector3(0, 1.68, 65) # matches Pond.tscn Nest node
+const DELIVER_MOVE_SPEED := 5.0 # units/sec each duckling swims into the nest once dropped off
+const NEST_ARRIVE_DISTANCE := 0.35 # how close counts as "reached the nest center"
+const NEST_SETTLE_TIME := 0.35 # linger inside the nest so the visual node catches up before vanishing
 const INITIAL_DUCKLING_COUNT := TARGET_SCORE + 2
 const WANDER_SPEED := 1.2
 const WANDER_TURN_INTERVAL := 2.0
@@ -30,6 +34,7 @@ var _npc_angle := 0.0
 var _wander_state: Dictionary = {} # ducklingId -> {"dir": Vector2, "timer": float}
 var _carry_queues: Dictionary = {} # playerId -> Array[ducklingId]
 var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_moving": bool, "idle_spin": float}
+var _delivering_settle: Dictionary = {} # ducklingId -> seconds spent settled at the nest center
 
 func _ready() -> void:
 	GameData.target_score = TARGET_SCORE
@@ -95,6 +100,7 @@ func start_game() -> void:
 	_wander_state.clear()
 	_carry_queues.clear()
 	_player_motion.clear()
+	_delivering_settle.clear()
 	var ducklings: Array = []
 	for i in range(INITIAL_DUCKLING_COUNT):
 		ducklings.append(_fake_duckling("d%d" % (i + 1)))
@@ -129,6 +135,7 @@ func _process(delta: float) -> void:
 	_update_player_motion(delta)
 	_update_duckling_follow(delta)
 	_check_deliver()
+	_update_delivering(delta)
 
 	_broadcast_timer += delta
 	if _broadcast_timer >= 1.0 / TICK_HZ:
@@ -260,20 +267,47 @@ func _check_deliver() -> void:
 		for d in GameData.ducklings:
 			ducklings_by_id[d["ducklingId"]] = d
 
-		var delivered_count := 0
+		# Hand the carried ducklings off to the "delivering" state instead of
+		# scoring them instantly. They then swim into the nest on their own
+		# (see _update_delivering) and are scored the moment each one arrives.
 		for duckling_id in queue:
 			var d = ducklings_by_id.get(duckling_id)
 			if d == null:
 				continue
-			d["state"] = "delivered"
+			d["state"] = "delivering"
 			d["carrierPlayerId"] = null
-			delivered_count += 1
 
 		_carry_queues[player_id] = []
-		GameData.score += delivered_count
-		GameData.game_event.emit("duckling_delivered", {"playerId": player_id, "count": delivered_count})
-		if GameData.score >= GameData.target_score:
-			_end_game("duck")
+
+func _update_delivering(delta: float) -> void:
+	for d in GameData.ducklings:
+		if d["state"] != "delivering":
+			continue
+		var id: String = d["ducklingId"]
+		var current := _dict_to_vec3(d["position"])
+		var to_nest := NEST_POSITION - current
+		var dist := to_nest.length()
+		if dist > NEST_ARRIVE_DISTANCE:
+			var step: float = min(DELIVER_MOVE_SPEED * delta, dist)
+			var next_pos := current + to_nest.normalized() * step
+			d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
+			continue
+
+		# Reached the nest: pin it there and let it settle briefly so the visual
+		# duckling can catch up, then mark delivered (which despawns the node).
+		d["position"] = {"x": NEST_POSITION.x, "y": NEST_POSITION.y, "z": NEST_POSITION.z}
+		var settled: float = _delivering_settle.get(id, 0.0) + delta
+		_delivering_settle[id] = settled
+		if settled >= NEST_SETTLE_TIME:
+			_delivering_settle.erase(id)
+			_rescue_duckling(d)
+
+func _rescue_duckling(d: Dictionary) -> void:
+	d["state"] = "delivered"
+	GameData.score += 1
+	GameData.game_event.emit("duckling_delivered", {"ducklingId": d["ducklingId"], "count": 1})
+	if GameData.score >= GameData.target_score:
+		_end_game("duck")
 
 func _dict_to_vec3(pos: Dictionary) -> Vector3:
 	return Vector3(pos["x"], pos["y"], pos["z"])

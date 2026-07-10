@@ -1,6 +1,6 @@
 [gd_scene load_steps=12 format=3]
 
-[ext_resource type="PackedScene" path="res://assets/Nest/Nest.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/Nest/Birds nest.glb" id="2"]
 [ext_resource type="PackedScene" path="res://assets/rock/rock.glb" id="3"]
 [ext_resource type="PackedScene" path="res://assets/bush/bush.glb" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/world/props/Lilypad.tscn" id="5"]
