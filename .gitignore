@@ -26,4 +26,5 @@ client/assets/*/*.jpg
 client/assets/*/*.jpg.import
 client/assets/*/*.png
 client/assets/*/*.png.import
+
 !client/assets/ui/**
