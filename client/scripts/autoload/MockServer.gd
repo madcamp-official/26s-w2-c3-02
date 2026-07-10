@@ -57,6 +57,11 @@ func start_game() -> void:
 	GameData.game_event.emit("game_started", {})
 	GameData.game_state_changed.emit()
 
+func finish_game_for_test(winner: String = "duck") -> void:
+	if winner != "duck" and winner != "tagger":
+		winner = "duck"
+	_end_game(winner)
+
 func _process(delta: float) -> void:
 	if GameData.phase != "playing":
 		return

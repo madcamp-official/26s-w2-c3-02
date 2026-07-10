@@ -49,3 +49,20 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "상태 playing"
 horizontal_alignment = 1
+
+[node name="EndTestButton" type="Button" parent="Root"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -168.0
+offset_top = -72.0
+offset_right = -24.0
+offset_bottom = -24.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "종료 테스트"
+
+[connection signal="pressed" from="Root/EndTestButton" to="." method="_on_end_test_button_pressed"]

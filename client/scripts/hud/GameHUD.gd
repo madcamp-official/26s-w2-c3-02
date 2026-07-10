@@ -28,3 +28,6 @@ func _format_time(seconds: int) -> String:
 func _on_game_event(event: String, data: Dictionary) -> void:
 	if event == "game_ended":
 		SceneRouter.go_to("result")
+
+func _on_end_test_button_pressed() -> void:
+	MockServer.finish_game_for_test("duck")
