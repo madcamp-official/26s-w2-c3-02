@@ -46,8 +46,11 @@ func _seed_lobby() -> void:
 	GameData.players = [_fake_player("npc1", "Mock Police", "tagger", "aligator")]
 	GameData.room_state_changed.emit()
 
-func create_room(nickname: String) -> void:
-	_prepare_lobby(nickname, _generate_room_code())
+func create_room(nickname: String, room_id: String = "") -> void:
+	var normalized_room_id := _normalize_room_code(room_id)
+	if normalized_room_id.length() != ROOM_CODE_LENGTH:
+		normalized_room_id = _generate_room_code()
+	_prepare_lobby(nickname, normalized_room_id)
 
 func join_room(nickname: String, room_id: String) -> void:
 	var normalized_room_id := _normalize_room_code(room_id)

@@ -33,7 +33,11 @@ var _has_remote_target := false
 func _ready() -> void:
 	var config: Dictionary = CHARACTER_CONFIG[character]
 
-	var model: Node3D = load(config["model"]).instantiate()
+	var model_scene: PackedScene = load(config["model"])
+	if model_scene == null:
+		push_error("Player failed to load model for '%s': %s" % [character, config["model"]])
+		return
+	var model: Node3D = model_scene.instantiate()
 	model.position = config["model_pos"]
 	model.scale = Vector3.ONE * config["model_scale"]
 	model.rotation_degrees = Vector3(0, 180, 0)

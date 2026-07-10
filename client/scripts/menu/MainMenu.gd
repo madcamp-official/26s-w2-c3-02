@@ -11,7 +11,7 @@ func _ready() -> void:
 	_on_room_code_input_text_changed(room_code_input.text)
 
 func _on_create_room_button_pressed() -> void:
-	MockServer.create_room(nickname_input.text)
+	MockServer.create_room(nickname_input.text, room_code_input.text)
 	SceneRouter.go_to("lobby")
 
 func _on_join_room_button_pressed() -> void:
