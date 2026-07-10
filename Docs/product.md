@@ -82,5 +82,7 @@ inclusion: always
 
 | 이름 | GitHub | 담당 |
 |---|---|---|
-| TBD | TBD | Godot 클라이언트, 맵, 캐릭터 조작 |
-| TBD | TBD | Node.js 서버, 웹소켓 동기화, 게임 룰 |
+| 박수현 | [suh1088](https://github.com/suh1088) | Godot 클라이언트 B 트랙 — 인게임 월드, 캐릭터 조작, 새끼오리 |
+| 조예준 | [jossi-jossi](https://github.com/jossi-jossi) | Godot 클라이언트 A 트랙 — 화면 흐름·메뉴·HUD (서버 착수 시 Node.js 웹소켓 동기화·게임 룰로 전환) |
+
+> 역할 분담 상세는 [Plan.md](Plan.md)의 A/B 트랙 소유권 맵을 따른다.
