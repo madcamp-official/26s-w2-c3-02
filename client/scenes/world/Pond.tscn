@@ -1,6 +1,5 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=12 format=3]
 
-[ext_resource type="PackedScene" path="res://scenes/world/props/Jail.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://assets/Nest/Nest.glb" id="2"]
 [ext_resource type="PackedScene" path="res://assets/rock/rock.glb" id="3"]
 [ext_resource type="PackedScene" path="res://assets/bush/bush.glb" id="4"]
@@ -72,11 +71,8 @@ shape = SubResource("Shape_wall_ew")
 position = Vector3(0, 1.68, 65)
 scale = Vector3(4, 4, 4)
 
-[node name="JailMarker" parent="." instance=ExtResource("1")]
-position = Vector3(0, 0, -65)
-
 [node name="Rock1" type="StaticBody3D" parent="."]
-position = Vector3(-40, 0, 20)
+position = Vector3(-40, 3.0, 20)
 scale = Vector3(3.0, 3.0, 3.0)
 
 [node name="Model" parent="Rock1" instance=ExtResource("3")]
@@ -85,7 +81,7 @@ scale = Vector3(3.0, 3.0, 3.0)
 shape = SubResource("Shape_rock")
 
 [node name="Rock2" type="StaticBody3D" parent="."]
-position = Vector3(35, 0, -15)
+position = Vector3(35, 2.2, -15)
 scale = Vector3(2.2, 2.2, 2.2)
 
 [node name="Model" parent="Rock2" instance=ExtResource("3")]
@@ -94,7 +90,7 @@ scale = Vector3(2.2, 2.2, 2.2)
 shape = SubResource("Shape_rock")
 
 [node name="Rock3" type="StaticBody3D" parent="."]
-position = Vector3(-25, 0, -40)
+position = Vector3(-25, 3.5, -40)
 scale = Vector3(3.5, 3.5, 3.5)
 
 [node name="Model" parent="Rock3" instance=ExtResource("3")]
@@ -103,7 +99,7 @@ scale = Vector3(3.5, 3.5, 3.5)
 shape = SubResource("Shape_rock")
 
 [node name="Rock4" type="StaticBody3D" parent="."]
-position = Vector3(50, 0, 35)
+position = Vector3(50, 2.8, 35)
 scale = Vector3(2.8, 2.8, 2.8)
 
 [node name="Model" parent="Rock4" instance=ExtResource("3")]
@@ -112,7 +108,7 @@ scale = Vector3(2.8, 2.8, 2.8)
 shape = SubResource("Shape_rock")
 
 [node name="Rock5" type="StaticBody3D" parent="."]
-position = Vector3(-55, 0, 5)
+position = Vector3(-55, 2.5, 5)
 scale = Vector3(2.5, 2.5, 2.5)
 
 [node name="Model" parent="Rock5" instance=ExtResource("3")]
@@ -122,7 +118,7 @@ shape = SubResource("Shape_rock")
 
 [node name="Bush1" type="StaticBody3D" parent="."]
 position = Vector3(25, 0, 50)
-scale = Vector3(0.025, 0.025, 0.025)
+scale = Vector3(0.075, 0.075, 0.075)
 
 [node name="Model" parent="Bush1" instance=ExtResource("4")]
 
@@ -131,7 +127,7 @@ shape = SubResource("Shape_bush")
 
 [node name="Bush2" type="StaticBody3D" parent="."]
 position = Vector3(-35, 0, -55)
-scale = Vector3(0.022, 0.022, 0.022)
+scale = Vector3(0.066, 0.066, 0.066)
 
 [node name="Model" parent="Bush2" instance=ExtResource("4")]
 
@@ -140,7 +136,7 @@ shape = SubResource("Shape_bush")
 
 [node name="Bush3" type="StaticBody3D" parent="."]
 position = Vector3(55, 0, -35)
-scale = Vector3(0.028, 0.028, 0.028)
+scale = Vector3(0.084, 0.084, 0.084)
 
 [node name="Model" parent="Bush3" instance=ExtResource("4")]
 

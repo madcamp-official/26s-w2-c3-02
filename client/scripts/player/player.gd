@@ -1,8 +1,9 @@
 extends CharacterBody3D
 
-const SPEED := 7.0
+const SPEED := 10.0
 const GRAVITY := 20.0
 const TURN_SPEED := 6.0
+const REMOTE_LERP_SPEED := 10.0
 
 const CHARACTER_CONFIG := {
 	"duck": {
@@ -23,6 +24,11 @@ const CHARACTER_CONFIG := {
 
 @export var character: String = "duck"
 @export var controllable: bool = false
+@export_enum("wasd", "arrows") var control_scheme: String = "wasd"
+
+var _remote_target_pos: Vector3
+var _remote_target_rot: float
+var _has_remote_target := false
 
 func _ready() -> void:
 	var config: Dictionary = CHARACTER_CONFIG[character]
@@ -44,6 +50,21 @@ func _ready() -> void:
 	if controllable:
 		add_to_group("controllable_player")
 
+func set_remote_state(pos: Vector3, rotation_y: float) -> void:
+	_remote_target_pos = pos
+	_remote_target_rot = rotation_y
+	_has_remote_target = true
+
+func set_display_name(text: String) -> void:
+	$IdLabel.text = text
+	$IdLabel.visible = true
+
+func _process(delta: float) -> void:
+	if not _has_remote_target:
+		return
+	position = position.lerp(_remote_target_pos, clamp(delta * REMOTE_LERP_SPEED, 0.0, 1.0))
+	rotation.y = lerp_angle(rotation.y, _remote_target_rot, clamp(delta * REMOTE_LERP_SPEED, 0.0, 1.0))
+
 func _physics_process(delta: float) -> void:
 	if not controllable:
 		return
@@ -53,14 +74,16 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	var action_suffix := "_arrow" if control_scheme == "arrows" else ""
+
 	var input_dir := Vector3.ZERO
-	if Input.is_action_pressed("move_up"):
+	if Input.is_action_pressed("move_up" + action_suffix):
 		input_dir.z -= 1.0
-	if Input.is_action_pressed("move_down"):
+	if Input.is_action_pressed("move_down" + action_suffix):
 		input_dir.z += 1.0
-	if Input.is_action_pressed("move_left"):
+	if Input.is_action_pressed("move_left" + action_suffix):
 		input_dir.x -= 1.0
-	if Input.is_action_pressed("move_right"):
+	if Input.is_action_pressed("move_right" + action_suffix):
 		input_dir.x += 1.0
 
 	input_dir = input_dir.normalized()

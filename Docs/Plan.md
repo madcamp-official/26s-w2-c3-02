@@ -104,7 +104,7 @@ client/
 
 ---
 
-## A 트랙 — 화면 흐름 & UI
+## A 트랙 — 화면 흐름 & UI - 조예준
 
 **소유:** `scenes/menu`, `scenes/hud`, `scripts/menu`, `scripts/hud`, `assets/ui` + 오토로드(`SceneRouter`/`MockServer`/`GameData`).
 
@@ -119,7 +119,7 @@ client/
 
 ---
 
-## B 트랙 — 인게임 월드 & 캐릭터
+## B 트랙 — 인게임 월드 & 캐릭터 - 박수현
 
 **소유:** `scenes/world`, `scenes/player`, `scenes/duckling`, `scripts/world`, `scripts/player`, `scripts/duckling`, `assets/duck`, `assets/aligator`. **공유 파일은 읽기만.**
 
