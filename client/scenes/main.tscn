@@ -1,7 +1,8 @@
 [gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1"]
-[ext_resource type="PackedScene" path="res://assets/goose/goose.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/duck/duck.glb" id="2"]
+[ext_resource type="PackedScene" path="res://assets/aligator/aligator.glb" id="3"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
 size = Vector2(40, 40)
@@ -12,8 +13,11 @@ size = Vector3(40, 0.1, 40)
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.35, 0.68, 0.88, 1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_goose"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_duck"]
 size = Vector3(1.2, 3.6, 1.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_aligator"]
+size = Vector3(4.0, 3.36, 12.0)
 
 [node name="Main" type="Node3D"]
 
@@ -34,14 +38,26 @@ shape = SubResource("BoxShape3D_ground")
 [node name="Player" type="CharacterBody3D" parent="."]
 script = ExtResource("1")
 
-[node name="GooseModel" parent="Player" instance=ExtResource("2")]
+[node name="DuckModel" parent="Player" instance=ExtResource("2")]
 position = Vector3(0, 0.622, 0)
 scale = Vector3(3, 3, 3)
 rotation_degrees = Vector3(0, 180, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
 position = Vector3(0, 1.8, 0)
-shape = SubResource("BoxShape3D_goose")
+shape = SubResource("BoxShape3D_duck")
+
+[node name="Aligator" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+
+[node name="AligatorModel" parent="Aligator" instance=ExtResource("3")]
+position = Vector3(0, 1.684, 0)
+scale = Vector3(6, 6, 6)
+rotation_degrees = Vector3(0, 180, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Aligator"]
+position = Vector3(0, 1.68, 0)
+shape = SubResource("BoxShape3D_aligator")
 
 [node name="Camera3D" type="Camera3D" parent="."]
 position = Vector3(0, 16, 14)
