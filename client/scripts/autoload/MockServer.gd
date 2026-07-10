@@ -3,10 +3,31 @@ extends Node
 const TICK_HZ := 10.0 # api-spec.md STATE_TICK_RATE
 const GAME_DURATION := 180 # api-spec.md GAME_DURATION_SECONDS
 const TARGET_SCORE := 5
+const PICKUP_DISTANCE := 1.2 # api-spec.md PICKUP_DISTANCE
+const DELIVER_DISTANCE := 1.8 # api-spec.md DELIVER_DISTANCE
+const NEST_POSITION := Vector3(0, 1.68, 65) # matches Pond.tscn Nest node
+const INITIAL_DUCKLING_COUNT := TARGET_SCORE + 2
+const WANDER_SPEED := 1.2
+const WANDER_TURN_INTERVAL := 2.0
+const POND_BOUND := 70.0
+const FOLLOW_SPACING := 1.5
+const FOLLOW_LEASH := FOLLOW_SPACING * 1.6 # hard cap on gap so it can't balloon at high speed
+const FOLLOW_LERP_SPEED := 4.0
+const FOLLOW_LERP_FALLOFF := 0.5 # each link back in the chain lags a bit more
+const FOLLOW_LERP_MIN := 1.5
+const MOVING_SPEED_THRESHOLD := 1.0 # player speed (units/sec) above which it's considered "moving"
+const CIRCLE_RADIUS := 2.2
+const CIRCLE_LERP_SPEED := 4.0
+const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 
 var _broadcast_timer := 0.0
 var _second_timer := 0.0
 var _npc_angle := 0.0
+
+# Internal mock-simulation-only bookkeeping (not part of the api-spec.md Duckling schema).
+var _wander_state: Dictionary = {} # ducklingId -> {"dir": Vector2, "timer": float}
+var _carry_queues: Dictionary = {} # playerId -> Array[ducklingId]
+var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_moving": bool, "idle_spin": float}
 
 func _ready() -> void:
 	GameData.target_score = TARGET_SCORE
@@ -21,7 +42,13 @@ func start_game() -> void:
 	GameData.remaining_seconds = GAME_DURATION
 	GameData.score = 0
 	GameData.winner = null
-	GameData.ducklings = [_fake_duckling("d1"), _fake_duckling("d2"), _fake_duckling("d3")]
+	_wander_state.clear()
+	_carry_queues.clear()
+	_player_motion.clear()
+	var ducklings: Array = []
+	for i in range(INITIAL_DUCKLING_COUNT):
+		ducklings.append(_fake_duckling("d%d" % (i + 1)))
+	GameData.ducklings = ducklings
 	GameData.game_event.emit("game_started", {})
 	GameData.game_state_changed.emit()
 
@@ -42,10 +69,159 @@ func _process(delta: float) -> void:
 			_end_game("tagger")
 			return
 
+	_update_duckling_wander(delta)
+	_check_pickup()
+	_update_player_motion(delta)
+	_update_duckling_follow(delta)
+	_check_deliver()
+
 	_broadcast_timer += delta
 	if _broadcast_timer >= 1.0 / TICK_HZ:
 		_broadcast_timer = 0.0
 		GameData.game_state_changed.emit()
+
+func _update_duckling_wander(delta: float) -> void:
+	for d in GameData.ducklings:
+		if d["state"] != "spawned":
+			continue
+		var id: String = d["ducklingId"]
+		var w: Dictionary = _wander_state.get(id, {"dir": Vector2.ZERO, "timer": 0.0})
+		w["timer"] -= delta
+		if w["timer"] <= 0.0 or w["dir"] == Vector2.ZERO:
+			var angle := randf_range(0.0, TAU)
+			w["dir"] = Vector2(cos(angle), sin(angle))
+			w["timer"] = randf_range(WANDER_TURN_INTERVAL * 0.5, WANDER_TURN_INTERVAL * 1.5)
+		_wander_state[id] = w
+
+		var pos: Dictionary = d["position"]
+		var next_x: float = clamp(pos["x"] + w["dir"].x * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
+		var next_z: float = clamp(pos["z"] + w["dir"].y * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
+		d["position"] = {"x": next_x, "y": pos["y"], "z": next_z}
+
+func _check_pickup() -> void:
+	for player in GameData.players:
+		if player["team"] != "duck":
+			continue
+		var player_id: String = player["playerId"]
+		var player_pos := _dict_to_vec3(player["position"])
+		for d in GameData.ducklings:
+			if d["state"] != "spawned":
+				continue
+			var duckling_pos := _dict_to_vec3(d["position"])
+			if player_pos.distance_to(duckling_pos) <= PICKUP_DISTANCE:
+				d["state"] = "carried"
+				d["carrierPlayerId"] = player_id
+				_wander_state.erase(d["ducklingId"])
+				var queue: Array = _carry_queues.get(player_id, [])
+				queue.append(d["ducklingId"])
+				_carry_queues[player_id] = queue
+
+func _update_player_motion(delta: float) -> void:
+	for player in GameData.players:
+		if player["team"] != "duck":
+			continue
+		var player_id: String = player["playerId"]
+		var pos := _dict_to_vec3(player["position"])
+		var m: Dictionary = _player_motion.get(player_id, {"prev_pos": pos, "is_moving": false, "idle_spin": 0.0})
+		var speed := 0.0
+		if delta > 0.0:
+			speed = pos.distance_to(m["prev_pos"]) / delta
+		m["is_moving"] = speed > MOVING_SPEED_THRESHOLD
+		m["prev_pos"] = pos
+		if not m["is_moving"]:
+			m["idle_spin"] += delta * CIRCLE_SPIN_SPEED
+		_player_motion[player_id] = m
+
+func _update_duckling_follow(delta: float) -> void:
+	var players_by_id := {}
+	for player in GameData.players:
+		players_by_id[player["playerId"]] = player
+
+	var ducklings_by_id := {}
+	for d in GameData.ducklings:
+		ducklings_by_id[d["ducklingId"]] = d
+
+	for player_id in _carry_queues.keys():
+		var player = players_by_id.get(player_id)
+		if player == null:
+			continue
+		var queue: Array = _carry_queues[player_id]
+		if queue.is_empty():
+			continue
+		var player_pos := _dict_to_vec3(player["position"])
+		var motion: Dictionary = _player_motion.get(player_id, {"is_moving": false, "idle_spin": 0.0})
+
+		if motion["is_moving"]:
+			# Leader-follows-leader chain: each duckling keeps roughly FOLLOW_SPACING
+			# distance from the node in front of it, but lags behind with its own
+			# lerp speed so the line goes loose/slack through turns instead of
+			# rotating as a rigid rod.
+			var leader_pos := player_pos
+			for i in range(queue.size()):
+				var d = ducklings_by_id.get(queue[i])
+				if d == null:
+					continue
+				var current := _dict_to_vec3(d["position"])
+				var to_leader := current - leader_pos
+				var dist := to_leader.length()
+				var dir := to_leader.normalized() if dist > 0.01 else Vector3.BACK
+				var next_pos: Vector3
+				if dist > FOLLOW_LEASH:
+					# Rope pulled taut: hard-clamp the gap so it can never keep growing
+					# while the leader is moving faster than the lerp can catch up.
+					next_pos = leader_pos + dir * FOLLOW_LEASH
+				else:
+					var target := leader_pos + dir * FOLLOW_SPACING
+					var lerp_speed: float = max(FOLLOW_LERP_MIN, FOLLOW_LERP_SPEED - i * FOLLOW_LERP_FALLOFF)
+					next_pos = current.lerp(target, clamp(delta * lerp_speed, 0.0, 1.0))
+				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
+				leader_pos = next_pos
+		else:
+			# Idle: gather loosely in a slowly-rotating circle beside the player.
+			var count := queue.size()
+			for i in range(count):
+				var d = ducklings_by_id.get(queue[i])
+				if d == null:
+					continue
+				var angle: float = motion["idle_spin"] + (TAU / count) * i
+				var target := player_pos + Vector3(cos(angle), 0, sin(angle)) * CIRCLE_RADIUS
+				var current := _dict_to_vec3(d["position"])
+				var next_pos := current.lerp(target, clamp(delta * CIRCLE_LERP_SPEED, 0.0, 1.0))
+				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
+
+func _check_deliver() -> void:
+	for player in GameData.players:
+		if player["team"] != "duck":
+			continue
+		var player_id: String = player["playerId"]
+		var queue: Array = _carry_queues.get(player_id, [])
+		if queue.is_empty():
+			continue
+		var player_pos := _dict_to_vec3(player["position"])
+		if player_pos.distance_to(NEST_POSITION) > DELIVER_DISTANCE:
+			continue
+
+		var ducklings_by_id := {}
+		for d in GameData.ducklings:
+			ducklings_by_id[d["ducklingId"]] = d
+
+		var delivered_count := 0
+		for duckling_id in queue:
+			var d = ducklings_by_id.get(duckling_id)
+			if d == null:
+				continue
+			d["state"] = "delivered"
+			d["carrierPlayerId"] = null
+			delivered_count += 1
+
+		_carry_queues[player_id] = []
+		GameData.score += delivered_count
+		GameData.game_event.emit("duckling_delivered", {"playerId": player_id, "count": delivered_count})
+		if GameData.score >= GameData.target_score:
+			_end_game("duck")
+
+func _dict_to_vec3(pos: Dictionary) -> Vector3:
+	return Vector3(pos["x"], pos["y"], pos["z"])
 
 func _end_game(winner: String) -> void:
 	GameData.phase = "ended"
