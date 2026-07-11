@@ -35,6 +35,8 @@ var _wander_state: Dictionary = {} # ducklingId -> {"dir": Vector2, "timer": flo
 var _carry_queues: Dictionary = {} # playerId -> Array[ducklingId]
 var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_moving": bool, "idle_spin": float}
 var _delivering_settle: Dictionary = {} # ducklingId -> seconds spent settled at the nest center
+var _delivery_batches: Dictionary = {} # batchId -> {playerId, playerName, total, delivered}
+var _next_delivery_batch_id := 1
 
 func _ready() -> void:
 	GameData.target_score = TARGET_SCORE
@@ -87,6 +89,7 @@ func _prepare_lobby(nickname: String, room_id: String) -> void:
 	GameData.score = 0
 	GameData.winner = null
 	GameData.ducklings = []
+	_delivery_batches.clear()
 	GameData.players = [
 		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck"),
 		_fake_player("npc1", "Mock Police", "tagger", "aligator"),
@@ -104,6 +107,8 @@ func start_game() -> void:
 	_carry_queues.clear()
 	_player_motion.clear()
 	_delivering_settle.clear()
+	_delivery_batches.clear()
+	_next_delivery_batch_id = 1
 	var ducklings: Array = []
 	for i in range(INITIAL_DUCKLING_COUNT):
 		ducklings.append(_fake_duckling("d%d" % (i + 1)))
@@ -270,15 +275,34 @@ func _check_deliver() -> void:
 		for d in GameData.ducklings:
 			ducklings_by_id[d["ducklingId"]] = d
 
-		# Hand the carried ducklings off to the "delivering" state instead of
-		# scoring them instantly. They then swim into the nest on their own
-		# (see _update_delivering) and are scored the moment each one arrives.
+		var delivering_ducklings: Array = []
 		for duckling_id in queue:
 			var d = ducklings_by_id.get(duckling_id)
 			if d == null:
 				continue
+			delivering_ducklings.append(d)
+
+		if delivering_ducklings.is_empty():
+			_carry_queues[player_id] = []
+			continue
+
+		var batch_id: String = "delivery_%d" % _next_delivery_batch_id
+		_next_delivery_batch_id += 1
+		_delivery_batches[batch_id] = {
+			"playerId": player_id,
+			"playerName": str(player.get("nickname", player_id)),
+			"total": delivering_ducklings.size(),
+			"delivered": 0,
+		}
+
+		# Hand the carried ducklings off to the "delivering" state instead of
+		# scoring them instantly. They then swim into the nest on their own
+		# (see _update_delivering), then emit one notification when the whole
+		# batch has arrived.
+		for d in delivering_ducklings:
 			d["state"] = "delivering"
 			d["carrierPlayerId"] = null
+			d["deliveryBatchId"] = batch_id
 
 		_carry_queues[player_id] = []
 
@@ -308,7 +332,30 @@ func _update_delivering(delta: float) -> void:
 func _rescue_duckling(d: Dictionary) -> void:
 	d["state"] = "delivered"
 	GameData.score += 1
-	GameData.game_event.emit("duckling_delivered", {"ducklingId": d["ducklingId"], "count": 1})
+
+	var batch_id: String = str(d.get("deliveryBatchId", ""))
+	d.erase("deliveryBatchId")
+
+	if batch_id == "" or not _delivery_batches.has(batch_id):
+		GameData.game_event.emit("duckling_delivered", {"ducklingId": d["ducklingId"], "count": 1})
+		if GameData.score >= GameData.target_score:
+			_end_game("duck")
+		return
+
+	var batch: Dictionary = _delivery_batches[batch_id]
+	batch["delivered"] = int(batch.get("delivered", 0)) + 1
+	_delivery_batches[batch_id] = batch
+
+	if int(batch["delivered"]) < int(batch["total"]):
+		return
+
+	_delivery_batches.erase(batch_id)
+	GameData.game_event.emit("duckling_delivered", {
+		"ducklingId": d["ducklingId"],
+		"count": int(batch["total"]),
+		"playerId": str(batch["playerId"]),
+		"playerName": str(batch["playerName"]),
+	})
 	if GameData.score >= GameData.target_score:
 		_end_game("duck")
 
