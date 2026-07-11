@@ -18,6 +18,10 @@ enum ContentView { NONE, PLAY, INVENTORY, SETTINGS, LOGIN }
 @onready var start_game_button: Button = %StartGameButton
 @onready var alert_overlay: Control = %AlertOverlay
 @onready var alert_message_label: Label = %AlertMessageLabel
+@onready var bgm_volume_slider: HSlider = %BgmVolumeSlider
+@onready var sfx_volume_slider: HSlider = %SfxVolumeSlider
+@onready var bgm_volume_value_label: Label = %BgmVolumeValueLabel
+@onready var sfx_volume_value_label: Label = %SfxVolumeValueLabel
 
 const NICKNAME_MAX_LENGTH := 8
 
@@ -32,6 +36,7 @@ func _ready() -> void:
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
 	_on_nickname_input_text_changed(nickname_input.text)
+	_init_audio_settings()
 
 	_set_content_view(ContentView.NONE)
 	lobby_overlay.visible = false
@@ -108,6 +113,29 @@ func _set_content_view(view: ContentView) -> void:
 	login_panel.visible = view == ContentView.LOGIN
 	if view == ContentView.PLAY:
 		_refresh_room_list()
+
+
+func _init_audio_settings() -> void:
+	bgm_volume_slider.value_changed.connect(_on_bgm_volume_slider_value_changed)
+	sfx_volume_slider.value_changed.connect(_on_sfx_volume_slider_value_changed)
+	bgm_volume_slider.set_value_no_signal(AudioManager.get_bgm_volume() * 100.0)
+	sfx_volume_slider.set_value_no_signal(AudioManager.get_sfx_volume() * 100.0)
+	_refresh_audio_volume_labels()
+
+
+func _refresh_audio_volume_labels() -> void:
+	bgm_volume_value_label.text = "%d%%" % int(round(bgm_volume_slider.value))
+	sfx_volume_value_label.text = "%d%%" % int(round(sfx_volume_slider.value))
+
+
+func _on_bgm_volume_slider_value_changed(value: float) -> void:
+	AudioManager.set_bgm_volume(value / 100.0)
+	_refresh_audio_volume_labels()
+
+
+func _on_sfx_volume_slider_value_changed(value: float) -> void:
+	AudioManager.set_sfx_volume(value / 100.0)
+	_refresh_audio_volume_labels()
 
 
 func _on_play_button_pressed() -> void:
