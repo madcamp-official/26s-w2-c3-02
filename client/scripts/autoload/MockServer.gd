@@ -186,6 +186,28 @@ func _check_pickup() -> void:
 				queue.append(d["ducklingId"])
 				_carry_queues[player_id] = queue
 
+func release_ducklings(player_id: String, at_position: Vector3) -> void:
+	# Called when the duck is caught: drop everything it was carrying back into the
+	# pond at the catch spot (state -> spawned so they wander and can be re-collected).
+	var queue: Array = _carry_queues.get(player_id, [])
+	if queue.is_empty():
+		return
+	var ducklings_by_id := {}
+	for d in GameData.ducklings:
+		ducklings_by_id[d["ducklingId"]] = d
+	for duckling_id in queue:
+		var d = ducklings_by_id.get(duckling_id)
+		if d == null:
+			continue
+		var angle := randf_range(0.0, TAU)
+		var radius := randf_range(1.0, 3.0)
+		d["position"] = {"x": at_position.x + cos(angle) * radius, "y": 0.0, "z": at_position.z + sin(angle) * radius}
+		d["state"] = "spawned"
+		d["carrierPlayerId"] = null
+		_wander_state.erase(duckling_id)
+	_carry_queues[player_id] = []
+	GameData.game_state_changed.emit()
+
 func _update_player_motion(delta: float) -> void:
 	for player in GameData.players:
 		if player["team"] != "duck":

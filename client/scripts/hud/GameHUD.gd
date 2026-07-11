@@ -2,7 +2,7 @@ extends CanvasLayer
 
 const TOAST_DURATION := 3.0
 const NEST_POSITION := Vector3(0, 1.68, 65)
-const JAIL_POSITION := Vector3(-55, 1.0, -45) # TODO: replace with B track's actual jail position.
+const JAIL_FALLBACK_POSITION := Vector3(-32, 0.5, 32) # used only if the jail node isn't found
 const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(116, 60)
 
@@ -21,6 +21,7 @@ const INDICATOR_SIZE := Vector2(116, 60)
 @onready var debug_summary_label: Label = %DebugSummaryLabel
 
 var _toast_remaining := 0.0
+var _jail_node: Node3D = null
 
 
 func _ready() -> void:
@@ -213,7 +214,14 @@ func _update_direction_indicators() -> void:
 		return
 
 	_update_direction_indicator(nest_direction_indicator, nest_arrow_label, NEST_POSITION, camera)
-	_update_direction_indicator(jail_direction_indicator, jail_arrow_label, JAIL_POSITION, camera)
+	_update_direction_indicator(jail_direction_indicator, jail_arrow_label, _jail_world_position(), camera)
+
+func _jail_world_position() -> Vector3:
+	if not is_instance_valid(_jail_node):
+		_jail_node = get_tree().get_first_node_in_group("jail") as Node3D
+	if is_instance_valid(_jail_node):
+		return _jail_node.global_position
+	return JAIL_FALLBACK_POSITION
 
 
 func _update_direction_indicator(indicator: Control, arrow_label: Label, world_position: Vector3, camera: Camera3D) -> void:

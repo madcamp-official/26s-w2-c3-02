@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://1jqmi6alwxrx"
-path="res://.godot/imported/duckling.glb-0b172bd5ffa09de99ba0785484b47d7f.scn"
+uid="uid://dxmphal8gk8hy"
+path="res://.godot/imported/island.glb-05febc521080fd7c64033ca81d1aee56.scn"
 
 [deps]
 
-source_file="res://assets/duckling/duckling.glb"
-dest_files=["res://.godot/imported/duckling.glb-0b172bd5ffa09de99ba0785484b47d7f.scn"]
+source_file="res://assets/island_1/island.glb"
+dest_files=["res://.godot/imported/island.glb-05febc521080fd7c64033ca81d1aee56.scn"]
 
 [params]
 
