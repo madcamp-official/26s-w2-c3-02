@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/main_menu/background.png" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
-[ext_resource type="Texture2D" path="res://assets/ui/icons/settings_icon.png" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/menu/InventoryPreview3D.tscn" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 46.0
@@ -22,6 +22,22 @@ corner_radius_bottom_right = 18
 corner_radius_bottom_left = 18
 shadow_color = Color(0, 0, 0, 0.35)
 shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_preview_box"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.0117647, 0.054902, 0.101961, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.247059, 0.352941, 0.470588, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input"]
 bg_color = Color(0.0117647, 0.054902, 0.101961, 0.95)
@@ -102,23 +118,55 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
-[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_icon_button"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sidebar_button"]
+content_margin_left = 24.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+bg_color = Color(0.0117647, 0.054902, 0.101961, 0.6)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.172549, 0.313726, 0.478431, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
-[sub_resource type="Shader" id="Shader_icon_mask"]
-code = "shader_type canvas_item;
-uniform vec4 fill_color : source_color = vec4(1.0);
-void fragment() {
-	vec4 tex = texture(TEXTURE, UV);
-	COLOR = vec4(fill_color.rgb, tex.a * fill_color.a);
-}"
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sidebar_button_hover"]
+content_margin_left = 24.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+bg_color = Color(0.0862745, 0.223529, 0.360784, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.172549, 0.313726, 0.478431, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_icon_black"]
-shader = SubResource("Shader_icon_mask")
-shader_parameter/fill_color = Color(0.04, 0.05, 0.06, 1)
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sidebar_button_active"]
+content_margin_left = 24.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+bg_color = Color(0.129412, 0.45098, 0.780392, 1)
+border_width_left = 4
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.466667, 0.713726, 0.956863, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_icon_white"]
-shader = SubResource("Shader_icon_mask")
-shader_parameter/fill_color = Color(1, 1, 1, 1)
+[sub_resource type="ButtonGroup" id="ButtonGroup_sidebar"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -176,19 +224,14 @@ theme_override_constants/margin_top = 64
 theme_override_constants/margin_right = 96
 theme_override_constants/margin_bottom = 64
 
-[node name="CenterContainer" type="CenterContainer" parent="MarginContainer"]
+[node name="RootLayout" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="TitleBar" type="CenterContainer" parent="MarginContainer/RootLayout"]
 layout_mode = 2
 
-[node name="Panel" type="PanelContainer" parent="MarginContainer/CenterContainer"]
-layout_mode = 2
-custom_minimum_size = Vector2(660, 0)
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="Content" type="VBoxContainer" parent="MarginContainer/CenterContainer/Panel"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="TitleLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
+[node name="TitleLabel" type="Label" parent="MarginContainer/RootLayout/TitleBar"]
 layout_mode = 2
 text = "경찰과 오리"
 horizontal_alignment = 1
@@ -197,81 +240,332 @@ theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 66
 
-[node name="SubtitleLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
+[node name="BodyRow" type="HBoxContainer" parent="MarginContainer/RootLayout"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 32
+
+[node name="SidebarButtons" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 0)
+theme_override_constants/separation = 14
+
+[node name="PlayButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+toggle_mode = true
+button_group = SubResource("ButtonGroup_sidebar")
+alignment = 0
+text = "플레이"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 27
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+
+[node name="InventoryButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+toggle_mode = true
+button_group = SubResource("ButtonGroup_sidebar")
+alignment = 0
+text = "인벤토리"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 27
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+
+[node name="SettingsNavButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+toggle_mode = true
+button_group = SubResource("ButtonGroup_sidebar")
+alignment = 0
+text = "설정"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 27
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+
+[node name="LoginButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
+toggle_mode = true
+button_group = SubResource("ButtonGroup_sidebar")
+alignment = 0
+text = "로그인"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 27
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+
+[node name="ContentArea" type="CenterContainer" parent="MarginContainer/RootLayout/BodyRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PlayPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(780, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="SubtitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content"]
 layout_mode = 2
 text = "닉네임을 설정하고 방을 만들거나 참가하세요."
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 26
 
-[node name="NicknameInput" type="LineEdit" parent="MarginContainer/CenterContainer/Panel/Content"]
+[node name="PlayBody" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="RoomListSection" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody"]
+layout_mode = 2
+custom_minimum_size = Vector2(300, 0)
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="RoomListTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/RoomListSection"]
+layout_mode = 2
+text = "게임 목록"
+theme_override_colors/font_color = Color(0.682353, 0.780392, 0.886275, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="RoomListScroll" type="ScrollContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/RoomListSection"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 240)
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="RoomList" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/RoomListSection/RoomListScroll"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="JoinCreateColumn" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody"]
+layout_mode = 2
+custom_minimum_size = Vector2(280, 0)
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="NicknameRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NicknameLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/NicknameRow"]
+layout_mode = 2
+text = "닉네임:"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="NicknameInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/NicknameRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+size_flags_horizontal = 3
 placeholder_text = "닉네임"
+max_length = 8
 text = "Player"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
-[node name="RoomCodeInput" type="LineEdit" parent="MarginContainer/CenterContainer/Panel/Content"]
+[node name="RoomCodeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="RoomCodeFieldLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/RoomCodeRow"]
+layout_mode = 2
+text = "참가코드:"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="RoomCodeInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/RoomCodeRow"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
-placeholder_text = "방 코드 4자리 숫자"
+custom_minimum_size = Vector2(0, 60)
+size_flags_horizontal = 3
+placeholder_text = "4자리 숫자"
 max_length = 4
 text = "1234"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
-[node name="Buttons" type="HBoxContainer" parent="MarginContainer/CenterContainer/Panel/Content"]
-layout_mode = 2
-theme_override_constants/separation = 34
-
-[node name="CreateRoomButton" type="Button" parent="MarginContainer/CenterContainer/Panel/Content/Buttons"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 72)
-size_flags_horizontal = 3
-text = "방 만들기"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 34
-theme_override_styles/normal = SubResource("StyleBoxFlat_green")
-theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-
-[node name="JoinRoomButton" type="Button" parent="MarginContainer/CenterContainer/Panel/Content/Buttons"]
+[node name="JoinRoomButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 72)
-size_flags_horizontal = 3
-text = "방 입장"
+custom_minimum_size = Vector2(0, 60)
+text = "참가하기"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 34
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 26
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[node name="LobbyPanel" type="PanelContainer" parent="MarginContainer/CenterContainer"]
+[node name="CreateRoomButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 60)
+text = "방 만들기"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_green")
+theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+
+[node name="InventoryPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
 unique_name_in_owner = true
 visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(460, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+alignment = 1
+
+[node name="InventoryTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
+layout_mode = 2
+text = "인벤토리"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 40
+
+[node name="PreviewBoxCenter" type="CenterContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
+layout_mode = 2
+
+[node name="PreviewBox" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter"]
+layout_mode = 2
+custom_minimum_size = Vector2(360, 360)
+theme_override_styles/panel = SubResource("StyleBoxFlat_preview_box")
+
+[node name="PreviewViewportContainer" type="SubViewportContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox"]
+layout_mode = 2
+mouse_filter = 2
+stretch = true
+
+[node name="PreviewViewport" type="SubViewport" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer"]
+size = Vector2i(360, 360)
+
+[node name="InventoryPreview3D" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer/PreviewViewport" instance=ExtResource("4")]
+
+[node name="SettingsPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(660, 280)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel"]
+layout_mode = 2
+
+[node name="PlaceholderLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content"]
+layout_mode = 2
+text = "설정 기능은 준비 중입니다."
+horizontal_alignment = 1
+vertical_alignment = 1
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="LoginPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(660, 280)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/LoginPanel"]
+layout_mode = 2
+
+[node name="PlaceholderLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/LoginPanel/Content"]
+layout_mode = 2
+text = "로그인 기능은 준비 중입니다."
+horizontal_alignment = 1
+vertical_alignment = 1
+size_flags_vertical = 3
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="LobbyOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="LobbyOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.28)
+
+[node name="CenterContainer" type="CenterContainer" parent="LobbyOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LobbyPanel" type="PanelContainer" parent="LobbyOverlay/CenterContainer"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(660, 0)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="Content" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel"]
+[node name="Content" type="VBoxContainer" parent="LobbyOverlay/CenterContainer/LobbyPanel"]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="LobbyTitleLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="LobbyTitleLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
 text = "로비"
 horizontal_alignment = 1
@@ -280,7 +574,7 @@ theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 56
 
-[node name="RoomCodeLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="RoomCodeLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "방 코드: -"
@@ -288,19 +582,19 @@ horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 32
 
-[node name="PlayersTitleLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="PlayersTitleLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
 text = "참가자"
 theme_override_colors/font_color = Color(0.682353, 0.780392, 0.886275, 1)
 theme_override_font_sizes/font_size = 26
 
-[node name="PlayersList" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="PlayersList" type="VBoxContainer" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 168)
 theme_override_constants/separation = 8
 
-[node name="LobbyStatusLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="LobbyStatusLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "필요 조건: 경찰 1명, 오리 2명"
@@ -308,7 +602,7 @@ horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 24
 
-[node name="AddMockPlayerButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="AddMockPlayerButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 54)
@@ -321,11 +615,11 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[node name="LobbyButtons" type="HBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+[node name="LobbyButtons" type="HBoxContainer" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
 theme_override_constants/separation = 34
 
-[node name="BackButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons"]
+[node name="BackButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
 size_flags_horizontal = 3
@@ -338,7 +632,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[node name="StartGameButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons"]
+[node name="StartGameButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
@@ -351,13 +645,6 @@ theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
-
-[node name="SettingsPanel" type="PanelContainer" parent="MarginContainer/CenterContainer"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(660, 280)
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="AlertOverlay" type="Control" parent="."]
 unique_name_in_owner = true
@@ -416,91 +703,13 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[node name="SettingsButton" type="Button" parent="."]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -106.0
-offset_top = -106.0
-offset_right = -32.0
-offset_bottom = -32.0
-grow_horizontal = 0
-grow_vertical = 0
-tooltip_text = "설정"
-flat = true
-theme_override_styles/normal = SubResource("StyleBoxEmpty_icon_button")
-theme_override_styles/hover = SubResource("StyleBoxEmpty_icon_button")
-theme_override_styles/pressed = SubResource("StyleBoxEmpty_icon_button")
-theme_override_styles/focus = SubResource("StyleBoxEmpty_icon_button")
-
-[node name="ShadowDown" type="TextureRect" parent="SettingsButton"]
-material = SubResource("ShaderMaterial_icon_black")
-layout_mode = 1
-offset_left = 14.0
-offset_top = 20.0
-offset_right = 68.0
-offset_bottom = 74.0
-mouse_filter = 2
-texture = ExtResource("4")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="OutlineLeft" type="TextureRect" parent="SettingsButton"]
-material = SubResource("ShaderMaterial_icon_black")
-layout_mode = 1
-offset_left = 8.0
-offset_top = 12.0
-offset_right = 62.0
-offset_bottom = 66.0
-mouse_filter = 2
-texture = ExtResource("4")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="OutlineRight" type="TextureRect" parent="SettingsButton"]
-material = SubResource("ShaderMaterial_icon_black")
-layout_mode = 1
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 70.0
-offset_bottom = 66.0
-mouse_filter = 2
-texture = ExtResource("4")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="OutlineUp" type="TextureRect" parent="SettingsButton"]
-material = SubResource("ShaderMaterial_icon_black")
-layout_mode = 1
-offset_left = 12.0
-offset_top = 8.0
-offset_right = 66.0
-offset_bottom = 62.0
-mouse_filter = 2
-texture = ExtResource("4")
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Icon" type="TextureRect" parent="SettingsButton"]
-material = SubResource("ShaderMaterial_icon_white")
-layout_mode = 1
-offset_left = 12.0
-offset_top = 12.0
-offset_right = 66.0
-offset_bottom = 66.0
-mouse_filter = 2
-texture = ExtResource("4")
-expand_mode = 1
-stretch_mode = 5
-
-[connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
-[connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
-[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/AddMockPlayerButton" to="." method="_on_add_mock_player_button_pressed"]
-[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_back_button_pressed"]
-[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/StartGameButton" to="." method="_on_start_game_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/SidebarButtons/PlayButton" to="." method="_on_play_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/SidebarButtons/InventoryButton" to="." method="_on_inventory_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/SidebarButtons/SettingsNavButton" to="." method="_on_settings_nav_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/SidebarButtons/LoginButton" to="." method="_on_login_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
+[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
+[connection signal="pressed" from="LobbyOverlay/CenterContainer/LobbyPanel/Content/AddMockPlayerButton" to="." method="_on_add_mock_player_button_pressed"]
+[connection signal="pressed" from="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_back_button_pressed"]
+[connection signal="pressed" from="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons/StartGameButton" to="." method="_on_start_game_button_pressed"]
 [connection signal="pressed" from="AlertOverlay/CenterContainer/Panel/Content/AlertOkButton" to="." method="_on_alert_ok_button_pressed"]
-[connection signal="pressed" from="SettingsButton" to="." method="_on_settings_button_pressed"]

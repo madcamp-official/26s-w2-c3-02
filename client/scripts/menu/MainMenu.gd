@@ -1,12 +1,16 @@
 extends Control
 
-@onready var menu_panel: PanelContainer = $"MarginContainer/CenterContainer/Panel"
-@onready var lobby_panel: PanelContainer = %LobbyPanel
+enum ContentView { NONE, PLAY, INVENTORY, SETTINGS, LOGIN }
+
+@onready var play_panel: PanelContainer = %PlayPanel
+@onready var inventory_panel: PanelContainer = %InventoryPanel
 @onready var settings_panel: PanelContainer = %SettingsPanel
-@onready var settings_button: Button = %SettingsButton
+@onready var login_panel: PanelContainer = %LoginPanel
+@onready var room_list: VBoxContainer = %RoomList
 @onready var nickname_input: LineEdit = %NicknameInput
 @onready var room_code_input: LineEdit = %RoomCodeInput
 @onready var join_room_button: Button = %JoinRoomButton
+@onready var lobby_overlay: Control = %LobbyOverlay
 @onready var room_code_label: Label = %RoomCodeLabel
 @onready var players_list: VBoxContainer = %PlayersList
 @onready var lobby_status_label: Label = %LobbyStatusLabel
@@ -15,25 +19,26 @@ extends Control
 @onready var alert_overlay: Control = %AlertOverlay
 @onready var alert_message_label: Label = %AlertMessageLabel
 
+const NICKNAME_MAX_LENGTH := 8
+
 var _normalizing_room_code := false
-var _settings_return_view := "menu"
-var _settings_button_base_position: Vector2
-var _settings_hover_tween: Tween = null
+var _normalizing_nickname := false
+var _current_view: ContentView = ContentView.NONE
 
 
 func _ready() -> void:
 	GameData.room_state_changed.connect(_refresh_lobby)
 	room_code_input.text_changed.connect(_on_room_code_input_text_changed)
-	settings_button.mouse_entered.connect(_on_settings_button_mouse_entered)
-	settings_button.mouse_exited.connect(_on_settings_button_mouse_exited)
-	_settings_button_base_position = settings_button.position
 	_on_room_code_input_text_changed(room_code_input.text)
+	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
+	_on_nickname_input_text_changed(nickname_input.text)
+
+	_set_content_view(ContentView.NONE)
+	lobby_overlay.visible = false
 
 	if GameData.menu_entry_view == "lobby":
 		GameData.menu_entry_view = "menu"
 		_show_lobby()
-	else:
-		_show_menu()
 
 
 func _exit_tree() -> void:
@@ -71,6 +76,19 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 	join_room_button.disabled = normalized.length() != 4
 
 
+func _on_nickname_input_text_changed(new_text: String) -> void:
+	if _normalizing_nickname:
+		return
+	if new_text.length() <= NICKNAME_MAX_LENGTH:
+		return
+	var caret := nickname_input.caret_column
+	var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
+	_normalizing_nickname = true
+	nickname_input.text = truncated
+	nickname_input.caret_column = min(caret, truncated.length())
+	_normalizing_nickname = false
+
+
 func _room_code_digits(value: String) -> String:
 	var code := ""
 	for i in range(value.length()):
@@ -82,38 +100,135 @@ func _room_code_digits(value: String) -> String:
 	return code
 
 
-func _show_menu() -> void:
-	menu_panel.visible = true
-	lobby_panel.visible = false
-	settings_panel.visible = false
-	alert_overlay.visible = false
+func _set_content_view(view: ContentView) -> void:
+	_current_view = view
+	play_panel.visible = view == ContentView.PLAY
+	inventory_panel.visible = view == ContentView.INVENTORY
+	settings_panel.visible = view == ContentView.SETTINGS
+	login_panel.visible = view == ContentView.LOGIN
+	if view == ContentView.PLAY:
+		_refresh_room_list()
+
+
+func _on_play_button_pressed() -> void:
+	_set_content_view(ContentView.PLAY)
+
+
+func _on_inventory_button_pressed() -> void:
+	_set_content_view(ContentView.INVENTORY)
+
+
+func _on_settings_nav_button_pressed() -> void:
+	_set_content_view(ContentView.SETTINGS)
+
+
+func _on_login_button_pressed() -> void:
+	_set_content_view(ContentView.LOGIN)
+
+
+func _refresh_room_list() -> void:
+	if not is_instance_valid(room_list):
+		return
+
+	for child in room_list.get_children():
+		room_list.remove_child(child)
+		child.queue_free()
+
+	for room in MockServer.list_rooms():
+		room_list.add_child(_make_room_row(room))
+
+
+func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.border_color = border
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_right = 10
+	style.corner_radius_bottom_left = 10
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
+	return style
+
+
+func _make_room_row(room: Dictionary) -> Control:
+	var room_id: String = str(room.get("room_id", "----"))
+	var host_nickname: String = str(room.get("host_nickname", "-"))
+	var player_count: int = int(room.get("player_count", 0))
+	var is_full: bool = player_count >= MockServer.MVP_PLAYER_LIMIT
+
+	var row: Button = Button.new()
+	row.custom_minimum_size = Vector2(0, 54)
+	row.text = ""
+	row.add_theme_stylebox_override("normal", _room_card_style(Color(0.0117647, 0.054902, 0.101961, 0.75), Color(0.172549, 0.313726, 0.478431, 1)))
+	row.add_theme_stylebox_override("hover", _room_card_style(Color(0.0862745, 0.223529, 0.360784, 0.9), Color(0.466667, 0.713726, 0.956863, 1)))
+	row.add_theme_stylebox_override("pressed", _room_card_style(Color(0.129412, 0.45098, 0.780392, 1), Color(0.466667, 0.713726, 0.956863, 1)))
+	row.pressed.connect(_on_room_row_pressed.bind(room_id))
+
+	var content: HBoxContainer = HBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", 12)
+	row.add_child(content)
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content.offset_left = 16.0
+	content.offset_top = 8.0
+	content.offset_right = -16.0
+	content.offset_bottom = -8.0
+
+	var dot: Panel = Panel.new()
+	dot.custom_minimum_size = Vector2(14, 14)
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var dot_style := StyleBoxFlat.new()
+	dot_style.corner_radius_top_left = 7
+	dot_style.corner_radius_top_right = 7
+	dot_style.corner_radius_bottom_right = 7
+	dot_style.corner_radius_bottom_left = 7
+	dot_style.bg_color = Color(0.85, 0.25, 0.25) if is_full else Color(0.45, 0.8, 0.3)
+	dot.add_theme_stylebox_override("panel", dot_style)
+	content.add_child(dot)
+
+	var code_label: Label = Label.new()
+	code_label.text = room_id
+	code_label.custom_minimum_size = Vector2(70, 0)
+	code_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	code_label.add_theme_font_size_override("font_size", 24)
+	code_label.add_theme_color_override("font_color", Color.WHITE)
+	content.add_child(code_label)
+
+	var host_label: Label = Label.new()
+	host_label.text = host_nickname
+	host_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	host_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	host_label.add_theme_font_size_override("font_size", 22)
+	host_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
+	content.add_child(host_label)
+
+	var count_label: Label = Label.new()
+	count_label.text = "%d/%d" % [player_count, MockServer.MVP_PLAYER_LIMIT]
+	count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	count_label.add_theme_font_size_override("font_size", 22)
+	count_label.add_theme_color_override("font_color", Color(0.682353, 0.780392, 0.886275, 1))
+	content.add_child(count_label)
+
+	return row
+
+
+func _on_room_row_pressed(room_id: String) -> void:
+	room_code_input.text = room_id
+	_on_room_code_input_text_changed(room_id)
 
 
 func _show_lobby() -> void:
-	menu_panel.visible = false
-	lobby_panel.visible = true
-	settings_panel.visible = false
+	lobby_overlay.visible = true
 	alert_overlay.visible = false
 	_refresh_lobby()
-
-
-func _show_settings() -> void:
-	if lobby_panel.visible:
-		_settings_return_view = "lobby"
-	else:
-		_settings_return_view = "menu"
-
-	menu_panel.visible = false
-	lobby_panel.visible = false
-	settings_panel.visible = true
-	alert_overlay.visible = false
-
-
-func _restore_from_settings() -> void:
-	if _settings_return_view == "lobby":
-		_show_lobby()
-	else:
-		_show_menu()
 
 
 func _refresh_lobby() -> void:
@@ -151,9 +266,10 @@ func _make_player_row(player: Dictionary) -> Control:
 
 	var name_input: LineEdit = LineEdit.new()
 	name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_input.max_length = NICKNAME_MAX_LENGTH
 	name_input.text = str(player.get("nickname", "Player"))
 	name_input.add_theme_font_size_override("font_size", 24)
-	name_input.text_changed.connect(_on_lobby_player_name_changed.bind(player_id))
+	name_input.text_changed.connect(_on_lobby_name_input_text_changed.bind(name_input, player_id))
 	row.add_child(name_input)
 
 	var team_select: OptionButton = OptionButton.new()
@@ -174,7 +290,17 @@ func _make_player_row(player: Dictionary) -> Control:
 	return row
 
 
-func _on_lobby_player_name_changed(new_text: String, player_id: String) -> void:
+func _on_lobby_name_input_text_changed(new_text: String, input: LineEdit, player_id: String) -> void:
+	if input.get_meta("normalizing", false):
+		return
+	if new_text.length() > NICKNAME_MAX_LENGTH:
+		var caret := input.caret_column
+		var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
+		input.set_meta("normalizing", true)
+		input.text = truncated
+		input.caret_column = min(caret, truncated.length())
+		input.set_meta("normalizing", false)
+		new_text = truncated
 	MockServer.set_player_nickname(player_id, new_text)
 
 
@@ -200,7 +326,7 @@ func _on_start_game_button_pressed() -> void:
 
 
 func _on_back_button_pressed() -> void:
-	_show_menu()
+	lobby_overlay.visible = false
 
 
 func _show_alert(message: String) -> void:
@@ -210,28 +336,3 @@ func _show_alert(message: String) -> void:
 
 func _on_alert_ok_button_pressed() -> void:
 	alert_overlay.visible = false
-
-
-func _on_settings_button_pressed() -> void:
-	if settings_panel.visible:
-		_restore_from_settings()
-	else:
-		_show_settings()
-
-
-func _on_settings_button_mouse_entered() -> void:
-	_animate_settings_button(_settings_button_base_position + Vector2(0.0, -6.0))
-
-
-func _on_settings_button_mouse_exited() -> void:
-	_animate_settings_button(_settings_button_base_position)
-
-
-func _animate_settings_button(target_position: Vector2) -> void:
-	if _settings_hover_tween != null and _settings_hover_tween.is_running():
-		_settings_hover_tween.kill()
-
-	_settings_hover_tween = create_tween()
-	_settings_hover_tween.set_trans(Tween.TRANS_SINE)
-	_settings_hover_tween.set_ease(Tween.EASE_OUT)
-	_settings_hover_tween.tween_property(settings_button, "position", target_position, 0.12)
