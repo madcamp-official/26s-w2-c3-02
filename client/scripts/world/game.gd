@@ -14,14 +14,15 @@ var _remote_players: Dictionary = {}
 var _duck: Node3D = null
 var _aligator: Node3D = null
 var _jail_point: Marker3D = null
+var _arrow_control_player_id := ""
 
 func _ready() -> void:
 	if GameData.phase == "lobby":
 		MockServer.start_game()
-	_target = get_tree().get_first_node_in_group("controllable_player")
 	_duck = get_node_or_null("Duck")
 	_aligator = get_node_or_null("Aligator")
 	_jail_point = get_node_or_null("JailIsland/TeleportPoint")
+	_configure_controlled_players()
 	GameData.game_state_changed.connect(_sync_remote_players)
 	GameData.game_event.connect(_on_game_event)
 	_apply_phase_positions()
@@ -42,17 +43,48 @@ func _physics_process(_delta: float) -> void:
 
 func _on_game_event(event: String, _data: Dictionary) -> void:
 	if event == "game_started":
+		_configure_controlled_players()
 		_apply_phase_positions()
 
-func _apply_phase_positions() -> void:
-	_snap_local_node_to_team(_duck, "duck")
-	_snap_local_node_to_team(_aligator, "tagger")
+func _configure_controlled_players() -> void:
+	_arrow_control_player_id = MockServer.arrow_control_player_id()
+	var local_team := MockServer.local_player_team()
 
-func _snap_local_node_to_team(node: Node3D, team: String) -> void:
+	if local_team == "tagger":
+		_configure_controlled_node(_aligator, GameData.local_player_id, "wasd", true)
+		_configure_controlled_node(_duck, _arrow_control_player_id, "arrows", _arrow_control_player_id != "")
+		_target = _aligator
+	else:
+		_configure_controlled_node(_duck, GameData.local_player_id, "wasd", true)
+		_configure_controlled_node(_aligator, _arrow_control_player_id, "arrows", _arrow_control_player_id != "")
+		_target = _duck
+
+func _configure_controlled_node(node: Node3D, player_id: String, scheme: String, enabled: bool) -> void:
+	if node == null:
+		return
+	node.set("controllable", enabled)
+	node.set("control_scheme", scheme)
+	node.set("controlled_player_id", player_id)
+	if player_id != "":
+		var player := _player_by_id(player_id)
+		if not player.is_empty():
+			node.call("set_display_name", str(player.get("nickname", player_id)))
+
+func _apply_phase_positions() -> void:
+	var duck_player_id := ""
+	if _duck != null:
+		duck_player_id = str(_duck.get("controlled_player_id"))
+	var aligator_player_id := ""
+	if _aligator != null:
+		aligator_player_id = str(_aligator.get("controlled_player_id"))
+	_snap_node_to_player_id(_duck, duck_player_id)
+	_snap_node_to_player_id(_aligator, aligator_player_id)
+
+func _snap_node_to_player_id(node: Node3D, player_id: String) -> void:
 	if node == null:
 		return
 
-	var player: Dictionary = _first_player_for_team(team)
+	var player: Dictionary = _player_by_id(player_id)
 	if player.is_empty():
 		return
 
@@ -60,9 +92,9 @@ func _snap_local_node_to_team(node: Node3D, team: String) -> void:
 	node.global_position = pos
 	node.rotation.y = float(player.get("rotationY", 0.0))
 
-func _first_player_for_team(team: String) -> Dictionary:
+func _player_by_id(player_id: String) -> Dictionary:
 	for player in GameData.players:
-		if str(player.get("team", "")) == team:
+		if str(player.get("playerId", "")) == player_id:
 			return player
 	return {}
 
@@ -75,7 +107,9 @@ func _check_jail() -> void:
 	var mouth := _aligator.global_position + forward * MOUTH_OFFSET
 	if _duck.global_position.distance_to(mouth) <= MOUTH_CATCH_RADIUS:
 		# 모든 수감/텔레포트 처리는 MockServer.jail_player()에 위임
-		MockServer.jail_player(GameData.local_player_id)
+		var duck_player_id := str(_duck.get("controlled_player_id"))
+		if duck_player_id != "":
+			MockServer.jail_player(duck_player_id)
 
 
 func _sync_remote_players() -> void:
@@ -83,6 +117,8 @@ func _sync_remote_players() -> void:
 	for p in GameData.players:
 		var pid: String = p["playerId"]
 		if pid == GameData.local_player_id:
+			continue
+		if pid == _arrow_control_player_id:
 			continue
 		seen_ids[pid] = true
 		var was_created := false

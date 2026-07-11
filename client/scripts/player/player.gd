@@ -28,6 +28,7 @@ const CHARACTER_CONFIG := {
 @export var character: String = "duck"
 @export var controllable: bool = false
 @export_enum("wasd", "arrows") var control_scheme: String = "wasd"
+@export var controlled_player_id: String = ""
 
 var _remote_target_pos: Vector3
 var _remote_target_rot: float
@@ -36,6 +37,9 @@ var _is_jailed := false
 
 
 func _ready() -> void:
+	if controlled_player_id == "":
+		controlled_player_id = GameData.local_player_id
+
 	var config: Dictionary = CHARACTER_CONFIG[character]
 	var model_scene: PackedScene = load(config["model"])
 	if model_scene == null:
@@ -86,7 +90,7 @@ func set_display_name(text: String) -> void:
 
 
 func _on_game_event(event: String, data: Dictionary) -> void:
-	var my_id := GameData.local_player_id
+	var my_id := controlled_player_id
 	match event:
 		"player_jailed":
 			if str(data.get("playerId", "")) == my_id:
@@ -191,5 +195,5 @@ func _face_input_direction(input_dir: Vector3, delta: float) -> void:
 
 
 func _update_local_transform_if_needed() -> void:
-	if character == "duck":
-		GameData.update_local_player_transform(global_position, rotation.y)
+	if controlled_player_id != "":
+		GameData.update_player_transform(controlled_player_id, global_position, rotation.y)

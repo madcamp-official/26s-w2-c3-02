@@ -9,7 +9,7 @@ const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(116, 60)
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
-const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
+const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
@@ -73,7 +73,7 @@ func _exit_tree() -> void:
 func _refresh() -> void:
 	timer_label.text = "남은 시간 %s" % _format_time(GameData.remaining_seconds)
 	score_label.text = "새끼오리 %d / %d" % [GameData.score, GameData.target_score]
-	jailed_label.text = "수감 오리 %d명" % _jailed_duck_count()
+	jailed_label.text = "수감 중 오리 %d명" % _jailed_duck_count()
 	_refresh_countdown()
 	_refresh_player_list()
 	_refresh_debug_summary()
@@ -171,7 +171,8 @@ func _make_player_row(player: Dictionary) -> Control:
 	row.custom_minimum_size = Vector2(0, 36)
 	row.add_theme_constant_override("separation", 8)
 
-	row.add_child(_make_hud_icon(_icon_path_for_team(str(player.get("team", ""))), Vector2(30, 30)))
+	var is_jailed := str(player.get("state", "")) == "jailed"
+	row.add_child(_make_role_status_icon(_icon_path_for_team(str(player.get("team", ""))), is_jailed))
 
 	var name_label: Label = Label.new()
 	name_label.text = str(player.get("nickname", "Player"))
@@ -179,9 +180,6 @@ func _make_player_row(player: Dictionary) -> Control:
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_apply_game_text_style(name_label, 22, Color.WHITE, 6, 4)
 	row.add_child(name_label)
-
-	if str(player.get("state", "")) == "jailed":
-		row.add_child(_make_hud_icon(LOCK_ICON_PATH, Vector2(26, 26)))
 
 	return row
 
@@ -209,6 +207,33 @@ func _make_hud_icon(path: String, icon_size: Vector2) -> Control:
 	_add_icon_layer(holder, texture, Vector2(4, 1), icon_size, Color(0.04, 0.05, 0.06, 1.0))
 	_add_icon_layer(holder, texture, Vector2(4, 4), icon_size, Color.WHITE)
 	return holder
+
+
+func _make_role_status_icon(role_path: String, is_jailed: bool) -> Control:
+	var holder := _make_hud_icon(role_path, Vector2(30, 30))
+	if not is_jailed or not ResourceLoader.exists(JAIL_ICON_PATH):
+		return holder
+
+	var jail_texture: Texture2D = load(JAIL_ICON_PATH) as Texture2D
+	if jail_texture == null:
+		return holder
+
+	var jail_size := Vector2(44, 50)
+	var jail_offset := Vector2(-1, -6)
+	_add_raw_icon_layer(holder, jail_texture, jail_offset, jail_size)
+	return holder
+
+
+func _add_raw_icon_layer(parent: Control, texture: Texture2D, offset: Vector2, icon_size: Vector2) -> void:
+	var layer: TextureRect = TextureRect.new()
+	layer.position = offset
+	layer.custom_minimum_size = icon_size
+	layer.size = icon_size
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.texture = texture
+	layer.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	layer.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	parent.add_child(layer)
 
 
 func _add_icon_layer(parent: Control, texture: Texture2D, offset: Vector2, icon_size: Vector2, color: Color) -> void:

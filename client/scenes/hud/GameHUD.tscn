@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" path="res://scripts/hud/GameHUD.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/hud/RescueDonut.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/jail_thumbnail.png" id="3_jail"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/nest_thumbnail.png" id="4_nest"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0313726, 0.117647, 0.211765, 0.86)
@@ -98,7 +100,7 @@ theme_override_font_sizes/font_size = 34
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "수감 오리 0명"
+text = "수감 중 오리 0명"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
@@ -256,10 +258,13 @@ offset_right = 56.0
 offset_bottom = 56.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
 
-[node name="JailPhoto" type="PanelContainer" parent="Root/JailDirectionIndicator/Rotator/Circle"]
+[node name="JailPhoto" type="TextureRect" parent="Root/JailDirectionIndicator/Rotator/Circle"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+texture = ExtResource("3_jail")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
 pivot_offset = Vector2(28, 28)
 
 [node name="JailArrowLabel" type="Label" parent="Root/JailDirectionIndicator/Rotator"]
@@ -303,10 +308,13 @@ offset_right = 56.0
 offset_bottom = 56.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
 
-[node name="NestPhoto" type="PanelContainer" parent="Root/NestDirectionIndicator/Rotator/Circle"]
+[node name="NestPhoto" type="TextureRect" parent="Root/NestDirectionIndicator/Rotator/Circle"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+texture = ExtResource("4_nest")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
 pivot_offset = Vector2(28, 28)
 
 [node name="NestArrowLabel" type="Label" parent="Root/NestDirectionIndicator/Rotator"]
@@ -350,10 +358,13 @@ offset_right = 56.0
 offset_bottom = 56.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
 
-[node name="Nest2Photo" type="PanelContainer" parent="Root/Nest2DirectionIndicator/Rotator/Circle"]
+[node name="Nest2Photo" type="TextureRect" parent="Root/Nest2DirectionIndicator/Rotator/Circle"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+texture = ExtResource("4_nest")
+expand_mode = 1
+stretch_mode = 5
+mouse_filter = 2
 pivot_offset = Vector2(28, 28)
 
 [node name="Nest2ArrowLabel" type="Label" parent="Root/Nest2DirectionIndicator/Rotator"]
