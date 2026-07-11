@@ -1,18 +1,29 @@
 [gd_scene format=3 uid="uid://ba4m3xltrkf5k"]
 
 [ext_resource type="PackedScene" uid="uid://y2osiio024u6" path="res://assets/Nest/Birds nest.glb" id="2"]
-[ext_resource type="PackedScene" uid="uid://b1w6akmrtwr12" path="res://assets/rock/rock.glb" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/props/Lilypad.tscn" id="5"]
 [ext_resource type="PackedScene" uid="uid://ck762a6n126ip" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_001.fbx" id="6"]
 [ext_resource type="PackedScene" uid="uid://vm6ec2mxdyd5" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_005.fbx" id="7"]
-[ext_resource type="PackedScene" uid="uid://b8py47c3jxlx5" path="res://assets/Grass_temp_climate/Fbx/Grass_003.fbx" id="9"]
 [ext_resource type="Texture2D" uid="uid://b20ligmxtix3c" path="res://assets/Bush_temp_climate/Textures/T_Bush_temp_climate.png" id="10"]
-[ext_resource type="Texture2D" uid="uid://dgepcdwbwpoj5" path="res://assets/Grass_temp_climate/Textures/T_Grass.png" id="11"]
 [ext_resource type="Script" uid="uid://dblcw3dk6s5pn" path="res://scripts/world/stealth_asset.gd" id="12"]
 [ext_resource type="PackedScene" uid="uid://cxpl1nq13i3ba" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_002.fbx" id="13"]
 [ext_resource type="PackedScene" uid="uid://cad2scixxcyq2" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_008.fbx" id="14"]
 [ext_resource type="PackedScene" uid="uid://bdlc8orek4x0a" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_009.fbx" id="14_d120r"]
 [ext_resource type="PackedScene" uid="uid://md3hjiq1gq13" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_012.fbx" id="15"]
+[ext_resource type="PackedScene" uid="uid://cv2ddbvv7pflv" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_003.fbx" id="BushTemp003"]
+[ext_resource type="PackedScene" uid="uid://ck2liu7qhxpd" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_006.fbx" id="BushTemp006"]
+[ext_resource type="PackedScene" uid="uid://ca1hscynp15ex" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_007.fbx" id="BushTemp007"]
+[ext_resource type="PackedScene" uid="uid://dw5n0kwq7j6ht" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_010.fbx" id="BushTemp010"]
+[ext_resource type="PackedScene" uid="uid://dwk77ikl8wt6p" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_011.fbx" id="BushTemp011"]
+[ext_resource type="PackedScene" uid="uid://ca7x8wf6wlwve" path="res://assets/rock_fbx/Low_Poly_Rock_001.fbx" id="RockAsset1"]
+[ext_resource type="PackedScene" uid="uid://dxioy5i228k53" path="res://assets/rock_fbx/Low_Poly_Rock_003.fbx" id="RockAsset2"]
+[ext_resource type="PackedScene" uid="uid://vul6jk5o4uuq" path="res://assets/rock_fbx/Low_Poly_Rock_006.fbx" id="RockAsset4"]
+[ext_resource type="PackedScene" uid="uid://d18joewtdtel" path="res://assets/rock_fbx/Low_Poly_Rock_Big_001.fbx" id="RockAsset5"]
+[ext_resource type="PackedScene" uid="uid://47013wkuj0eh" path="res://assets/rock_fbx/Low_Poly_Rock_Big_003.fbx" id="RockAsset6"]
+[ext_resource type="PackedScene" uid="uid://bwrumelfre5j4" path="res://assets/rock_fbx/Low_Poly_Rock_Big_004.fbx" id="RockAsset7"]
+[ext_resource type="PackedScene" uid="uid://bvvwu0n45ld45" path="res://assets/rock_fbx/Low_Poly_Rock_Small_003.fbx" id="RockAsset9"]
+[ext_resource type="PackedScene" uid="uid://dy3w1f407m641" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_003.fbx" id="RockAsset10"]
+[ext_resource type="PackedScene" uid="uid://ie3osf0kk8hm" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_007.fbx" id="RockAsset11"]
 
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 1
@@ -36,6 +47,10 @@ size = Vector3(208, 4, 1)
 [sub_resource type="BoxShape3D" id="Shape_wall_ew"]
 size = Vector3(1, 4, 208)
 
+[sub_resource type="StandardMaterial3D" id="Mat_Rock"]
+albedo_color = Color(0.55, 0.53, 0.5, 1)
+roughness = 0.95
+
 [sub_resource type="SphereShape3D" id="Shape_rock"]
 radius = 1.0
 
@@ -44,12 +59,6 @@ transparency = 2
 alpha_scissor_threshold = 0.5
 alpha_antialiasing_mode = 0
 albedo_texture = ExtResource("10")
-
-[sub_resource type="StandardMaterial3D" id="Mat_Grass"]
-transparency = 2
-alpha_scissor_threshold = 0.5
-alpha_antialiasing_mode = 0
-albedo_texture = ExtResource("11")
 
 [node name="Pond" type="Node3D" unique_id=1523958988]
 
@@ -63,17 +72,13 @@ environment = SubResource("Environment_world")
 [node name="Ground" type="StaticBody3D" parent="." unique_id=1249957214]
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=1020682904]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.0665512, -0.07020092, -2.0907173)
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = SubResource("Mat_ground")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=1707436486]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
 shape = SubResource("BoxShape3D_ground")
-
-[node name="Bush_temp_climate_012" parent="Ground" unique_id=1647471904 instance=ExtResource("15")]
-transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, -9.064619, -0.10225344, -21.077335)
-script = ExtResource("12")
-custom_material = SubResource("Mat_Bush")
 
 [node name="WallNorth" type="StaticBody3D" parent="." unique_id=1981512504]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -104)
@@ -105,48 +110,214 @@ transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -58.5, 1.68, 58.5)
 [node name="Nest2" parent="." unique_id=1398003767 instance=ExtResource("2")]
 transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 58.5, 1.68, -58.5)
 
-[node name="Rock1" type="StaticBody3D" parent="." unique_id=2105275411]
-transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, -40, 3, 20)
+[node name="Rock1" type="StaticBody3D" parent="." unique_id=1216621455]
+transform = Transform3D(8.0567, 0, 6.3382, 0, 10.251, 0, -6.3382, 0, 8.0567, 30, 2.09, 69.9)
 
-[node name="Model" parent="Rock1" unique_id=465954448 instance=ExtResource("3")]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+[node name="Model" parent="Rock1" unique_id=1800802536 instance=ExtResource("RockAsset5")]
+transform = Transform3D(0.4357, 0, 5.9604645e-08, 0, 0.4357, 0, -5.9604645e-08, 0, 0.4357, 0.9156177, -0.6660788, -16.259655)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock1" unique_id=282589072]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock1" unique_id=1464948157]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9156177, -0.6660788, -16.259655)
 shape = SubResource("Shape_rock")
 
-[node name="Rock2" type="StaticBody3D" parent="." unique_id=59849667]
-transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 35, 2.2, -15)
+[node name="Rock2" type="StaticBody3D" parent="." unique_id=56005839]
+transform = Transform3D(5.9273, 0, 1.2124, 0, 6.05, 0, -1.2124, 0, 5.9273, 69.34, 1.41, 23.45)
 
-[node name="Model" parent="Rock2" unique_id=1290602132 instance=ExtResource("3")]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+[node name="Model" parent="Rock2" unique_id=1434890866 instance=ExtResource("RockAsset9")]
+transform = Transform3D(2.0408, 0, 0, 0, 2.0408, 0, 0, 0, 2.0408, -0.9482689, 0, -0.47546434)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock2" unique_id=202808558]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock2" unique_id=1540897087]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9482689, 0, -0.47546434)
 shape = SubResource("Shape_rock")
 
-[node name="Rock3" type="StaticBody3D" parent="." unique_id=1293463318]
-transform = Transform3D(5.5, 0, 0, 0, 5.5, 0, 0, 0, 5.5, -25, 3.5, -40)
+[node name="Rock3" type="StaticBody3D" parent="." unique_id=274152049]
+transform = Transform3D(-9.3487, 0, 2.7152, 0, 9.7351, 0, -2.7152, 0, -9.3487, 88.45, 2.29, 43.55)
 
-[node name="Model" parent="Rock3" unique_id=1971620833 instance=ExtResource("3")]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+[node name="Model" parent="Rock3" unique_id=939249940 instance=ExtResource("RockAsset11")]
+transform = Transform3D(0.7663, 0, 0, 0, 0.7663, 0, 0, 0, 0.7663, 3.4607038, 0, 10.33651)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock3" unique_id=643950080]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock3" unique_id=1176193916]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4607038, 0, 10.33651)
 shape = SubResource("Shape_rock")
 
-[node name="Rock4" type="StaticBody3D" parent="." unique_id=1878863267]
-transform = Transform3D(4.5, 0, 0, 0, 4.5, 0, 0, 0, 4.5, 50, 2.8, 35)
+[node name="Rock4" type="StaticBody3D" parent="." unique_id=1561346730]
+transform = Transform3D(8.2234, 0, 0.7227, 0, 8.255, 0, -0.7227, 0, 8.2234, 61.05, 2.39, -83.87)
 
-[node name="Model" parent="Rock4" unique_id=1740581870 instance=ExtResource("3")]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+[node name="Model" parent="Rock4" unique_id=1151224059 instance=ExtResource("RockAsset11")]
+transform = Transform3D(0.7663, 0, 0, 0, 0.7663, 0, 0, 0, 0.7663, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock4" unique_id=1731608553]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock4" unique_id=329717673]
 shape = SubResource("Shape_rock")
 
-[node name="Rock5" type="StaticBody3D" parent="." unique_id=1895563501]
-transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -55, 2.5, 5)
+[node name="Rock5" type="StaticBody3D" parent="." unique_id=1662463917]
+transform = Transform3D(2.6845, 0, 9.117, 0, 9.504, 0, -9.117, 0, 2.6845, 5.84, 2.69, -9.12)
 
-[node name="Model" parent="Rock5" unique_id=1157996931 instance=ExtResource("3")]
+[node name="Model" parent="Rock5" unique_id=1792356933 instance=ExtResource("RockAsset10")]
+transform = Transform3D(0.7813, 0, 0, 0, 0.7813, 0, 0, 0, 0.7813, 3.0271432, -0.2657442, 1.2019389)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock5" unique_id=117313580]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock5" unique_id=1560535708]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.0271432, -0.2657442, 1.2019389)
+shape = SubResource("Shape_rock")
+
+[node name="Rock6" type="StaticBody3D" parent="." unique_id=1824483934]
+transform = Transform3D(3.9615, 0, 9.3588, 0, 10.1627, 0, -9.3588, 0, 3.9615, -60.43, 4.02, -34.14)
+
+[node name="Model" parent="Rock6" unique_id=1955631947 instance=ExtResource("RockAsset6")]
+transform = Transform3D(0.39450002, 0, 0, 0, 0.39450002, 0, 0, 0, 0.39450002, 0, -0.38547534, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock6" unique_id=1904499425]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.38547534, 0)
+shape = SubResource("Shape_rock")
+
+[node name="Rock7" type="StaticBody3D" parent="." unique_id=1789161015]
+transform = Transform3D(2.4469, 0, -6.3574, 0, 6.8121, 0, 6.3574, 0, 2.4469, -15.98, 2.33, 83.73)
+
+[node name="Model" parent="Rock7" unique_id=1746977375 instance=ExtResource("RockAsset10")]
+transform = Transform3D(0.7813, 0, 0, 0, 0.7813, 0, 0, 0, 0.7813, -3.9437976, 0, 0.18262815)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock7" unique_id=547123410]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.9437976, 0, 0.18262815)
+shape = SubResource("Shape_rock")
+
+[node name="Rock8" type="StaticBody3D" parent="." unique_id=1127175452]
+transform = Transform3D(-5.3368, 0, -3.6036, 0, 6.4395, 0, 3.6036, 0, -5.3368, 90.29, 1.55, -35.53)
+
+[node name="Model" parent="Rock8" unique_id=1151218655 instance=ExtResource("RockAsset6")]
+transform = Transform3D(0.3945, 0, 0, 0, 0.3945, 0, 0, 0, 0.3945, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock8" unique_id=924984372]
+shape = SubResource("Shape_rock")
+
+[node name="Rock9" type="StaticBody3D" parent="." unique_id=1455107819]
+transform = Transform3D(-4.3733, 0, -5.5924, 0, 7.0994, 0, 5.5924, 0, -4.3733, 58.21, 2.24, 53.89)
+
+[node name="Model" parent="Rock9" unique_id=1829285725 instance=ExtResource("RockAsset2")]
+transform = Transform3D(1.087, 0, 0, 0, 1.087, 0, 0, 0, 1.087, -1.1046124, 0, -0.6188345)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock9" unique_id=1140955590]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1046124, 0, -0.6188345)
+shape = SubResource("Shape_rock")
+
+[node name="Rock10" type="StaticBody3D" parent="." unique_id=1481112696]
+transform = Transform3D(-4.0811, 0, -0.5847, 0, 4.1227, 0, 0.5847, 0, -4.0811, -56.49, 0.98, 90.1)
+
+[node name="Model" parent="Rock10" unique_id=636752191 instance=ExtResource("RockAsset1")]
+transform = Transform3D(1.9231, 0, 0, 0, 1.9231, 0, 0, 0, 1.9231, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock10" unique_id=2135134002]
+shape = SubResource("Shape_rock")
+
+[node name="Rock11" type="StaticBody3D" parent="." unique_id=2009679346]
+transform = Transform3D(4.8903, 0, 1.3857, 0, 5.0828, 0, -1.3857, 0, 4.8903, 91.25, 1.47, -6.65)
+
+[node name="Model" parent="Rock11" unique_id=122633053 instance=ExtResource("RockAsset4")]
+transform = Transform3D(0.885, 0, 0, 0, 0.885, 0, 0, 0, 0.885, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock11" unique_id=241695080]
+shape = SubResource("Shape_rock")
+
+[node name="Rock12" type="StaticBody3D" parent="." unique_id=1826032557]
+transform = Transform3D(9.9914, 0, 2.6584, 0, 10.339, 0, -2.6584, 0, 9.9914, 70.02, 2.55, 81.5)
+
+[node name="Model" parent="Rock12" unique_id=1311983146 instance=ExtResource("RockAsset5")]
+transform = Transform3D(0.43570006, 0, -7.450581e-09, 0, 0.43570003, 0, 7.450581e-09, 0, 0.43570006, 0, -0.58577234, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock12" unique_id=383460045]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.58577234, 0)
+shape = SubResource("Shape_rock")
+
+[node name="Rock13" type="StaticBody3D" parent="." unique_id=1551298084]
+transform = Transform3D(2.7332, 0, 6.298, 0, 6.8655, 0, -6.298, 0, 2.7332, -8.13, 2.23, -60.13)
+
+[node name="Model" parent="Rock13" unique_id=1246847233 instance=ExtResource("RockAsset7")]
+transform = Transform3D(0.3053, 0, 0, 0, 0.3053, 0, 0, 0, 0.3053, -0.90450907, -0.22630692, 1.2319784)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock13" unique_id=1738889051]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.90450907, -0.22630692, 1.2319784)
+shape = SubResource("Shape_rock")
+
+[node name="Rock14" type="StaticBody3D" parent="." unique_id=100597602]
+transform = Transform3D(6.7046, 0, 7.2827, 0, 9.8989, 0, -7.2827, 0, 6.7046, -80.81, 2.41, -21.93)
+
+[node name="Model" parent="Rock14" unique_id=201965359 instance=ExtResource("RockAsset4")]
+transform = Transform3D(0.885, 0, 0, 0, 0.885, 0, 0, 0, 0.885, -0.5729947, -0.1677979, 7.484684)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock14" unique_id=1457271471]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5729947, -0.1677979, 7.484684)
+shape = SubResource("Shape_rock")
+
+[node name="Rock15" type="StaticBody3D" parent="." unique_id=1295437303]
+transform = Transform3D(-9.8805, 0, 1.9054, 0, 10.0625, 0, -1.9054, 0, -9.8805, 5.94, 3.43, 49.82)
+
+[node name="Model" parent="Rock15" unique_id=974030555 instance=ExtResource("RockAsset5")]
+transform = Transform3D(0.42071685, 0.082433194, -0.07769509, -0.08243317, 0.017826967, -0.42745918, -0.0776951, 0.4274593, 0.03281004, -1.205124, -0.41158748, 0.73618174)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock15" unique_id=560899835]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.205124, -0.41158748, 0.73618174)
+shape = SubResource("Shape_rock")
+
+[node name="Rock16" type="StaticBody3D" parent="." unique_id=1129033285]
+transform = Transform3D(-7.0351, 0, -4.4376, 0, 8.3177, 0, 4.4376, 0, -7.0351, -27.48, 2.49, -14.57)
+
+[node name="Model" parent="Rock16" unique_id=1243305739 instance=ExtResource("RockAsset6")]
+transform = Transform3D(0.3945, 0, 0, 0, 0.3945, 0, 0, 0, 0.3945, 2.622071, -0.20162259, -1.0310092)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock16" unique_id=452581908]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.622071, -0.20162259, -1.0310092)
+shape = SubResource("Shape_rock")
+
+[node name="Rock17" type="StaticBody3D" parent="." unique_id=1231652521]
+transform = Transform3D(-1.7095, 0, 4.8067, 0, 5.1016, 0, -4.8067, 0, -1.7095, 45.52, 1.05, 44.95)
+
+[node name="Model" parent="Rock17" unique_id=1153979117 instance=ExtResource("RockAsset5")]
+transform = Transform3D(0.4357, 0, 0, 0, 0.4357, 0, 0, 0, 0.4357, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock17" unique_id=847625822]
+shape = SubResource("Shape_rock")
+
+[node name="Rock18" type="StaticBody3D" parent="." unique_id=1669781375]
+transform = Transform3D(2.9407, 0, -4.3899, 0, 5.2839, 0, 4.3899, 0, 2.9407, -3.96, 1.59, 75.39)
+
+[node name="Model" parent="Rock18" unique_id=1066177426 instance=ExtResource("RockAsset2")]
+transform = Transform3D(1.087, 0, 0, 0, 1.087, 0, 0, 0, 1.087, 0, 0, 0)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Rock")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock18" unique_id=595282661]
 shape = SubResource("Shape_rock")
 
 [node name="Lilypad1" parent="." unique_id=1502893238 instance=ExtResource("5")]
@@ -173,92 +344,137 @@ transform = Transform3D(-1.5499997, 0, -2.6846788, 0, 3.1, 0, 2.6846788, 0, -1.5
 [node name="Lilypad8" parent="." unique_id=1535043761 instance=ExtResource("5")]
 transform = Transform3D(0.46885002, 0, -2.6589808, 0, 2.7, 0, 2.6589808, 0, 0.46885002, -45, 0, -25)
 
-[node name="StealthBush1" parent="." unique_id=2134079053 instance=ExtResource("6")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -30, 0.1, 30)
+[node name="Tree1" parent="." unique_id=1550009934 instance=ExtResource("14")]
+transform = Transform3D(11.2971, 0, -3.7381, 0, 11.8995, 0, 3.7381, 0, 11.2971, -72.1, 0.1, 9.67)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush2" parent="." unique_id=524705415 instance=ExtResource("6")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 31.191376, 0.1, -36.753258)
+[node name="Tree2" parent="." unique_id=1825979678 instance=ExtResource("7")]
+transform = Transform3D(-2.7187, 0, 6.7942, 0, 7.318, 0, -6.7942, 0, -2.7187, 26.49, 0.1, 81.56)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush3" parent="." unique_id=2079067272 instance=ExtResource("6")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -50, 0.1, -20)
+[node name="Tree3" parent="." unique_id=1417108624 instance=ExtResource("6")]
+transform = Transform3D(-9.7, 0, -5.0047, 0, 10.915, 0, 5.0047, 0, -9.7, 55.1, 0.1, -2.24)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush4" parent="." unique_id=132064096 instance=ExtResource("6")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 50, 0.1, 20)
+[node name="Tree4" parent="." unique_id=765328749 instance=ExtResource("13")]
+transform = Transform3D(0.2305, 0, 7.1747, 0, 7.1784, 0, -7.1747, 0, 0.2305, 80.47, 0.1, 14.23)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush5" parent="." unique_id=811991215 instance=ExtResource("7")]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 5.46117, 0.10000191, -53.30781)
+[node name="Tree5" parent="." unique_id=1638358172 instance=ExtResource("14_d120r")]
+transform = Transform3D(3.4036, 0, -6.0672, 0, 6.9567, 0, 6.0672, 0, 3.4036, -90.78, 0.1, 23.55)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush6" parent="." unique_id=869744213 instance=ExtResource("7")]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 20, 0.1, 45)
+[node name="Tree6" parent="." unique_id=1328101678 instance=ExtResource("13")]
+transform = Transform3D(-4.8904, 0, -9.7262, 0, 10.8865, 0, 9.7262, 0, -4.8904, -62.55, 0.1, 27.79)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush7" parent="." unique_id=312831999 instance=ExtResource("7")]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -60, 0.1, 10)
+[node name="Tree7" parent="." unique_id=1356058253 instance=ExtResource("6")]
+transform = Transform3D(11.6949, 0, -0.6922, 0, 11.7154, 0, 0.6922, 0, 11.6949, 43.62, 0.1, 62.21)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthBush8" parent="." unique_id=266287744 instance=ExtResource("7")]
-transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 60, 0.1, -10)
+[node name="Tree8" parent="." unique_id=1858047473 instance=ExtResource("13")]
+transform = Transform3D(8.6992, 0, -1.1806, 0, 8.7789, 0, 1.1806, 0, 8.6992, 7.19, 0.1, -40.37)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthGrass5" parent="." unique_id=2123592231 instance=ExtResource("9")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -55, 0.1, 55)
-script = ExtResource("12")
-custom_material = SubResource("Mat_Grass")
-
-[node name="StealthGrass6" parent="." unique_id=537502312 instance=ExtResource("9")]
-transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 55, 0.1, -55)
-script = ExtResource("12")
-custom_material = SubResource("Mat_Grass")
-
-[node name="StealthSmallBush2" parent="." unique_id=241391139 instance=ExtResource("13")]
-transform = Transform3D(6, 0, 0, 0, 6, 0, 0, 0, 6, 10.27676, 0.099998094, -31.073208)
+[node name="Tree9" parent="." unique_id=278103283 instance=ExtResource("14_d120r")]
+transform = Transform3D(-3.0938, 0, -6.3116, 0, 7.0291, 0, 6.3116, 0, -3.0938, -45.01, 0.1, -54.65)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush3" parent="." unique_id=543842702 instance=ExtResource("14")]
-transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, -45, 0.1, -10)
+[node name="Tree10" parent="." unique_id=1853350722 instance=ExtResource("15")]
+transform = Transform3D(9.1087, 0, 6.4228, 0, 11.1454, 0, -6.4228, 0, 9.1087, -79.86573, -8.4270525, 67.896324)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush4" parent="." unique_id=1147241277 instance=ExtResource("14")]
-transform = Transform3D(11, 0, 0, 0, 11, 0, 0, 0, 11, -25.517105, 0.1, 3.8598557)
+[node name="Tree11" parent="." unique_id=411491553 instance=ExtResource("13")]
+transform = Transform3D(8.3811, 0, 0.1632, 0, 8.3827, 0, -0.1632, 0, 8.3811, -29.33, 0.1, 12.01)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush5" parent="." unique_id=707879712 instance=ExtResource("15")]
-transform = Transform3D(4.5, 0, 0, 0, 4.5, 0, 0, 0, 4.5, -24.504646, 0.1, -24.368916)
+[node name="Tree12" parent="." unique_id=845972094 instance=ExtResource("14")]
+transform = Transform3D(7.4777, 0, -9.2985, 0, 11.9323, 0, 9.2985, 0, 7.4777, -24.448015, -5.4928193, -80.110504)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush6" parent="." unique_id=83003538 instance=ExtResource("15")]
-transform = Transform3D(7.5, 0, 0, 0, 7.5, 0, 0, 0, 7.5, -9.537724, 0.1, 54.92217)
+[node name="Tree13" parent="." unique_id=877193580 instance=ExtResource("7")]
+transform = Transform3D(5.4944, 0, 6.0657, 0, 8.1842, 0, -6.0657, 0, 5.4944, -0.99, 0.1, 59.96)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush7" parent="." unique_id=1423046030 instance=ExtResource("13")]
-transform = Transform3D(6.5, 0, 0, 0, 6.5, 0, 0, 0, 6.5, -70, 0.1, 40)
+[node name="Tree14" parent="." unique_id=1384701821 instance=ExtResource("14_d120r")]
+transform = Transform3D(-7.2899, 0, 0.5229, 0, 7.3087, 0, -0.5229, 0, -7.2899, 37.88, 0.1, -10.12)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="StealthSmallBush8" parent="." unique_id=506109251 instance=ExtResource("14")]
-transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 70, 0.1, -40)
+[node name="Bush1" parent="." unique_id=522631785 instance=ExtResource("BushTemp003")]
+transform = Transform3D(8.21, 0, 2.2, 0, 8.5, 0, -2.2, 0, 8.21, 5.179553, 0.1, -76.00258)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
 
-[node name="Bush_temp_climate_009" parent="." unique_id=2102610275 instance=ExtResource("14_d120r")]
-transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, 22.61269, 0.2538673, 14.854427)
+[node name="Bush2" parent="." unique_id=604953056 instance=ExtResource("BushTemp006")]
+transform = Transform3D(1.215, 0, 6.894, 0, 7, 0, -6.894, 0, 1.215, 49.888805, 0.1, -32.827404)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush3" parent="." unique_id=1459462690 instance=ExtResource("BushTemp007")]
+transform = Transform3D(-6.894, 0, 5.785, 0, 9, 0, -5.785, 0, -6.894, -64.32, 0.1, -9.98)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush4" parent="." unique_id=1980511220 instance=ExtResource("BushTemp010")]
+transform = Transform3D(-6.108, 0, -2.223, 0, 6.5, 0, 2.223, 0, -6.108, -71.51183, 0.1, 42.468727)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush5" parent="." unique_id=160725391 instance=ExtResource("BushTemp011")]
+transform = Transform3D(-1.736, 0, -9.848, 0, 10, 0, 9.848, 0, -1.736, 18.42, 0.1, -91.83)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush6" parent="." unique_id=2121351470 instance=ExtResource("BushTemp003")]
+transform = Transform3D(5.745, 0, -4.821, 0, 7.5, 0, 4.821, 0, 5.745, -22.545998, 0.1, -56.572327)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush7" parent="." unique_id=1676008312 instance=ExtResource("BushTemp006")]
+transform = Transform3D(5.142, 0, 6.128, 0, 8, 0, -6.128, 0, 5.142, 46.77, 0.1, 26.89)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush8" parent="." unique_id=1120104300 instance=ExtResource("BushTemp007")]
+transform = Transform3D(-3.249, 0, 8.927, 0, 9.5, 0, -8.927, 0, -3.249, -17.91879, 0.1, -34.71013)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush9" parent="." unique_id=61172560 instance=ExtResource("BushTemp010")]
+transform = Transform3D(-6.697, 0, 1.18, 0, 6.8, 0, -1.18, 0, -6.697, -78.83, 0.1, -76.78)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush10" parent="." unique_id=1710580184 instance=ExtResource("BushTemp011")]
+transform = Transform3D(-5.914, 0, -7.047, 0, 9.2, 0, 7.047, 0, -5.914, 72.47, 0.1, -25.96)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush11" parent="." unique_id=940094048 instance=ExtResource("BushTemp003")]
+transform = Transform3D(2.668, 0, -7.33, 0, 7.8, 0, 7.33, 0, 2.668, -55.77764, 0.1, -92.69507)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush12" parent="." unique_id=1494859278 instance=ExtResource("BushTemp006")]
+transform = Transform3D(8.666, 0, -1.528, 0, 8.8, 0, 1.528, 0, 8.666, 38.66, 0.1, -64.71)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="Bush13" parent="." unique_id=1539050163 instance=ExtResource("BushTemp007")]
+transform = Transform3D(-0.602, 0, 6.874, 0, 6.9, 0, -6.874, 0, -0.602, 78.01, 0.1, 31.08)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Bush")
