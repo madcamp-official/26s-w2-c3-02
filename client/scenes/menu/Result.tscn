@@ -120,7 +120,7 @@ theme_override_font_sizes/font_size = 28
 layout_mode = 2
 custom_minimum_size = Vector2(0, 58)
 size_flags_horizontal = 3
-text = "로비로"
+text = "대기실로"
 theme_override_font_sizes/font_size = 28
 
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/MainMenuButton" to="." method="_on_main_menu_button_pressed"]

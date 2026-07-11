@@ -403,17 +403,11 @@ func _update_duckling_wander(delta: float) -> void:
 		var pos: Dictionary = d["position"]
 		var next_x: float = clamp(pos["x"] + w["dir"].x * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
 		var next_z: float = clamp(pos["z"] + w["dir"].y * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
-		
-		# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
-		var flat_pos := Vector2(next_x, next_z)
-		if flat_pos.length() < 9.0:
-			var pushed := flat_pos.normalized() * 9.0
-			next_x = pushed.x
-			next_z = pushed.y
-			w["dir"] = -w["dir"] # 방향 반전하여 섬에서 튕겨 나가게 함
-			_wander_state[id] = w
 
 		var pushed_pos := _push_out_of_props(Vector2(next_x, next_z))
+		if pushed_pos != Vector2(next_x, next_z):
+			w["dir"] = -w["dir"] # 장애물에서 튕겨 나가도록 방향 반전
+			_wander_state[id] = w
 		d["position"] = {"x": pushed_pos.x, "y": pos["y"], "z": pushed_pos.y}
 
 func _check_pickup() -> void:
@@ -451,12 +445,7 @@ func release_ducklings(player_id: String, at_position: Vector3) -> void:
 		var radius := randf_range(1.0, 3.0)
 		var drop_x := at_position.x + cos(angle) * radius
 		var drop_z := at_position.z + sin(angle) * radius
-		
-		# 드롭 위치가 섬 내부일 경우 섬 밖으로 밀어냄
-		var flat_drop := Vector2(drop_x, drop_z)
-		if flat_drop.length() < 9.0:
-			flat_drop = flat_drop.normalized() * 9.0
-		flat_drop = _push_out_of_props(flat_drop)
+		var flat_drop := _push_out_of_props(Vector2(drop_x, drop_z))
 
 		d["position"] = {"x": flat_drop.x, "y": 0.0, "z": flat_drop.y}
 		d["state"] = "spawned"
@@ -525,13 +514,6 @@ func _update_duckling_follow(delta: float) -> void:
 					var target := leader_pos + dir * FOLLOW_SPACING
 					var lerp_speed: float = max(FOLLOW_LERP_MIN, FOLLOW_LERP_SPEED - i * FOLLOW_LERP_FALLOFF)
 					next_pos = current.lerp(target, clamp(delta * lerp_speed, 0.0, 1.0))
-				
-				# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
-				var flat_next := Vector2(next_pos.x, next_pos.z)
-				if flat_next.length() < 9.0:
-					var pushed := flat_next.normalized() * 9.0
-					next_pos.x = pushed.x
-					next_pos.z = pushed.y
 
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 				leader_pos = next_pos
@@ -546,13 +528,6 @@ func _update_duckling_follow(delta: float) -> void:
 				var target := player_pos + Vector3(cos(angle), 0, sin(angle)) * CIRCLE_RADIUS
 				var current := _dict_to_vec3(d["position"])
 				var next_pos := current.lerp(target, clamp(delta * CIRCLE_LERP_SPEED, 0.0, 1.0))
-				
-				# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
-				var flat_next := Vector2(next_pos.x, next_pos.z)
-				if flat_next.length() < 9.0:
-					var pushed := flat_next.normalized() * 9.0
-					next_pos.x = pushed.x
-					next_pos.z = pushed.y
 
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 

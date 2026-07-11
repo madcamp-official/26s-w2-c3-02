@@ -47,6 +47,11 @@ func _register_pond_obstacles() -> void:
 			var obs := _obstacle_from_node(child)
 			if not obs.is_empty():
 				obstacles.append(obs)
+	var jail_island := get_node_or_null("JailIsland")
+	if jail_island:
+		var jail_obs := _obstacle_from_node(jail_island)
+		if not jail_obs.is_empty():
+			obstacles.append(jail_obs)
 	MockServer.register_obstacles(obstacles)
 
 func _obstacle_from_node(node: Node3D) -> Dictionary:
