@@ -29,7 +29,6 @@ const CIRCLE_LERP_SPEED := 4.0
 const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
-const MOCK_USED_ROOM_CODE := "9999"
 const MOCK_JOIN_ROOM_CODE := "1234"
 const MVP_PLAYER_LIMIT := 3
 const MVP_DUCK_COUNT := 2
@@ -79,7 +78,7 @@ func _seed_lobby() -> void:
 
 func create_room(nickname: String, room_id: String = "") -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
-	if normalized_room_id == MOCK_USED_ROOM_CODE or normalized_room_id == MOCK_JOIN_ROOM_CODE:
+	if normalized_room_id == MOCK_JOIN_ROOM_CODE:
 		return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
 	if normalized_room_id.length() != ROOM_CODE_LENGTH:
 		normalized_room_id = _generate_room_code()
@@ -88,15 +87,10 @@ func create_room(nickname: String, room_id: String = "") -> Dictionary:
 
 func join_room(nickname: String, room_id: String) -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
-	if normalized_room_id == MOCK_USED_ROOM_CODE:
-		return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
 	if normalized_room_id == MOCK_JOIN_ROOM_CODE:
 		_prepare_mock_join_lobby(nickname)
 		return {"ok": true}
-	if normalized_room_id.length() != ROOM_CODE_LENGTH:
-		normalized_room_id = _generate_room_code()
-	_prepare_lobby(nickname, normalized_room_id)
-	return {"ok": true}
+	return {"ok": false, "message": "존재하지 않는 방입니다."}
 
 func list_rooms() -> Array:
 	# 실제 멀티룸 백엔드가 없으므로 정적 mock 데이터를 반환한다.
@@ -107,8 +101,8 @@ func list_rooms() -> Array:
 	]
 
 func _generate_room_code() -> String:
-	var code := MOCK_USED_ROOM_CODE
-	while code == MOCK_USED_ROOM_CODE or code == MOCK_JOIN_ROOM_CODE:
+	var code := MOCK_JOIN_ROOM_CODE
+	while code == MOCK_JOIN_ROOM_CODE:
 		code = ""
 		for i in range(ROOM_CODE_LENGTH):
 			var index := randi() % ROOM_CODE_CHARS.length()
@@ -288,6 +282,30 @@ func lobby_status_text() -> String:
 		player_count,
 		MVP_PLAYER_LIMIT,
 	]
+
+func local_player_team() -> String:
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == GameData.local_player_id:
+			return str(player.get("team", "duck"))
+	return "duck"
+
+func arrow_control_player_id() -> String:
+	var target_team := "duck"
+	if local_player_team() == "duck":
+		target_team = "tagger"
+
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == GameData.local_player_id:
+			continue
+		if bool(player.get("isMock", false)) and str(player.get("team", "")) == target_team:
+			return str(player.get("playerId", ""))
+
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == GameData.local_player_id:
+			continue
+		if str(player.get("team", "")) == target_team:
+			return str(player.get("playerId", ""))
+	return ""
 
 func return_to_lobby() -> void:
 	GameData.phase = "lobby"
@@ -662,11 +680,13 @@ func _rescue_duckling(d: Dictionary) -> void:
 
 func jail_player(player_id: String) -> void:
 	# 해당 플레이어를 수감 상태로 전환하고 들고 있던 새끼오리를 떨어뜨린다.
+	var player_found := false
 	for p in GameData.players:
 		if p["playerId"] != player_id:
 			continue
 		if p["state"] == "jailed":
 			return  # 이미 수감 중
+		player_found = true
 		p["state"] = "jailed"
 		if _count_duck_players() == 1:
 			p["jailRemaining"] = JAIL_SECONDS
@@ -676,6 +696,9 @@ func jail_player(player_id: String) -> void:
 		p["position"] = {"x": JAIL_POSITION.x, "y": JAIL_POSITION.y, "z": JAIL_POSITION.z}
 		release_ducklings(player_id, catch_pos)
 		break
+
+	if not player_found:
+		return
 
 	# 1인 자동탈출 타이머 초기화
 	# 구출 진행 리셋

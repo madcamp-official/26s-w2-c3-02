@@ -1,8 +1,10 @@
 extends Node3D
 
 @export var custom_material: Material
+@export var stealth_radius: float = 8.0
 
 func _ready() -> void:
+	add_to_group("stealth_cover")
 	if custom_material != null:
 		_apply_material(self)
 

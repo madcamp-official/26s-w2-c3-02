@@ -5,11 +5,13 @@ const OBJECTIVE_TOAST_DURATION := 5.0
 const NEST_1_POSITION := Vector3(-58.5, 1.68, 58.5) 
 const NEST_2_POSITION := Vector3(58.5, 1.68, -58.5) 
 const JAIL_FALLBACK_POSITION := Vector3(0, 0.5, 0)
-const INDICATOR_MARGIN := 32.0
-const INDICATOR_SIZE := Vector2(116, 60)
+const INDICATOR_MARGIN := 20.0
+const INDICATOR_SIZE := Vector2(180, 180)
+const INDICATOR_CENTER := Vector2(90, 90)
+const INDICATOR_SAFE_RADIUS := 96.0
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
-const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
+const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
@@ -24,9 +26,12 @@ const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 @onready var jail_direction_indicator: Control = %JailDirectionIndicator
 @onready var nest_direction_indicator: Control = %NestDirectionIndicator
 @onready var nest_2_direction_indicator: Control = %Nest2DirectionIndicator
-@onready var jail_arrow_label: Label = %JailArrowLabel
-@onready var nest_arrow_label: Label = %NestArrowLabel
-@onready var nest_2_arrow_label: Label = %Nest2ArrowLabel
+@onready var jail_arrow_label: TextureRect = %JailArrowLabel
+@onready var nest_arrow_label: TextureRect = %NestArrowLabel
+@onready var nest_2_arrow_label: TextureRect = %Nest2ArrowLabel
+@onready var jail_photo: TextureRect = %JailPhoto
+@onready var nest_photo: TextureRect = %NestPhoto
+@onready var nest_2_photo: TextureRect = %Nest2Photo
 @onready var debug_mode_button: Button = %DebugModeButton
 @onready var debug_panel: PanelContainer = %DebugPanel
 @onready var debug_summary_label: Label = %DebugSummaryLabel
@@ -35,12 +40,15 @@ var _toast_remaining := 0.0
 var _objective_remaining := 0.0
 var _jail_node: Node3D = null
 var _icon_mask_shader: Shader = null
+var _circle_photo_mask_shader: Shader = null
 
 
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
 	GameData.debug_mode_changed.connect(_on_debug_mode_changed)
+	_apply_direction_photo_masks()
+	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
 	_on_debug_mode_changed(GameData.debug_mode_enabled)
 	_refresh()
@@ -73,7 +81,7 @@ func _exit_tree() -> void:
 func _refresh() -> void:
 	timer_label.text = "남은 시간 %s" % _format_time(GameData.remaining_seconds)
 	score_label.text = "새끼오리 %d / %d" % [GameData.score, GameData.target_score]
-	jailed_label.text = "수감 오리 %d명" % _jailed_duck_count()
+	jailed_label.text = "수감 중 오리 %d명" % _jailed_duck_count()
 	_refresh_countdown()
 	_refresh_player_list()
 	_refresh_debug_summary()
@@ -171,7 +179,8 @@ func _make_player_row(player: Dictionary) -> Control:
 	row.custom_minimum_size = Vector2(0, 36)
 	row.add_theme_constant_override("separation", 8)
 
-	row.add_child(_make_hud_icon(_icon_path_for_team(str(player.get("team", ""))), Vector2(30, 30)))
+	var is_jailed := str(player.get("state", "")) == "jailed"
+	row.add_child(_make_role_status_icon(_icon_path_for_team(str(player.get("team", ""))), is_jailed))
 
 	var name_label: Label = Label.new()
 	name_label.text = str(player.get("nickname", "Player"))
@@ -179,9 +188,6 @@ func _make_player_row(player: Dictionary) -> Control:
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_apply_game_text_style(name_label, 22, Color.WHITE, 6, 4)
 	row.add_child(name_label)
-
-	if str(player.get("state", "")) == "jailed":
-		row.add_child(_make_hud_icon(LOCK_ICON_PATH, Vector2(26, 26)))
 
 	return row
 
@@ -211,6 +217,33 @@ func _make_hud_icon(path: String, icon_size: Vector2) -> Control:
 	return holder
 
 
+func _make_role_status_icon(role_path: String, is_jailed: bool) -> Control:
+	var holder := _make_hud_icon(role_path, Vector2(30, 30))
+	if not is_jailed or not ResourceLoader.exists(JAIL_ICON_PATH):
+		return holder
+
+	var jail_texture: Texture2D = load(JAIL_ICON_PATH) as Texture2D
+	if jail_texture == null:
+		return holder
+
+	var jail_size := Vector2(44, 50)
+	var jail_offset := Vector2(-1, -6)
+	_add_raw_icon_layer(holder, jail_texture, jail_offset, jail_size)
+	return holder
+
+
+func _add_raw_icon_layer(parent: Control, texture: Texture2D, offset: Vector2, icon_size: Vector2) -> void:
+	var layer: TextureRect = TextureRect.new()
+	layer.position = offset
+	layer.custom_minimum_size = icon_size
+	layer.size = icon_size
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.texture = texture
+	layer.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	layer.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	parent.add_child(layer)
+
+
 func _add_icon_layer(parent: Control, texture: Texture2D, offset: Vector2, icon_size: Vector2, color: Color) -> void:
 	var layer: TextureRect = TextureRect.new()
 	layer.position = offset
@@ -235,14 +268,48 @@ func _make_icon_mask_material(color: Color) -> ShaderMaterial:
 	return material
 
 
+func _apply_direction_photo_masks() -> void:
+	var material := _make_circle_photo_mask_material()
+	jail_photo.material = material.duplicate()
+	nest_photo.material = material.duplicate()
+	nest_2_photo.material = material.duplicate()
+
+
+func _apply_direction_arrow_styles() -> void:
+	_apply_direction_arrow_style(jail_arrow_label)
+	_apply_direction_arrow_style(nest_arrow_label)
+	_apply_direction_arrow_style(nest_2_arrow_label)
+
+
+func _apply_direction_arrow_style(arrow: TextureRect) -> void:
+	if arrow == null or arrow.texture == null:
+		return
+
+	var texture := arrow.texture
+	var icon_size := arrow.size
+	arrow.texture = null
+	arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_add_icon_layer(arrow, texture, Vector2(0, 5), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(arrow, texture, Vector2(-3, 2), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(arrow, texture, Vector2(3, 2), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(arrow, texture, Vector2(0, -1), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(arrow, texture, Vector2(0, 2), icon_size, Color.WHITE)
+
+
+func _make_circle_photo_mask_material() -> ShaderMaterial:
+	if _circle_photo_mask_shader == null:
+		_circle_photo_mask_shader = Shader.new()
+		_circle_photo_mask_shader.code = "shader_type canvas_item;\nvoid fragment() {\n\tvec4 tex = texture(TEXTURE, UV);\n\tfloat mask = step(length(UV - vec2(0.5)), 0.5);\n\tCOLOR = vec4(tex.rgb, tex.a * mask);\n}"
+	var material := ShaderMaterial.new()
+	material.shader = _circle_photo_mask_shader
+	return material
+
+
 func _apply_static_text_styles() -> void:
 	_apply_game_text_style(timer_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(score_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(jailed_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(event_message_label, 30, Color.WHITE, 7, 4)
-	_apply_game_text_style(jail_arrow_label, 42, Color.WHITE, 7, 4)
-	_apply_game_text_style(nest_arrow_label, 42, Color.WHITE, 7, 4)
-	_apply_game_text_style(nest_2_arrow_label, 42, Color.WHITE, 7, 4)
 	_apply_game_text_style(countdown_label, 96, Color.WHITE, 12, 7)
 	_apply_game_text_style(objective_label, 34, Color.WHITE, 7, 4)
 
@@ -340,7 +407,7 @@ func _jail_world_position() -> Vector3:
 	return JAIL_FALLBACK_POSITION
 
 
-func _update_direction_indicator(indicator: Control, arrow_label: Label, world_position: Vector3, camera: Camera3D) -> void:
+func _update_direction_indicator(indicator: Control, arrow_label: Control, world_position: Vector3, camera: Camera3D) -> void:
 	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var center: Vector2 = viewport_size * 0.5
 	var screen_pos: Vector2 = camera.unproject_position(world_position)
@@ -359,7 +426,7 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 		direction = Vector2.RIGHT
 
 	var unit: Vector2 = direction.normalized()
-	var half_bounds: Vector2 = viewport_size * 0.5 - INDICATOR_SIZE * 0.5 - Vector2.ONE * INDICATOR_MARGIN
+	var half_bounds: Vector2 = viewport_size * 0.5 - Vector2.ONE * (INDICATOR_SAFE_RADIUS + INDICATOR_MARGIN)
 	var distance_x := INF
 	if abs(unit.x) >= 0.001:
 		distance_x = half_bounds.x / abs(unit.x)
@@ -367,7 +434,7 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 	if abs(unit.y) >= 0.001:
 		distance_y = half_bounds.y / abs(unit.y)
 	var edge_center: Vector2 = center + unit * min(distance_x, distance_y)
-	indicator.position = edge_center - INDICATOR_SIZE * 0.5
+	indicator.position = edge_center - INDICATOR_CENTER
 
 	var rotator := indicator.get_node_or_null("Rotator") as Control
 	if rotator != null:
@@ -376,10 +443,8 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 		arrow_label.rotation = 0.0
 
 		var circle := rotator.get_node_or_null("Circle") as Control
-		if circle != null and circle.get_child_count() > 0:
-			var photo := circle.get_child(0) as Control
-			if photo != null:
-				photo.rotation = -target_angle
+		if circle != null:
+			circle.rotation = -target_angle
 
 
 func _is_world_position_visible(screen_pos: Vector2, viewport_size: Vector2, is_behind: bool) -> bool:
