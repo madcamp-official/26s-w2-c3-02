@@ -101,15 +101,45 @@ func _player_by_id(player_id: String) -> Dictionary:
 func _check_jail() -> void:
 	if GameData.phase != "playing":
 		return
-	if _duck == null or _aligator == null or _jail_point == null:
+	if _aligator == null or _jail_point == null:
 		return
 	var forward := -_aligator.global_transform.basis.z
 	var mouth := _aligator.global_position + forward * MOUTH_OFFSET
-	if _duck.global_position.distance_to(mouth) <= MOUTH_CATCH_RADIUS:
+	for duck_node in _duck_jail_candidates():
+		if duck_node.global_position.distance_to(mouth) > MOUTH_CATCH_RADIUS:
+			continue
 		# 모든 수감/텔레포트 처리는 MockServer.jail_player()에 위임
-		var duck_player_id := str(_duck.get("controlled_player_id"))
-		if duck_player_id != "":
+		var duck_player_id := str(duck_node.get("controlled_player_id"))
+		if duck_player_id != "" and not _is_player_jailed(duck_player_id):
 			MockServer.jail_player(duck_player_id)
+
+
+func _duck_jail_candidates() -> Array[Node3D]:
+	var candidates: Array[Node3D] = []
+	if _is_duck_player_node(_duck):
+		candidates.append(_duck)
+	for value in _remote_players.values():
+		var node := value as Node3D
+		if _is_duck_player_node(node):
+			candidates.append(node)
+	return candidates
+
+
+func _is_duck_player_node(node: Node) -> bool:
+	if node == null:
+		return false
+	var player_id := str(node.get("controlled_player_id"))
+	if player_id == "":
+		return false
+	var player := _player_by_id(player_id)
+	if player.is_empty():
+		return false
+	return str(player.get("team", "")) == "duck"
+
+
+func _is_player_jailed(player_id: String) -> bool:
+	var player := _player_by_id(player_id)
+	return not player.is_empty() and str(player.get("state", "")) == "jailed"
 
 
 func _sync_remote_players() -> void:
@@ -126,8 +156,9 @@ func _sync_remote_players() -> void:
 			var node := PlayerScene.instantiate()
 			node.character = p["character"]
 			node.controllable = false
+			node.controlled_player_id = pid
 			add_child(node)
-			node.set_display_name(pid)
+			node.set_display_name(str(p.get("nickname", pid)))
 			_remote_players[pid] = node
 			was_created = true
 		var pos: Dictionary = p["position"]
