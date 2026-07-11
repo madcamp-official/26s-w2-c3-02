@@ -2,8 +2,8 @@ extends CanvasLayer
 
 const TOAST_DURATION := 3.0
 const OBJECTIVE_TOAST_DURATION := 5.0
-const NEST_1_POSITION := Vector3(-45, 1.68, 45)
-const NEST_2_POSITION := Vector3(45, 1.68, -45)
+const NEST_1_POSITION := Vector3(-58.5, 1.68, 58.5) (1.3배 멀어짐)
+const NEST_2_POSITION := Vector3(58.5, 1.68, -58.5) (1.3배 멀어짐)
 const JAIL_FALLBACK_POSITION := Vector3(0, 0.5, 0)
 const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(116, 60)

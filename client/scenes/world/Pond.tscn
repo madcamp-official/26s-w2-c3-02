@@ -1,187 +1,280 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene format=3 uid="uid://ba4m3xltrkf5k"]
 
-[ext_resource type="PackedScene" path="res://assets/Nest/Birds nest.glb" id="2"]
-[ext_resource type="PackedScene" path="res://assets/rock/rock.glb" id="3"]
-[ext_resource type="PackedScene" path="res://assets/bush/bush.glb" id="4"]
+[ext_resource type="PackedScene" uid="uid://y2osiio024u6" path="res://assets/Nest/Birds nest.glb" id="2"]
+[ext_resource type="PackedScene" uid="uid://b1w6akmrtwr12" path="res://assets/rock/rock.glb" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/world/props/Lilypad.tscn" id="5"]
+[ext_resource type="PackedScene" uid="uid://ck762a6n126ip" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_001.fbx" id="6"]
+[ext_resource type="PackedScene" uid="uid://vm6ec2mxdyd5" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_005.fbx" id="7"]
+[ext_resource type="PackedScene" uid="uid://dqenda6vm8e0s" path="res://assets/Grass_temp_climate/Fbx/Grass_001.fbx" id="8"]
+[ext_resource type="PackedScene" uid="uid://b8py47c3jxlx5" path="res://assets/Grass_temp_climate/Fbx/Grass_003.fbx" id="9"]
+[ext_resource type="Texture2D" uid="uid://b20ligmxtix3c" path="res://assets/Bush_temp_climate/Textures/T_Bush_temp_climate.png" id="10"]
+[ext_resource type="Texture2D" uid="uid://dgepcdwbwpoj5" path="res://assets/Grass_temp_climate/Textures/T_Grass.png" id="11"]
+[ext_resource type="Script" uid="uid://dblcw3dk6s5pn" path="res://scripts/world/stealth_asset.gd" id="12"]
+[ext_resource type="PackedScene" uid="uid://cxpl1nq13i3ba" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_002.fbx" id="13"]
+[ext_resource type="PackedScene" uid="uid://cad2scixxcyq2" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_008.fbx" id="14"]
+[ext_resource type="PackedScene" uid="uid://md3hjiq1gq13" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_012.fbx" id="15"]
+
+[sub_resource type="Environment" id="Environment_world"]
+background_mode = 1
+background_color = Color(0.35, 0.68, 0.88, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.2, 0.24, 0.3, 1)
+ambient_light_energy = 0.55
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
-size = Vector2(160, 160)
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
-size = Vector3(160, 0.1, 160)
+size = Vector2(208, 208)
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.35, 0.68, 0.88, 1)
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(208, 0.1, 208)
+
+[sub_resource type="BoxShape3D" id="Shape_wall_ns"]
+size = Vector3(208, 4, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_wall_ew"]
+size = Vector3(1, 4, 208)
+
 [sub_resource type="SphereShape3D" id="Shape_rock"]
 radius = 1.0
 
-[sub_resource type="CapsuleShape3D" id="Shape_bush"]
-radius = 1.0
-height = 2.0
+[sub_resource type="StandardMaterial3D" id="Mat_Bush"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = ExtResource("10")
 
-[sub_resource type="BoxShape3D" id="Shape_wall_ns"]
-size = Vector3(160, 4, 1)
+[sub_resource type="StandardMaterial3D" id="Mat_Grass"]
+transparency = 2
+alpha_scissor_threshold = 0.5
+alpha_antialiasing_mode = 0
+albedo_texture = ExtResource("11")
 
-[sub_resource type="BoxShape3D" id="Shape_wall_ew"]
-size = Vector3(1, 4, 160)
+[node name="Pond" type="Node3D" unique_id=1523958988]
 
-[node name="Pond" type="Node3D"]
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-45, -30, 0)
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1968520926]
+transform = Transform3D(0.8660254, 0.35355338, -0.35355338, 0, 0.70710677, 0.70710677, 0.5, -0.6123724, 0.6123724, 0, 0, 0)
 shadow_enabled = true
 
-[node name="Ground" type="StaticBody3D" parent="."]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=189277015]
+environment = SubResource("Environment_world")
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+[node name="Ground" type="StaticBody3D" parent="." unique_id=1249957214]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground" unique_id=1020682904]
 mesh = SubResource("PlaneMesh_ground")
 surface_material_override/0 = SubResource("Mat_ground")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground" unique_id=1707436486]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
 shape = SubResource("BoxShape3D_ground")
 
-[node name="WallNorth" type="StaticBody3D" parent="."]
-position = Vector3(0, 2, -80)
+[node name="WallNorth" type="StaticBody3D" parent="." unique_id=1981512504]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -104)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth" unique_id=1368627902]
 shape = SubResource("Shape_wall_ns")
 
-[node name="WallSouth" type="StaticBody3D" parent="."]
-position = Vector3(0, 2, 80)
+[node name="WallSouth" type="StaticBody3D" parent="." unique_id=315517204]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 104)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth" unique_id=156654965]
 shape = SubResource("Shape_wall_ns")
 
-[node name="WallEast" type="StaticBody3D" parent="."]
-position = Vector3(80, 2, 0)
+[node name="WallEast" type="StaticBody3D" parent="." unique_id=940344155]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 104, 2, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast" unique_id=993426960]
 shape = SubResource("Shape_wall_ew")
 
-[node name="WallWest" type="StaticBody3D" parent="."]
-position = Vector3(-80, 2, 0)
+[node name="WallWest" type="StaticBody3D" parent="." unique_id=1408448961]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -104, 2, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest" unique_id=334475947]
 shape = SubResource("Shape_wall_ew")
 
-[node name="Nest" parent="." instance=ExtResource("2")]
-position = Vector3(-45, 1.68, 45)
-scale = Vector3(4, 4, 4)
+[node name="Nest" parent="." unique_id=830184236 instance=ExtResource("2")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -58.5, 1.68, 58.5)
 
-[node name="Nest2" parent="." instance=ExtResource("2")]
-position = Vector3(45, 1.68, -45)
-scale = Vector3(4, 4, 4)
+[node name="Nest2" parent="." unique_id=1398003767 instance=ExtResource("2")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 58.5, 1.68, -58.5)
 
-[node name="Rock1" type="StaticBody3D" parent="."]
-position = Vector3(-40, 3.0, 20)
-scale = Vector3(3.0, 3.0, 3.0)
+[node name="Rock1" type="StaticBody3D" parent="." unique_id=2105275411]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, -40, 3, 20)
 
-[node name="Model" parent="Rock1" instance=ExtResource("3")]
+[node name="Model" parent="Rock1" unique_id=465954448 instance=ExtResource("3")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock1"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock1" unique_id=282589072]
 shape = SubResource("Shape_rock")
 
-[node name="Rock2" type="StaticBody3D" parent="."]
-position = Vector3(35, 2.2, -15)
-scale = Vector3(2.2, 2.2, 2.2)
+[node name="Rock2" type="StaticBody3D" parent="." unique_id=59849667]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 35, 2.2, -15)
 
-[node name="Model" parent="Rock2" instance=ExtResource("3")]
+[node name="Model" parent="Rock2" unique_id=1290602132 instance=ExtResource("3")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock2"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock2" unique_id=202808558]
 shape = SubResource("Shape_rock")
 
-[node name="Rock3" type="StaticBody3D" parent="."]
-position = Vector3(-25, 3.5, -40)
-scale = Vector3(3.5, 3.5, 3.5)
+[node name="Rock3" type="StaticBody3D" parent="." unique_id=1293463318]
+transform = Transform3D(5.5, 0, 0, 0, 5.5, 0, 0, 0, 5.5, -25, 3.5, -40)
 
-[node name="Model" parent="Rock3" instance=ExtResource("3")]
+[node name="Model" parent="Rock3" unique_id=1971620833 instance=ExtResource("3")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock3"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock3" unique_id=643950080]
 shape = SubResource("Shape_rock")
 
-[node name="Rock4" type="StaticBody3D" parent="."]
-position = Vector3(50, 2.8, 35)
-scale = Vector3(2.8, 2.8, 2.8)
+[node name="Rock4" type="StaticBody3D" parent="." unique_id=1878863267]
+transform = Transform3D(4.5, 0, 0, 0, 4.5, 0, 0, 0, 4.5, 50, 2.8, 35)
 
-[node name="Model" parent="Rock4" instance=ExtResource("3")]
+[node name="Model" parent="Rock4" unique_id=1740581870 instance=ExtResource("3")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock4"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock4" unique_id=1731608553]
 shape = SubResource("Shape_rock")
 
-[node name="Rock5" type="StaticBody3D" parent="."]
-position = Vector3(-55, 2.5, 5)
-scale = Vector3(2.5, 2.5, 2.5)
+[node name="Rock5" type="StaticBody3D" parent="." unique_id=1895563501]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, -55, 2.5, 5)
 
-[node name="Model" parent="Rock5" instance=ExtResource("3")]
+[node name="Model" parent="Rock5" unique_id=1157996931 instance=ExtResource("3")]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock5"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Rock5" unique_id=117313580]
 shape = SubResource("Shape_rock")
 
-[node name="Bush1" type="StaticBody3D" parent="."]
-position = Vector3(25, 0, 50)
-scale = Vector3(0.075, 0.075, 0.075)
+[node name="Lilypad1" parent="." unique_id=1502893238 instance=ExtResource("5")]
+transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 10, 0, 10)
 
-[node name="Model" parent="Bush1" instance=ExtResource("4")]
+[node name="Lilypad2" parent="." unique_id=984061278 instance=ExtResource("5")]
+transform = Transform3D(1.9151111, 0, 1.6069689, 0, 2.5, 0, -1.6069689, 0, 1.9151111, -15, 0, 25)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Bush1"]
-shape = SubResource("Shape_bush")
+[node name="Lilypad3" parent="." unique_id=1035370366 instance=ExtResource("5")]
+transform = Transform3D(0.5556743, 0, 3.1513848, 0, 3.2, 0, -3.1513848, 0, 0.5556743, 20, 0, -20)
 
-[node name="Bush2" type="StaticBody3D" parent="."]
-position = Vector3(-35, 0, -55)
-scale = Vector3(0.066, 0.066, 0.066)
+[node name="Lilypad4" parent="." unique_id=1211174183 instance=ExtResource("5")]
+transform = Transform3D(-1.4000001, 0, 2.424871, 0, 2.8, 0, -2.424871, 0, -1.4000001, -25, 0, -10)
 
-[node name="Model" parent="Bush2" instance=ExtResource("4")]
+[node name="Lilypad5" parent="." unique_id=891855331 instance=ExtResource("5")]
+transform = Transform3D(-2.819078, 0, 1.0260606, 0, 3, 0, -1.0260606, 0, -2.819078, 40, 0, 15)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Bush2"]
-shape = SubResource("Shape_bush")
+[node name="Lilypad6" parent="." unique_id=882427092 instance=ExtResource("5")]
+transform = Transform3D(-2.4432008, 0, -0.88925236, 0, 2.6, 0, 0.88925236, 0, -2.4432008, -10, 0, 45)
 
-[node name="Bush3" type="StaticBody3D" parent="."]
-position = Vector3(55, 0, -35)
-scale = Vector3(0.084, 0.084, 0.084)
+[node name="Lilypad7" parent="." unique_id=898726921 instance=ExtResource("5")]
+transform = Transform3D(-1.5499997, 0, -2.6846788, 0, 3.1, 0, 2.6846788, 0, -1.5499997, 15, 0, -45)
 
-[node name="Model" parent="Bush3" instance=ExtResource("4")]
+[node name="Lilypad8" parent="." unique_id=1535043761 instance=ExtResource("5")]
+transform = Transform3D(0.46885002, 0, -2.6589808, 0, 2.7, 0, 2.6589808, 0, 0.46885002, -45, 0, -25)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Bush3"]
-shape = SubResource("Shape_bush")
+[node name="StealthBush1" parent="." unique_id=2134079053 instance=ExtResource("6")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -30, 0.1, 30)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad1" parent="." instance=ExtResource("5")]
-position = Vector3(10, 0, 10)
-scale = Vector3(3.0, 3.0, 3.0)
+[node name="StealthBush2" parent="." unique_id=524705415 instance=ExtResource("6")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 30, 0.1, -30)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad2" parent="." instance=ExtResource("5")]
-position = Vector3(-15, 0, 25)
-rotation_degrees = Vector3(0, 40, 0)
-scale = Vector3(2.5, 2.5, 2.5)
+[node name="StealthBush3" parent="." unique_id=2079067272 instance=ExtResource("6")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -50, 0.1, -20)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad3" parent="." instance=ExtResource("5")]
-position = Vector3(20, 0, -20)
-rotation_degrees = Vector3(0, 80, 0)
-scale = Vector3(3.2, 3.2, 3.2)
+[node name="StealthBush4" parent="." unique_id=132064096 instance=ExtResource("6")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 50, 0.1, 20)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad4" parent="." instance=ExtResource("5")]
-position = Vector3(-25, 0, -10)
-rotation_degrees = Vector3(0, 120, 0)
-scale = Vector3(2.8, 2.8, 2.8)
+[node name="StealthBush5" parent="." unique_id=811991215 instance=ExtResource("7")]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -20, 0.1, -45)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad5" parent="." instance=ExtResource("5")]
-position = Vector3(40, 0, 15)
-rotation_degrees = Vector3(0, 160, 0)
-scale = Vector3(3.0, 3.0, 3.0)
+[node name="StealthBush6" parent="." unique_id=869744213 instance=ExtResource("7")]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 20, 0.1, 45)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad6" parent="." instance=ExtResource("5")]
-position = Vector3(-10, 0, 45)
-rotation_degrees = Vector3(0, 200, 0)
-scale = Vector3(2.6, 2.6, 2.6)
+[node name="StealthBush7" parent="." unique_id=312831999 instance=ExtResource("7")]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, -60, 0.1, 10)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad7" parent="." instance=ExtResource("5")]
-position = Vector3(15, 0, -45)
-rotation_degrees = Vector3(0, 240, 0)
-scale = Vector3(3.1, 3.1, 3.1)
+[node name="StealthBush8" parent="." unique_id=266287744 instance=ExtResource("7")]
+transform = Transform3D(10, 0, 0, 0, 10, 0, 0, 0, 10, 60, 0.1, -10)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
 
-[node name="Lilypad8" parent="." instance=ExtResource("5")]
-position = Vector3(-45, 0, -25)
-rotation_degrees = Vector3(0, 280, 0)
-scale = Vector3(2.7, 2.7, 2.7)
+[node name="StealthGrass1" parent="." unique_id=353514743 instance=ExtResource("8")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -40, 0.1, 50)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass2" parent="." unique_id=436631678 instance=ExtResource("8")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 40, 0.1, -50)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass3" parent="." unique_id=1214661525 instance=ExtResource("8")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -10, 0.1, -60)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass4" parent="." unique_id=1808860937 instance=ExtResource("8")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 10, 0.1, 60)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass5" parent="." unique_id=2123592231 instance=ExtResource("9")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, -55, 0.1, 55)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass6" parent="." unique_id=537502312 instance=ExtResource("9")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 55, 0.1, -55)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass7" parent="." unique_id=1674483514 instance=ExtResource("9")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 0.1, -35)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthGrass8" parent="." unique_id=1439842172 instance=ExtResource("9")]
+transform = Transform3D(12, 0, 0, 0, 12, 0, 0, 0, 12, 0, 0.1, 35)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Grass")
+
+[node name="StealthSmallBush2" parent="." unique_id=241391139 instance=ExtResource("13")]
+transform = Transform3D(4, 0, 0, 0, 4, 0, 0, 0, 4, 15, 0.1, -15)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush3" parent="." unique_id=543842702 instance=ExtResource("14")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, -45, 0.1, -10)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush4" parent="." unique_id=1147241277 instance=ExtResource("14")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 45, 0.1, 10)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush5" parent="." unique_id=707879712 instance=ExtResource("15")]
+transform = Transform3D(3.5, 0, 0, 0, 3.5, 0, 0, 0, 3.5, -25, 0.1, -30)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush6" parent="." unique_id=83003538 instance=ExtResource("15")]
+transform = Transform3D(3.5, 0, 0, 0, 3.5, 0, 0, 0, 3.5, 25, 0.1, 30)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush7" parent="." unique_id=1423046030 instance=ExtResource("13")]
+transform = Transform3D(4.5, 0, 0, 0, 4.5, 0, 0, 0, 4.5, -70, 0.1, 40)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")
+
+[node name="StealthSmallBush8" parent="." unique_id=506109251 instance=ExtResource("14")]
+transform = Transform3D(5, 0, 0, 0, 5, 0, 0, 0, 5, 70, 0.1, -40)
+script = ExtResource("12")
+custom_material = SubResource("Mat_Bush")

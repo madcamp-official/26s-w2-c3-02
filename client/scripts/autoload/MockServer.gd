@@ -6,10 +6,10 @@ const TARGET_SCORE := 5
 const PICKUP_DISTANCE := 2.4 # 수집 반경 확대 (기존 1.2 -> 2.4)
 const DELIVER_DISTANCE := 6.0 # covers the scale-4 Nest footprint (~4.6u radius) so
 # standing anywhere on/next to the visible nest triggers delivery
-const NEST_POSITION := Vector3(-45, 1.68, 45) # matches Pond.tscn Southwest Nest node
+const NEST_POSITION := Vector3(-58.5, 1.68, 58.5) # matches Pond.tscn Southwest Nest node
 const NEST_POSITIONS := [
-	Vector3(-45, 1.68, 45),   # 남서쪽 둥지
-	Vector3(45, 1.68, -45)    # 북동쪽 둥지
+	Vector3(-58.5, 1.68, 58.5),   # 남서쪽 둥지 (1.3배 멀어짐)
+	Vector3(58.5, 1.68, -58.5)    # 북동쪽 둥지 (1.3배 멀어짐)
 ]
 const DELIVER_MOVE_SPEED := 5.0 # units/sec each duckling swims into the nest once dropped off
 const NEST_ARRIVE_DISTANCE := 0.35 # how close counts as "reached the nest center"
@@ -17,7 +17,7 @@ const NEST_SETTLE_TIME := 0.35 # linger inside the nest so the visual node catch
 const INITIAL_DUCKLING_COUNT := TARGET_SCORE + 2
 const WANDER_SPEED := 1.2
 const WANDER_TURN_INTERVAL := 2.0
-const POND_BOUND := 70.0
+const POND_BOUND := 91.0
 const FOLLOW_SPACING := 1.5
 const FOLLOW_LEASH := FOLLOW_SPACING * 1.6 # hard cap on gap so it can't balloon at high speed
 const FOLLOW_LERP_SPEED := 4.0
@@ -925,9 +925,9 @@ func _random_player_spawn_position() -> Vector3:
 	return Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
 
 func _fake_duckling(id: String) -> Dictionary:
-	# 감옥 섬 외부(XZ 15.0 ~ 55.0 사이)의 랜덤 물 영역에 스폰시킴
+	# 감옥 섬 외부(XZ 15.0 ~ 75.0 사이)의 랜덤 물 영역에 스폰시킴
 	var angle := randf_range(0.0, TAU)
-	var dist := randf_range(15.0, 55.0)
+	var dist := randf_range(15.0, 75.0)
 	var spawn_x := cos(angle) * dist
 	var spawn_z := sin(angle) * dist
 
