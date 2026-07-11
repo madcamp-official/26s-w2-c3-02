@@ -28,6 +28,7 @@ func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
 	GameData.debug_mode_changed.connect(_on_debug_mode_changed)
+	_apply_static_text_styles()
 	_on_debug_mode_changed(GameData.debug_mode_enabled)
 	_refresh()
 	_update_direction_indicators()
@@ -108,8 +109,7 @@ func _add_player_group(title: String, team: String) -> void:
 		return
 
 	var title_label: Label = _make_player_list_label(title)
-	title_label.add_theme_font_size_override("font_size", 15)
-	title_label.add_theme_color_override("font_color", Color(0.68, 0.83, 1.0, 1.0))
+	_apply_game_text_style(title_label, 18, Color(0.78, 0.9, 1.0, 1.0), 5, 3)
 	player_list_content.add_child(title_label)
 
 	for player in group_players:
@@ -124,10 +124,28 @@ func _add_player_group(title: String, team: String) -> void:
 func _make_player_list_label(text: String) -> Label:
 	var label: Label = Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", 18)
-	label.add_theme_color_override("font_color", Color.WHITE)
+	_apply_game_text_style(label, 22, Color.WHITE, 6, 4)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return label
+
+
+func _apply_static_text_styles() -> void:
+	_apply_game_text_style(timer_label, 34, Color.WHITE, 8, 5)
+	_apply_game_text_style(score_label, 34, Color.WHITE, 8, 5)
+	_apply_game_text_style(jailed_label, 34, Color.WHITE, 8, 5)
+	_apply_game_text_style(event_message_label, 30, Color.WHITE, 7, 4)
+	_apply_game_text_style(jail_arrow_label, 42, Color.WHITE, 7, 4)
+	_apply_game_text_style(nest_arrow_label, 42, Color.WHITE, 7, 4)
+
+
+func _apply_game_text_style(label: Label, font_size: int, color: Color, outline_size: int, shadow_offset_y: int) -> void:
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.06, 1.0))
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_color_override("font_shadow_color", Color(0.04, 0.05, 0.06, 0.92))
+	label.add_theme_constant_override("shadow_offset_x", 0)
+	label.add_theme_constant_override("shadow_offset_y", shadow_offset_y)
 
 
 func _role_label(team: String) -> String:

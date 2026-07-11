@@ -1,14 +1,24 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu/MenuBackground3D.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/world/Pond.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://assets/duck/duck.glb" id="3"]
 [ext_resource type="PackedScene" path="res://assets/aligator/aligator.glb" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/world/props/JailIsland.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://assets/Nest/Birds nest.glb" id="6"]
 
 [node name="MenuBackground3D" type="Node3D"]
 script = ExtResource("1")
 
 [node name="Pond" parent="." instance=ExtResource("2")]
+
+[node name="JailIsland" parent="." instance=ExtResource("5")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -32, 0.5, 32)
+
+[node name="MenuNest" parent="." instance=ExtResource("6")]
+position = Vector3(36, 1.68, 8)
+rotation_degrees = Vector3(0, -24, 0)
+scale = Vector3(3, 3, 3)
 
 [node name="Duck" type="Node3D" parent="."]
 position = Vector3(14, 0, 4)

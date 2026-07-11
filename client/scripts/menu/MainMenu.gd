@@ -3,6 +3,7 @@ extends Control
 @onready var menu_panel: PanelContainer = $"MarginContainer/CenterContainer/Panel"
 @onready var lobby_panel: PanelContainer = %LobbyPanel
 @onready var settings_panel: PanelContainer = %SettingsPanel
+@onready var settings_button: Button = %SettingsButton
 @onready var nickname_input: LineEdit = %NicknameInput
 @onready var room_code_input: LineEdit = %RoomCodeInput
 @onready var join_room_button: Button = %JoinRoomButton
@@ -11,10 +12,15 @@ extends Control
 
 var _normalizing_room_code := false
 var _settings_return_view := "menu"
+var _settings_button_base_position: Vector2
+var _settings_hover_tween: Tween = null
 
 func _ready() -> void:
 	GameData.room_state_changed.connect(_refresh_lobby)
 	room_code_input.text_changed.connect(_on_room_code_input_text_changed)
+	settings_button.mouse_entered.connect(_on_settings_button_mouse_entered)
+	settings_button.mouse_exited.connect(_on_settings_button_mouse_exited)
+	_settings_button_base_position = settings_button.position
 	_on_room_code_input_text_changed(room_code_input.text)
 	_show_menu()
 
@@ -95,7 +101,7 @@ func _refresh_lobby() -> void:
 		var nickname := str(player.get("nickname", player.get("playerId", "Unknown")))
 		var team := _team_label(str(player.get("team", "")))
 		label.text = "%s        %s" % [nickname, team]
-		label.add_theme_font_size_override("font_size", 24)
+		label.add_theme_font_size_override("font_size", 28)
 		label.add_theme_color_override("font_color", Color.WHITE)
 		players_list.add_child(label)
 
@@ -117,3 +123,18 @@ func _on_settings_button_pressed() -> void:
 		_restore_from_settings()
 	else:
 		_show_settings()
+
+func _on_settings_button_mouse_entered() -> void:
+	_animate_settings_button(_settings_button_base_position + Vector2(0.0, -6.0))
+
+func _on_settings_button_mouse_exited() -> void:
+	_animate_settings_button(_settings_button_base_position)
+
+func _animate_settings_button(target_position: Vector2) -> void:
+	if _settings_hover_tween != null and _settings_hover_tween.is_running():
+		_settings_hover_tween.kill()
+
+	_settings_hover_tween = create_tween()
+	_settings_hover_tween.set_trans(Tween.TRANS_SINE)
+	_settings_hover_tween.set_ease(Tween.EASE_OUT)
+	_settings_hover_tween.tween_property(settings_button, "position", target_position, 0.12)
