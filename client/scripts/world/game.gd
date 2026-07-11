@@ -22,10 +22,52 @@ func _ready() -> void:
 	_duck = get_node_or_null("Duck")
 	_aligator = get_node_or_null("Aligator")
 	_jail_point = get_node_or_null("JailIsland/TeleportPoint")
+	_register_pond_obstacles()
 	GameData.game_state_changed.connect(_sync_remote_players)
 	GameData.game_event.connect(_on_game_event)
 	_apply_phase_positions()
 	_sync_remote_players()
+
+# 새끼오리가 바위/덤불/나무 안으로 들어가지 않도록, Pond의 소품들을 원형 장애물
+# 목록(월드 좌표 + 반지름)으로 변환해 MockServer의 이동 계산에 넘겨준다.
+func _register_pond_obstacles() -> void:
+	var pond := get_node_or_null("Pond")
+	if pond == null:
+		return
+	var obstacles: Array = []
+	for child in pond.get_children():
+		if child.name.begins_with("Rock"):
+			var model := child.get_node_or_null("Model")
+			if model:
+				var obs := _obstacle_from_node(model)
+				if not obs.is_empty():
+					obstacles.append(obs)
+		elif child.name.begins_with("Bush") or child.name.begins_with("Tree"):
+			var obs := _obstacle_from_node(child)
+			if not obs.is_empty():
+				obstacles.append(obs)
+	MockServer.register_obstacles(obstacles)
+
+func _obstacle_from_node(node: Node3D) -> Dictionary:
+	var aabb: AABB
+	var first := true
+	for mesh in _find_mesh_instances(node):
+		var world_aabb: AABB = mesh.global_transform * mesh.get_aabb()
+		aabb = world_aabb if first else aabb.merge(world_aabb)
+		first = false
+	if first:
+		return {}
+	var center := aabb.position + aabb.size * 0.5
+	var radius: float = max(aabb.size.x, aabb.size.z) * 0.5
+	return {"pos": Vector2(center.x, center.z), "radius": radius}
+
+func _find_mesh_instances(node: Node) -> Array:
+	var out: Array = []
+	if node is MeshInstance3D:
+		out.append(node)
+	for c in node.get_children():
+		out += _find_mesh_instances(c)
+	return out
 
 func _exit_tree() -> void:
 	if GameData.game_state_changed.is_connected(_sync_remote_players):

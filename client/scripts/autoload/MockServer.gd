@@ -48,7 +48,10 @@ var _second_timer := 0.0
 var _countdown_timer := 0.0
 var _npc_angle := 0.0
 
+const DUCKLING_OBSTACLE_PADDING := 0.4 # 새끼오리 몸체 여유 반경
+
 # Internal mock-simulation-only bookkeeping (not part of the api-spec.md Duckling schema).
+var _obstacles: Array = [] # [{"pos": Vector2, "radius": float}, ...] — game.gd가 Pond 소품에서 계산해 등록
 var _wander_state: Dictionary = {} # ducklingId -> {"dir": Vector2, "timer": float}
 var _carry_queues: Dictionary = {} # playerId -> Array[ducklingId]
 var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_moving": bool, "idle_spin": float}
@@ -94,6 +97,14 @@ func join_room(nickname: String, room_id: String) -> Dictionary:
 		normalized_room_id = _generate_room_code()
 	_prepare_lobby(nickname, normalized_room_id)
 	return {"ok": true}
+
+func list_rooms() -> Array:
+	# 실제 멀티룸 백엔드가 없으므로 정적 mock 데이터를 반환한다.
+	# MOCK_USED_ROOM_CODE는 "항상 꽉 찬 방" 에러 케이스 테스트용이라 목록에서 제외한다.
+	return [
+		{"room_id": MOCK_JOIN_ROOM_CODE, "host_nickname": "Mock Duck", "player_count": 1},
+		{"room_id": "5678", "host_nickname": "테스트방장", "player_count": 2},
+	]
 
 func _generate_room_code() -> String:
 	var code := MOCK_USED_ROOM_CODE
@@ -341,6 +352,23 @@ func _process(delta: float) -> void:
 		_broadcast_timer = 0.0
 		GameData.game_state_changed.emit()
 
+func register_obstacles(list: Array) -> void:
+	_obstacles = list
+
+# 새끼오리가 바위/덤불/나무(등록된 장애물) 안으로 들어가지 않도록 원 밖으로 밀어낸다.
+func _push_out_of_props(pos: Vector2) -> Vector2:
+	var result := pos
+	for obs in _obstacles:
+		var min_dist: float = obs["radius"] + DUCKLING_OBSTACLE_PADDING
+		var offset: Vector2 = result - obs["pos"]
+		var dist: float = offset.length()
+		if dist < min_dist:
+			if dist < 0.001:
+				offset = Vector2(1, 0)
+				dist = 0.001
+			result = obs["pos"] + offset.normalized() * min_dist
+	return result
+
 func _update_duckling_wander(delta: float) -> void:
 	for d in GameData.ducklings:
 		if d["state"] != "spawned":
@@ -367,7 +395,8 @@ func _update_duckling_wander(delta: float) -> void:
 			w["dir"] = -w["dir"] # 방향 반전하여 섬에서 튕겨 나가게 함
 			_wander_state[id] = w
 
-		d["position"] = {"x": next_x, "y": pos["y"], "z": next_z}
+		var pushed_pos := _push_out_of_props(Vector2(next_x, next_z))
+		d["position"] = {"x": pushed_pos.x, "y": pos["y"], "z": pushed_pos.y}
 
 func _check_pickup() -> void:
 	for player in GameData.players:
@@ -409,7 +438,8 @@ func release_ducklings(player_id: String, at_position: Vector3) -> void:
 		var flat_drop := Vector2(drop_x, drop_z)
 		if flat_drop.length() < 9.0:
 			flat_drop = flat_drop.normalized() * 9.0
-			
+		flat_drop = _push_out_of_props(flat_drop)
+
 		d["position"] = {"x": flat_drop.x, "y": 0.0, "z": flat_drop.y}
 		d["state"] = "spawned"
 		d["carrierPlayerId"] = null
@@ -484,7 +514,7 @@ func _update_duckling_follow(delta: float) -> void:
 					var pushed := flat_next.normalized() * 9.0
 					next_pos.x = pushed.x
 					next_pos.z = pushed.y
-					
+
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 				leader_pos = next_pos
 		else:
@@ -505,7 +535,7 @@ func _update_duckling_follow(delta: float) -> void:
 					var pushed := flat_next.normalized() * 9.0
 					next_pos.x = pushed.x
 					next_pos.z = pushed.y
-					
+
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 
 func _check_deliver() -> void:
@@ -945,12 +975,11 @@ func _fake_duckling(id: String) -> Dictionary:
 	# 감옥 섬 외부(XZ 15.0 ~ 75.0 사이)의 랜덤 물 영역에 스폰시킴
 	var angle := randf_range(0.0, TAU)
 	var dist := randf_range(15.0, 75.0)
-	var spawn_x := cos(angle) * dist
-	var spawn_z := sin(angle) * dist
+	var spawn_pos := _push_out_of_props(Vector2(cos(angle) * dist, sin(angle) * dist))
 
 	return {
 		"ducklingId": id,
-		"position": {"x": spawn_x, "y": 0.0, "z": spawn_z},
+		"position": {"x": spawn_pos.x, "y": 0.0, "z": spawn_pos.y},
 		"state": "spawned",
 		"carrierPlayerId": null,
 	}
