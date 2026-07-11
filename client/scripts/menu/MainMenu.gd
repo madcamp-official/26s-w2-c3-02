@@ -2,6 +2,7 @@ extends Control
 
 @onready var menu_panel: PanelContainer = $"MarginContainer/CenterContainer/Panel"
 @onready var lobby_panel: PanelContainer = %LobbyPanel
+@onready var settings_panel: PanelContainer = %SettingsPanel
 @onready var nickname_input: LineEdit = %NicknameInput
 @onready var room_code_input: LineEdit = %RoomCodeInput
 @onready var join_room_button: Button = %JoinRoomButton
@@ -9,6 +10,7 @@ extends Control
 @onready var players_list: VBoxContainer = %PlayersList
 
 var _normalizing_room_code := false
+var _settings_return_view := "menu"
 
 func _ready() -> void:
 	GameData.room_state_changed.connect(_refresh_lobby)
@@ -54,11 +56,29 @@ func _room_code_digits(value: String) -> String:
 func _show_menu() -> void:
 	menu_panel.visible = true
 	lobby_panel.visible = false
+	settings_panel.visible = false
 
 func _show_lobby() -> void:
 	menu_panel.visible = false
 	lobby_panel.visible = true
+	settings_panel.visible = false
 	_refresh_lobby()
+
+func _show_settings() -> void:
+	if lobby_panel.visible:
+		_settings_return_view = "lobby"
+	else:
+		_settings_return_view = "menu"
+
+	menu_panel.visible = false
+	lobby_panel.visible = false
+	settings_panel.visible = true
+
+func _restore_from_settings() -> void:
+	if _settings_return_view == "lobby":
+		_show_lobby()
+	else:
+		_show_menu()
 
 func _refresh_lobby() -> void:
 	if not is_instance_valid(room_code_label) or not is_instance_valid(players_list):
@@ -91,3 +111,9 @@ func _on_start_game_button_pressed() -> void:
 
 func _on_back_button_pressed() -> void:
 	_show_menu()
+
+func _on_settings_button_pressed() -> void:
+	if settings_panel.visible:
+		_restore_from_settings()
+	else:
+		_show_settings()
