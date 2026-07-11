@@ -3,10 +3,14 @@ extends Node
 const TICK_HZ := 10.0 # api-spec.md STATE_TICK_RATE
 const GAME_DURATION := 180 # api-spec.md GAME_DURATION_SECONDS
 const TARGET_SCORE := 5
-const PICKUP_DISTANCE := 1.2 # api-spec.md PICKUP_DISTANCE
+const PICKUP_DISTANCE := 2.4 # 수집 반경 확대 (기존 1.2 -> 2.4)
 const DELIVER_DISTANCE := 6.0 # covers the scale-4 Nest footprint (~4.6u radius) so
 # standing anywhere on/next to the visible nest triggers delivery
-const NEST_POSITION := Vector3(0, 1.68, 65) # matches Pond.tscn Nest node
+const NEST_POSITION := Vector3(-45, 1.68, 45) # matches Pond.tscn Southwest Nest node
+const NEST_POSITIONS := [
+	Vector3(-45, 1.68, 45),   # 남서쪽 둥지
+	Vector3(45, 1.68, -45)    # 북동쪽 둥지
+]
 const DELIVER_MOVE_SPEED := 5.0 # units/sec each duckling swims into the nest once dropped off
 const NEST_ARRIVE_DISTANCE := 0.35 # how close counts as "reached the nest center"
 const NEST_SETTLE_TIME := 0.35 # linger inside the nest so the visual node catches up before vanishing
@@ -25,11 +29,11 @@ const CIRCLE_LERP_SPEED := 4.0
 const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
-
+ 
 # 감옥 관련 상수
-const JAIL_POSITION := Vector3(-32, 7, 32)       # 감옥 텔레포트 목표 좌표 (섬 위)
-const JAIL_RELEASE_POSITION := Vector3(-15, 0, 15) # 석방 후 복귀 좌표
-const RESCUE_RADIUS := 10.0                        # 탈옥 시도 가능 거리
+const JAIL_POSITION := Vector3(0, 6.7, 0)          # 감옥 텔레포트 목표 좌표 (정중앙 0,0,0 상단)
+const JAIL_RELEASE_RADIUS := 16.0                  # 석방 시 스폰 원의 반지름 (섬 외곽)
+const RESCUE_RADIUS := 11.0                        # 탈옥 시도 가능 거리 (감옥 물리 경계 8.5보다 넓음)
 const RESCUE_DURATION := 3.0                       # 탈옥에 필요한 시간(초)
 const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 탈출 시간(초)
 
@@ -181,6 +185,16 @@ func _update_duckling_wander(delta: float) -> void:
 		var pos: Dictionary = d["position"]
 		var next_x: float = clamp(pos["x"] + w["dir"].x * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
 		var next_z: float = clamp(pos["z"] + w["dir"].y * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
+		
+		# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
+		var flat_pos := Vector2(next_x, next_z)
+		if flat_pos.length() < 9.0:
+			var pushed := flat_pos.normalized() * 9.0
+			next_x = pushed.x
+			next_z = pushed.y
+			w["dir"] = -w["dir"] # 방향 반전하여 섬에서 튕겨 나가게 함
+			_wander_state[id] = w
+
 		d["position"] = {"x": next_x, "y": pos["y"], "z": next_z}
 
 func _check_pickup() -> void:
@@ -216,7 +230,15 @@ func release_ducklings(player_id: String, at_position: Vector3) -> void:
 			continue
 		var angle := randf_range(0.0, TAU)
 		var radius := randf_range(1.0, 3.0)
-		d["position"] = {"x": at_position.x + cos(angle) * radius, "y": 0.0, "z": at_position.z + sin(angle) * radius}
+		var drop_x := at_position.x + cos(angle) * radius
+		var drop_z := at_position.z + sin(angle) * radius
+		
+		# 드롭 위치가 섬 내부일 경우 섬 밖으로 밀어냄
+		var flat_drop := Vector2(drop_x, drop_z)
+		if flat_drop.length() < 9.0:
+			flat_drop = flat_drop.normalized() * 9.0
+			
+		d["position"] = {"x": flat_drop.x, "y": 0.0, "z": flat_drop.y}
 		d["state"] = "spawned"
 		d["carrierPlayerId"] = null
 		_wander_state.erase(duckling_id)
@@ -281,6 +303,14 @@ func _update_duckling_follow(delta: float) -> void:
 					var target := leader_pos + dir * FOLLOW_SPACING
 					var lerp_speed: float = max(FOLLOW_LERP_MIN, FOLLOW_LERP_SPEED - i * FOLLOW_LERP_FALLOFF)
 					next_pos = current.lerp(target, clamp(delta * lerp_speed, 0.0, 1.0))
+				
+				# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
+				var flat_next := Vector2(next_pos.x, next_pos.z)
+				if flat_next.length() < 9.0:
+					var pushed := flat_next.normalized() * 9.0
+					next_pos.x = pushed.x
+					next_pos.z = pushed.y
+					
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 				leader_pos = next_pos
 		else:
@@ -294,6 +324,14 @@ func _update_duckling_follow(delta: float) -> void:
 				var target := player_pos + Vector3(cos(angle), 0, sin(angle)) * CIRCLE_RADIUS
 				var current := _dict_to_vec3(d["position"])
 				var next_pos := current.lerp(target, clamp(delta * CIRCLE_LERP_SPEED, 0.0, 1.0))
+				
+				# 감옥 섬 (0,0) 주변 반경 9.0 내부 진입 차단
+				var flat_next := Vector2(next_pos.x, next_pos.z)
+				if flat_next.length() < 9.0:
+					var pushed := flat_next.normalized() * 9.0
+					next_pos.x = pushed.x
+					next_pos.z = pushed.y
+					
 				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
 
 func _check_deliver() -> void:
@@ -305,7 +343,17 @@ func _check_deliver() -> void:
 		if queue.is_empty():
 			continue
 		var player_pos := _dict_to_vec3(player["position"])
-		if player_pos.distance_to(NEST_POSITION) > DELIVER_DISTANCE:
+
+		# 가장 가까운 둥지를 찾는다.
+		var nearest_nest := NEST_POSITIONS[0]
+		var min_dist := player_pos.distance_to(nearest_nest)
+		for nest_pos in NEST_POSITIONS:
+			var d := player_pos.distance_to(nest_pos)
+			if d < min_dist:
+				min_dist = d
+				nearest_nest = nest_pos
+
+		if min_dist > DELIVER_DISTANCE:
 			continue
 
 		var ducklings_by_id := {}
@@ -330,6 +378,7 @@ func _check_deliver() -> void:
 			"playerName": str(player.get("nickname", player_id)),
 			"total": delivering_ducklings.size(),
 			"delivered": 0,
+			"target_nest_pos": nearest_nest,  # 이 배치에 속한 새끼오리들의 목적지 설정
 		}
 
 		# Hand the carried ducklings off to the "delivering" state instead of
@@ -349,7 +398,14 @@ func _update_delivering(delta: float) -> void:
 			continue
 		var id: String = d["ducklingId"]
 		var current := _dict_to_vec3(d["position"])
-		var to_nest := NEST_POSITION - current
+
+		# 배치 ID를 통해 어떤 둥지로 헤엄칠지 확인한다.
+		var target_nest := NEST_POSITIONS[0]
+		var batch_id: String = str(d.get("deliveryBatchId", ""))
+		if batch_id != "" and _delivery_batches.has(batch_id):
+			target_nest = _delivery_batches[batch_id].get("target_nest_pos", NEST_POSITIONS[0])
+
+		var to_nest := target_nest - current
 		var dist := to_nest.length()
 		if dist > NEST_ARRIVE_DISTANCE:
 			var step: float = min(DELIVER_MOVE_SPEED * delta, dist)
@@ -359,7 +415,7 @@ func _update_delivering(delta: float) -> void:
 
 		# Reached the nest: pin it there and let it settle briefly so the visual
 		# duckling can catch up, then mark delivered (which despawns the node).
-		d["position"] = {"x": NEST_POSITION.x, "y": NEST_POSITION.y, "z": NEST_POSITION.z}
+		d["position"] = {"x": target_nest.x, "y": target_nest.y, "z": target_nest.z}
 		var settled: float = _delivering_settle.get(id, 0.0) + delta
 		_delivering_settle[id] = settled
 		if settled >= NEST_SETTLE_TIME:
@@ -421,26 +477,43 @@ func jail_player(player_id: String) -> void:
 	GameData.game_state_changed.emit()
 
 func _release_player(player_id: String, is_rescue: bool) -> void:
-	# 플레이어를 석방하고 감옥 밖으로 이동시킨다.
+	# 감옥 중심 주변 원 위의 랜덤 위치를 생성해 플레이어를 석방한다.
+	var release_pos := _random_release_pos()
+
 	for p in GameData.players:
 		if p["playerId"] != player_id:
 			continue
 		p["state"] = "idle"
 		p["position"] = {
-			"x": JAIL_RELEASE_POSITION.x,
-			"y": JAIL_RELEASE_POSITION.y,
-			"z": JAIL_RELEASE_POSITION.z,
+			"x": release_pos.x,
+			"y": release_pos.y,
+			"z": release_pos.z,
 		}
 		break
 
+	var pos_dict := {"x": release_pos.x, "y": release_pos.y, "z": release_pos.z}
 	if is_rescue:
 		GameData.game_event.emit("player_rescued", {
 			"targetId": player_id,
 			"rescuerId": _active_rescuer_id,
+			"releasePosition": pos_dict,
 		})
 	else:
-		GameData.game_event.emit("player_released", {"playerId": player_id})
+		GameData.game_event.emit("player_released", {
+			"playerId": player_id,
+			"releasePosition": pos_dict,
+		})
 	GameData.game_state_changed.emit()
+
+func _random_release_pos() -> Vector3:
+	# 감옥 섬 XZ 중심에서 JAIL_RELEASE_RADIUS 거리의 원 위에서
+	# 랜덤 각도를 골라 석방 위치를 반환한다. Y=0 (연못 수면).
+	var angle := randf_range(0.0, TAU)
+	return Vector3(
+		JAIL_POSITION.x + cos(angle) * JAIL_RELEASE_RADIUS,
+		0.0,
+		JAIL_POSITION.z + sin(angle) * JAIL_RELEASE_RADIUS
+	)
 
 func _rescue_all_jailed() -> void:
 	# 현재 수감 중인 오리 플레이어를 전원 석방한다.
@@ -581,12 +654,16 @@ func _end_game(winner: String) -> void:
 	GameData.game_state_changed.emit()
 
 func _fake_player(id: String, nickname: String, team: String, character: String) -> Dictionary:
+	var spawn_pos := Vector3(-40.0, 0.0, 40.0) # 오리 기본 스폰 (남서쪽)
+	if character == "aligator":
+		spawn_pos = Vector3(40.0, 0.0, -40.0) # 악어 기본 스폰 (북동쪽)
+
 	return {
 		"playerId": id,
 		"nickname": nickname,
 		"team": team,
 		"character": character,
-		"position": {"x": 0.0, "y": 0.0, "z": 0.0},
+		"position": {"x": spawn_pos.x, "y": spawn_pos.y, "z": spawn_pos.z},
 		"rotationY": 0.0,
 		"state": "idle",
 		"carryingDucklingId": null,
@@ -594,9 +671,15 @@ func _fake_player(id: String, nickname: String, team: String, character: String)
 	}
 
 func _fake_duckling(id: String) -> Dictionary:
+	# 감옥 섬 외부(XZ 15.0 ~ 55.0 사이)의 랜덤 물 영역에 스폰시킴
+	var angle := randf_range(0.0, TAU)
+	var dist := randf_range(15.0, 55.0)
+	var spawn_x := cos(angle) * dist
+	var spawn_z := sin(angle) * dist
+
 	return {
 		"ducklingId": id,
-		"position": {"x": randf_range(-15.0, 15.0), "y": 0.0, "z": randf_range(-15.0, 15.0)},
+		"position": {"x": spawn_x, "y": 0.0, "z": spawn_z},
 		"state": "spawned",
 		"carrierPlayerId": null,
 	}

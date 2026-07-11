@@ -32,12 +32,11 @@ var _has_remote_target := false
 var _is_jailed: bool = false  # 현재 수감 상태 여부
 
 # 감옥 섬 경계 상수
-# - JAIL_BOUND_RADIUS: 섬 중심(JAIL_POSITION XZ)에서 벗어날 수 있는 최대 수평 거리.
-# - JAIL_MIN_Y: 이 Y값 아래로 내려가면 연못 수면에 닿은 것으로 간주해 이동을 차단.
-#   연못 수면 ≈ Y 0, 섬 노드 원점 ≈ Y 2.5이므로 0.5로 설정.
-#   (3.0으로 설정하면 섬 표면(Y≈2.5~4)에서도 롤백이 발동해 이동이 불가능해짐)
-const JAIL_BOUND_RADIUS := 11.0
-const JAIL_MIN_Y        := 0.5
+# - JAIL_BOUND_RADIUS: 섬에서 멀리 이탈하는 것을 방지하기 위한 최대 안전 반경 버퍼 (15.0으로 넉넉하게 설정).
+# - JAIL_MIN_Y: 섬의 해안선(지형과 호수 물이 만나는 높이) 기준 최소 Y값.
+#   (Y=0.45 미만으로 내려가 물을 밟기 직전에 이동을 차단하여 해안선을 물리적 경계로 작동하게 함)
+const JAIL_BOUND_RADIUS := 15.0
+const JAIL_MIN_Y        := 0.45
 
 func _ready() -> void:
 	var config: Dictionary = CHARACTER_CONFIG[character]
@@ -57,11 +56,17 @@ func _ready() -> void:
 	$CollisionShape3D.shape = shape
 	$CollisionShape3D.position = config["collision_pos"]
 
-	# The jail island is a low-poly trimesh with faceted, sloped grass. Allow steeper
-	# contact normals to count as floor (and snap down onto them) so the character
-	# stays grounded there instead of sliding/jittering.
-	floor_max_angle = deg_to_rad(60)
-	floor_snap_length = 1.5
+	# \ub85c\uc6b0\ud3f4\ub9ac \ud2b8\ub9ac\uba54\uc2dc \uc12c\uc5d0\uc11c \ud134(ledge)\uc5d0 \uac78\ub9ac\uc9c0 \uc54a\ub3c4\ub85d \ud310\uc815\uc744 \ud6c4\ud558\uac8c \uc124\uc815\ud55c\ub2e4.
+	#
+	# floor_max_angle: \uc774 \uac01\ub3c4 \uc774\ub0b4\uc758 \uba74\uc740 "\ubc14\ub2e5"\uc73c\ub85c \uc778\uc2dd\ud55c\ub2e4.
+	#   \ub85c\uc6b0\ud3f4\ub9ac \uba54\uc2dc\ub294 \ud3f4\ub9ac\uacf5 \uacbd\uacc4\uc5d0 \uadfc\uc218\uc9c1 \uba74\uc774 \uc0dd\uae30\ubbc0\ub85c, 60\u00b0\uba74 \uc774\ub97c "\ubcbd"\uc73c\ub85c \ud310\ub2e8\ud574 \uc774\ub3d9\uc744 \ub9c9\ub294\ub2e4.
+	#   80\u00b0\ub85c \uc62c\ub9ac\uba74 \uac70\uc758 \uc218\uc9c1\uc5d0 \uac00\uae4c\uc6b4 \uba74\ub3c4 \ubc14\ub2e5\uc73c\ub85c \uc778\uc2dd\ub3fc \uadf8 \uc704\ub97c \uac78\uc5b4\uc62c\ub77c\uac08 \uc218 \uc788\ub2e4.
+	# floor_snap_length: \ub0b4\ub9ac\ub9c9 \ub54c \ubc14\ub2e5\uc5d0 \uc2a4\ub0c5\ud558\ub294 \uac70\ub9ac.
+	# max_slides: \ucda9\ub3cc \ud574\uc18c \ubc18\ubcf5 \ud69f\uc218. \ubcf5\uc7a1\ud55c \uc9c0\ud615\uc5d0\uc11c \ub354 \ub9ce\uc740 \ud328\uc2a4\ub85c \ucda9\ub3cc\uc744 \ud480\uc5b4\ub09c\ub2e4.
+	floor_max_angle  = deg_to_rad(80)  # 60\u00b0 \u2192 80\u00b0: \ub85c\uc6b0\ud3f4\ub9ac \ud134 \ud310\uc815 \ud6c4\ud558\uac8c
+	floor_snap_length = 2.5            # 1.5 \u2192 2.5: \ub0b4\ub9ac\ub9c9 \uc2a4\ub0c5 \uac15\ud654
+	max_slides        = 6              # 4(default) \u2192 6: \ubcf5\uc7a1\ud55c \ucda9\ub3cc \ud574\uc18c \ub2a5\ub825 \ud5a5\uc0c1
+
 
 	if character == "duck":
 		GameData.register_local_player("duck", "duck")
@@ -95,7 +100,14 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 		"player_released", "player_rescued":
 			if str(data.get("playerId", "")) == my_id or str(data.get("targetId", "")) == my_id:
 				_is_jailed = false
-				global_position = MockServer.JAIL_RELEASE_POSITION
+				# MockServer가 이벤트 payload에 석방 위치를 담아 보낸다.
+				# 서버 권한 원칙: 위치 결정은 서버(MockServer)가 하고, 클라이언트는 따른다.
+				var rp: Dictionary = data.get("releasePosition", {})
+				if not rp.is_empty():
+					global_position = Vector3(float(rp["x"]), float(rp["y"]), float(rp["z"]))
+				else:
+					# 폴백: 데이터가 없을 경우 중앙 감옥 남쪽 기본 위치로
+					global_position = Vector3(0, 0, 16)
 				velocity = Vector3.ZERO
 
 func _process(delta: float) -> void:

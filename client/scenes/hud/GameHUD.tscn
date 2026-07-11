@@ -174,18 +174,33 @@ offset_top = 480.0
 offset_right = 152.0
 offset_bottom = 540.0
 
-[node name="Circle" type="PanelContainer" parent="Root/JailDirectionIndicator"]
+[node name="Rotator" type="Control" parent="Root/JailDirectionIndicator"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(28, 28)
+
+[node name="Circle" type="PanelContainer" parent="Root/JailDirectionIndicator/Rotator"]
 layout_mode = 1
 offset_right = 56.0
 offset_bottom = 56.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
 
-[node name="JailArrowLabel" type="Label" parent="Root/JailDirectionIndicator"]
+[node name="JailPhoto" type="PanelContainer" parent="Root/JailDirectionIndicator/Rotator/Circle"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+pivot_offset = Vector2(28, 28)
+
+[node name="JailArrowLabel" type="Label" parent="Root/JailDirectionIndicator/Rotator"]
 unique_name_in_owner = true
 layout_mode = 1
-offset_left = 76.0
+offset_left = 56.0
 offset_top = 4.0
-offset_right = 116.0
+offset_right = 96.0
 offset_bottom = 52.0
 text = "▶"
 horizontal_alignment = 1
@@ -206,18 +221,80 @@ offset_top = 552.0
 offset_right = 152.0
 offset_bottom = 612.0
 
-[node name="Circle" type="PanelContainer" parent="Root/NestDirectionIndicator"]
+[node name="Rotator" type="Control" parent="Root/NestDirectionIndicator"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(28, 28)
+
+[node name="Circle" type="PanelContainer" parent="Root/NestDirectionIndicator/Rotator"]
 layout_mode = 1
 offset_right = 56.0
 offset_bottom = 56.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
 
-[node name="NestArrowLabel" type="Label" parent="Root/NestDirectionIndicator"]
+[node name="NestPhoto" type="PanelContainer" parent="Root/NestDirectionIndicator/Rotator/Circle"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+pivot_offset = Vector2(28, 28)
+
+[node name="NestArrowLabel" type="Label" parent="Root/NestDirectionIndicator/Rotator"]
 unique_name_in_owner = true
 layout_mode = 1
-offset_left = 76.0
+offset_left = 56.0
 offset_top = 4.0
-offset_right = 116.0
+offset_right = 96.0
+offset_bottom = 52.0
+text = "▶"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 7
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 42
+
+[node name="Nest2DirectionIndicator" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 36.0
+offset_top = 624.0
+offset_right = 152.0
+offset_bottom = 684.0
+
+[node name="Rotator" type="Control" parent="Root/Nest2DirectionIndicator"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(28, 28)
+
+[node name="Circle" type="PanelContainer" parent="Root/Nest2DirectionIndicator/Rotator"]
+layout_mode = 1
+offset_right = 56.0
+offset_bottom = 56.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_circle")
+
+[node name="Nest2Photo" type="PanelContainer" parent="Root/Nest2DirectionIndicator/Rotator/Circle"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
+pivot_offset = Vector2(28, 28)
+
+[node name="Nest2ArrowLabel" type="Label" parent="Root/Nest2DirectionIndicator/Rotator"]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 56.0
+offset_top = 4.0
+offset_right = 96.0
 offset_bottom = 52.0
 text = "▶"
 horizontal_alignment = 1
