@@ -68,7 +68,11 @@ position = Vector3(-80, 2, 0)
 shape = SubResource("Shape_wall_ew")
 
 [node name="Nest" parent="." instance=ExtResource("2")]
-position = Vector3(0, 1.68, 65)
+position = Vector3(-45, 1.68, 45)
+scale = Vector3(4, 4, 4)
+
+[node name="Nest2" parent="." instance=ExtResource("2")]
+position = Vector3(45, 1.68, -45)
 scale = Vector3(4, 4, 4)
 
 [node name="Rock1" type="StaticBody3D" parent="."]

@@ -106,8 +106,8 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 				if not rp.is_empty():
 					global_position = Vector3(float(rp["x"]), float(rp["y"]), float(rp["z"]))
 				else:
-					# 폴백: 데이터가 없을 경우 감옥 남쪽 기본 위치로
-					global_position = Vector3(-32, 0, 16)
+					# 폴백: 데이터가 없을 경우 중앙 감옥 남쪽 기본 위치로
+					global_position = Vector3(0, 0, 16)
 				velocity = Vector3.ZERO
 
 func _process(delta: float) -> void:

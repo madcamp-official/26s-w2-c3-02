@@ -1,8 +1,9 @@
 extends CanvasLayer
 
 const TOAST_DURATION := 3.0
-const NEST_POSITION := Vector3(0, 1.68, 65)
-const JAIL_FALLBACK_POSITION := Vector3(-32, 0.5, 32) # used only if the jail node isn't found
+const NEST_1_POSITION := Vector3(-45, 1.68, 45) # 남서쪽 둥지
+const NEST_2_POSITION := Vector3(45, 1.68, -45) # 북동쪽 둥지
+const JAIL_FALLBACK_POSITION := Vector3(0, 0.5, 0) # 감옥 중앙 이동 반영 폴백
 const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(116, 60)
 
@@ -14,8 +15,10 @@ const INDICATOR_SIZE := Vector2(116, 60)
 @onready var player_list_content: VBoxContainer = %PlayerListContent
 @onready var jail_direction_indicator: Control = %JailDirectionIndicator
 @onready var nest_direction_indicator: Control = %NestDirectionIndicator
+@onready var nest_2_direction_indicator: Control = %Nest2DirectionIndicator
 @onready var jail_arrow_label: Label = %JailArrowLabel
 @onready var nest_arrow_label: Label = %NestArrowLabel
+@onready var nest_2_arrow_label: Label = %Nest2ArrowLabel
 @onready var debug_mode_button: Button = %DebugModeButton
 @onready var debug_panel: PanelContainer = %DebugPanel
 @onready var debug_summary_label: Label = %DebugSummaryLabel
@@ -234,7 +237,8 @@ func _update_direction_indicators() -> void:
 	if camera == null:
 		return
 
-	_update_direction_indicator(nest_direction_indicator, nest_arrow_label, NEST_POSITION, camera)
+	_update_direction_indicator(nest_direction_indicator, nest_arrow_label, NEST_1_POSITION, camera)
+	_update_direction_indicator(nest_2_direction_indicator, nest_2_arrow_label, NEST_2_POSITION, camera)
 	_update_direction_indicator(jail_direction_indicator, jail_arrow_label, _jail_world_position(), camera)
 
 func _jail_world_position() -> Vector3:
@@ -270,9 +274,22 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 	var edge_center: Vector2 = center + unit * min(distance_x, distance_y)
 	indicator.position = edge_center - INDICATOR_SIZE * 0.5
 
-	arrow_label.text = "▶"
-	arrow_label.pivot_offset = arrow_label.size * 0.5
-	arrow_label.rotation = direction.angle()
+	# Rotator 노드를 찾아 방향 각도로 회전시킴
+	var rotator := indicator.get_node_or_null("Rotator") as Control
+	if rotator != null:
+		var target_angle := direction.angle()
+		rotator.rotation = target_angle
+		
+		# 화살표(Label)는 0도로 고정 (부모인 Rotator가 통째로 돌기 때문)
+		arrow_label.rotation = 0.0
+		
+		# Circle 자식의 첫 번째 노드인 Photo를 역회전하여 사진이 뒤집어지지 않고 항상 똑바로 유지되도록 함
+		var circle := rotator.get_node_or_null("Circle") as Control
+		if circle != null and circle.get_child_count() > 0:
+			var photo := circle.get_child(0) as Control
+			if photo != null:
+				photo.rotation = -target_angle
+
 
 
 func _is_world_position_visible(screen_pos: Vector2, viewport_size: Vector2, is_behind: bool) -> bool:
