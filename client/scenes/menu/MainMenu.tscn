@@ -1,7 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/main_menu/background.png" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 46.0
@@ -120,6 +121,21 @@ texture = ExtResource("2")
 expand_mode = 1
 stretch_mode = 6
 
+[node name="LiveBackground" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="MenuViewport" type="SubViewport" parent="LiveBackground"]
+size = Vector2i(1280, 720)
+
+[node name="MenuBackground3D" parent="LiveBackground/MenuViewport" instance=ExtResource("3")]
+
 [node name="BackgroundTint" type="ColorRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
@@ -164,7 +180,7 @@ theme_override_font_sizes/font_size = 58
 
 [node name="SubtitleLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
 layout_mode = 2
-text = "닉네임을 정하고 방을 만들거나 참가하세요."
+text = "닉네임을 설정하고 방을 만들거나 참가하세요."
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 24

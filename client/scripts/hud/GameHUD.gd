@@ -182,7 +182,7 @@ func _event_message(event: String, data: Dictionary) -> String:
 		"duckling_delivered":
 			var player_name := _player_name(data, "playerName", "playerId")
 			var count := int(data.get("count", 1))
-			return "%s이 새끼오리 %d마리를 둥지에 데려왔습니다!" % [player_name, count]
+			return "%s님이 새끼오리 %d마리를 둥지에 데려왔습니다!" % [player_name, count]
 	return ""
 
 
