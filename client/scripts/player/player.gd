@@ -7,6 +7,7 @@ const REMOTE_LERP_SPEED := 10.0
 
 const JAIL_BOUND_RADIUS := 15.0
 const JAIL_MIN_Y := 0.45
+const DEFAULT_STEALTH_RADIUS := 8.0
 
 const CHARACTER_CONFIG := {
 	"duck": {
@@ -28,14 +29,19 @@ const CHARACTER_CONFIG := {
 @export var character: String = "duck"
 @export var controllable: bool = false
 @export_enum("wasd", "arrows") var control_scheme: String = "wasd"
+@export var controlled_player_id: String = ""
 
 var _remote_target_pos: Vector3
 var _remote_target_rot: float
 var _has_remote_target := false
 var _is_jailed := false
+var _display_name_text := ""
 
 
 func _ready() -> void:
+	if controlled_player_id == "":
+		controlled_player_id = GameData.local_player_id
+
 	var config: Dictionary = CHARACTER_CONFIG[character]
 	var model_scene: PackedScene = load(config["model"])
 	if model_scene == null:
@@ -81,12 +87,13 @@ func snap_to_state(pos: Vector3, rotation_y: float) -> void:
 
 
 func set_display_name(text: String) -> void:
+	_display_name_text = text
 	$IdLabel.text = text
-	$IdLabel.visible = true
+	_update_name_visibility()
 
 
 func _on_game_event(event: String, data: Dictionary) -> void:
-	var my_id := GameData.local_player_id
+	var my_id := controlled_player_id
 	match event:
 		"player_jailed":
 			if str(data.get("playerId", "")) == my_id:
@@ -109,10 +116,30 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_name_visibility()
 	if not _has_remote_target:
 		return
 	position = position.lerp(_remote_target_pos, clamp(delta * REMOTE_LERP_SPEED, 0.0, 1.0))
 	rotation.y = lerp_angle(rotation.y, _remote_target_rot, clamp(delta * REMOTE_LERP_SPEED, 0.0, 1.0))
+
+
+func _update_name_visibility() -> void:
+	$IdLabel.visible = _display_name_text != "" and not _is_inside_stealth_cover()
+
+
+func _is_inside_stealth_cover() -> bool:
+	var player_flat := Vector2(global_position.x, global_position.z)
+	for cover in get_tree().get_nodes_in_group("stealth_cover"):
+		if not cover is Node3D:
+			continue
+		var cover_node := cover as Node3D
+		var cover_flat := Vector2(cover_node.global_position.x, cover_node.global_position.z)
+		var radius := DEFAULT_STEALTH_RADIUS
+		if cover_node.get("stealth_radius") != null:
+			radius = float(cover_node.get("stealth_radius"))
+		if player_flat.distance_to(cover_flat) <= radius:
+			return true
+	return false
 
 
 func _physics_process(delta: float) -> void:
@@ -191,5 +218,5 @@ func _face_input_direction(input_dir: Vector3, delta: float) -> void:
 
 
 func _update_local_transform_if_needed() -> void:
-	if character == "duck":
-		GameData.update_local_player_transform(global_position, rotation.y)
+	if controlled_player_id != "":
+		GameData.update_player_transform(controlled_player_id, global_position, rotation.y)

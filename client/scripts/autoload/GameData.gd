@@ -45,8 +45,11 @@ func register_local_player(team: String, character: String, nickname: String = "
 	})
 
 func update_local_player_transform(pos: Vector3, rotation_y: float) -> void:
+	update_player_transform(local_player_id, pos, rotation_y)
+
+func update_player_transform(player_id: String, pos: Vector3, rotation_y: float) -> void:
 	for p in players:
-		if p["playerId"] == local_player_id:
+		if p["playerId"] == player_id:
 			p["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
 			p["rotationY"] = rotation_y
 			return
