@@ -12,14 +12,15 @@ var _current_children: Array = []
 var _overlay_children: Array = []
 
 func go_to(screen: String) -> void:
+	if screen == "game":
+		if not MockServer.start_game():
+			return
+
 	_clear_overlays()
 
 	for child in _current_children:
 		child.queue_free()
 	_current_children.clear()
-
-	if screen == "game":
-		MockServer.start_game()
 
 	for path in SCENES.get(screen, []):
 		var packed: PackedScene = load(path)

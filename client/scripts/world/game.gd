@@ -23,7 +23,15 @@ func _ready() -> void:
 	_aligator = get_node_or_null("Aligator")
 	_jail_point = get_node_or_null("JailIsland/TeleportPoint")
 	GameData.game_state_changed.connect(_sync_remote_players)
+	GameData.game_event.connect(_on_game_event)
+	_apply_phase_positions()
 	_sync_remote_players()
+
+func _exit_tree() -> void:
+	if GameData.game_state_changed.is_connected(_sync_remote_players):
+		GameData.game_state_changed.disconnect(_sync_remote_players)
+	if GameData.game_event.is_connected(_on_game_event):
+		GameData.game_event.disconnect(_on_game_event)
 
 func _process(_delta: float) -> void:
 	if _target:
@@ -32,7 +40,35 @@ func _process(_delta: float) -> void:
 func _physics_process(_delta: float) -> void:
 	_check_jail()
 
+func _on_game_event(event: String, _data: Dictionary) -> void:
+	if event == "game_started":
+		_apply_phase_positions()
+
+func _apply_phase_positions() -> void:
+	_snap_local_node_to_team(_duck, "duck")
+	_snap_local_node_to_team(_aligator, "tagger")
+
+func _snap_local_node_to_team(node: Node3D, team: String) -> void:
+	if node == null:
+		return
+
+	var player: Dictionary = _first_player_for_team(team)
+	if player.is_empty():
+		return
+
+	var pos: Vector3 = _dict_to_vec3(player["position"])
+	node.global_position = pos
+	node.rotation.y = float(player.get("rotationY", 0.0))
+
+func _first_player_for_team(team: String) -> Dictionary:
+	for player in GameData.players:
+		if str(player.get("team", "")) == team:
+			return player
+	return {}
+
 func _check_jail() -> void:
+	if GameData.phase != "playing":
+		return
 	if _duck == null or _aligator == null or _jail_point == null:
 		return
 	var forward := -_aligator.global_transform.basis.z
@@ -49,6 +85,7 @@ func _sync_remote_players() -> void:
 		if pid == GameData.local_player_id:
 			continue
 		seen_ids[pid] = true
+		var was_created := false
 		if not _remote_players.has(pid):
 			var node := PlayerScene.instantiate()
 			node.character = p["character"]
@@ -56,10 +93,19 @@ func _sync_remote_players() -> void:
 			add_child(node)
 			node.set_display_name(pid)
 			_remote_players[pid] = node
+			was_created = true
 		var pos: Dictionary = p["position"]
-		_remote_players[pid].set_remote_state(Vector3(pos["x"], pos["y"], pos["z"]), p["rotationY"])
+		var target_pos: Vector3 = _dict_to_vec3(pos)
+		var target_rot: float = float(p["rotationY"])
+		if was_created or GameData.phase == "countdown":
+			_remote_players[pid].snap_to_state(target_pos, target_rot)
+		else:
+			_remote_players[pid].set_remote_state(target_pos, target_rot)
 
 	for pid in _remote_players.keys():
 		if not seen_ids.has(pid):
 			_remote_players[pid].queue_free()
 			_remote_players.erase(pid)
+
+func _dict_to_vec3(pos: Dictionary) -> Vector3:
+	return Vector3(float(pos["x"]), float(pos["y"]), float(pos["z"]))

@@ -297,8 +297,29 @@ theme_override_font_sizes/font_size = 26
 [node name="PlayersList" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 104)
+custom_minimum_size = Vector2(0, 168)
 theme_override_constants/separation = 8
+
+[node name="LobbyStatusLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "필요 조건: 경찰 1명, 오리 2명"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="AddMockPlayerButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 54)
+text = "Mock 플레이어 추가"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
+theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="LobbyButtons" type="HBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
@@ -318,6 +339,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="StartGameButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons"]
+unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 72)
 size_flags_horizontal = 3
@@ -336,6 +358,63 @@ visible = false
 layout_mode = 2
 custom_minimum_size = Vector2(660, 280)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="AlertOverlay" type="Control" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="AlertOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.28)
+
+[node name="CenterContainer" type="CenterContainer" parent="AlertOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="AlertOverlay/CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(520, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="AlertOverlay/CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="AlertMessageLabel" type="Label" parent="AlertOverlay/CenterContainer/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "알림"
+horizontal_alignment = 1
+autowrap_mode = 3
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 30
+
+[node name="AlertOkButton" type="Button" parent="AlertOverlay/CenterContainer/Panel/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 58)
+text = "확인"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_green")
+theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="SettingsButton" type="Button" parent="."]
 unique_name_in_owner = true
@@ -420,6 +499,8 @@ stretch_mode = 5
 
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
+[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/AddMockPlayerButton" to="." method="_on_add_mock_player_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_back_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/StartGameButton" to="." method="_on_start_game_button_pressed"]
+[connection signal="pressed" from="AlertOverlay/CenterContainer/Panel/Content/AlertOkButton" to="." method="_on_alert_ok_button_pressed"]
 [connection signal="pressed" from="SettingsButton" to="." method="_on_settings_button_pressed"]
