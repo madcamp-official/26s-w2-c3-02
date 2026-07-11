@@ -910,7 +910,7 @@ func _countdown_position_for_index(index: int) -> Vector3:
 		Vector3(4.0, 0.0, 0.0),
 		Vector3(0.0, 0.0, 4.0),
 	]
-	return JAIL_POSITION + offsets[index % offsets.size()]
+	return Vector3(0.0, 2.2, 0.0) + offsets[index % offsets.size()]
 
 func _place_players_in_countdown() -> void:
 	for i in range(GameData.players.size()):
