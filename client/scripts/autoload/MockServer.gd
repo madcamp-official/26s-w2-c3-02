@@ -29,6 +29,12 @@ const CIRCLE_LERP_SPEED := 4.0
 const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
+const MOCK_USED_ROOM_CODE := "9999"
+const MOCK_JOIN_ROOM_CODE := "1234"
+const MVP_PLAYER_LIMIT := 3
+const MVP_DUCK_COUNT := 2
+const MVP_TAGGER_COUNT := 1
+const COUNTDOWN_SECONDS := 10
  
 # 감옥 관련 상수
 const JAIL_POSITION := Vector3(0, 6.7, 0)          # 감옥 텔레포트 목표 좌표 (정중앙 0,0,0 상단)
@@ -39,6 +45,7 @@ const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 �
 
 var _broadcast_timer := 0.0
 var _second_timer := 0.0
+var _countdown_timer := 0.0
 var _npc_angle := 0.0
 
 # Internal mock-simulation-only bookkeeping (not part of the api-spec.md Duckling schema).
@@ -63,26 +70,38 @@ func _ready() -> void:
 func _seed_lobby() -> void:
 	GameData.room_id = _generate_room_code()
 	GameData.phase = "lobby"
+	GameData.countdown_seconds = 0
 	GameData.players = [_fake_player("npc1", "Mock Police", "tagger", "aligator")]
 	GameData.room_state_changed.emit()
 
-func create_room(nickname: String, room_id: String = "") -> void:
+func create_room(nickname: String, room_id: String = "") -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
+	if normalized_room_id == MOCK_USED_ROOM_CODE or normalized_room_id == MOCK_JOIN_ROOM_CODE:
+		return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
 	if normalized_room_id.length() != ROOM_CODE_LENGTH:
 		normalized_room_id = _generate_room_code()
 	_prepare_lobby(nickname, normalized_room_id)
+	return {"ok": true}
 
-func join_room(nickname: String, room_id: String) -> void:
+func join_room(nickname: String, room_id: String) -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
+	if normalized_room_id == MOCK_USED_ROOM_CODE:
+		return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
+	if normalized_room_id == MOCK_JOIN_ROOM_CODE:
+		_prepare_mock_join_lobby(nickname)
+		return {"ok": true}
 	if normalized_room_id.length() != ROOM_CODE_LENGTH:
 		normalized_room_id = _generate_room_code()
 	_prepare_lobby(nickname, normalized_room_id)
+	return {"ok": true}
 
 func _generate_room_code() -> String:
-	var code := ""
-	for i in range(ROOM_CODE_LENGTH):
-		var index := randi() % ROOM_CODE_CHARS.length()
-		code += ROOM_CODE_CHARS.substr(index, 1)
+	var code := MOCK_USED_ROOM_CODE
+	while code == MOCK_USED_ROOM_CODE or code == MOCK_JOIN_ROOM_CODE:
+		code = ""
+		for i in range(ROOM_CODE_LENGTH):
+			var index := randi() % ROOM_CODE_CHARS.length()
+			code += ROOM_CODE_CHARS.substr(index, 1)
 	return code
 
 func _normalize_room_code(room_id: String) -> String:
@@ -103,24 +122,54 @@ func _prepare_lobby(nickname: String, room_id: String) -> void:
 	GameData.room_id = room_id
 	GameData.local_nickname = normalized_nickname
 	GameData.phase = "lobby"
+	GameData.countdown_seconds = 0
 	GameData.remaining_seconds = 0
 	GameData.score = 0
 	GameData.winner = null
+	GameData.end_reason = ""
 	GameData.ducklings = []
+	GameData.menu_entry_view = "lobby"
 	_delivery_batches.clear()
 	GameData.players = [
-		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck"),
-		_fake_player("npc1", "Mock Police", "tagger", "aligator"),
+		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck", false),
 	]
 	GameData.room_state_changed.emit()
 
-func start_game() -> void:
+func _prepare_mock_join_lobby(nickname: String) -> void:
+	var normalized_nickname := nickname.strip_edges()
+	if normalized_nickname == "":
+		normalized_nickname = "Player"
+
+	GameData.room_id = MOCK_JOIN_ROOM_CODE
+	GameData.local_nickname = normalized_nickname
+	GameData.phase = "lobby"
+	GameData.countdown_seconds = 0
+	GameData.remaining_seconds = 0
+	GameData.score = 0
+	GameData.winner = null
+	GameData.end_reason = ""
+	GameData.ducklings = []
+	GameData.menu_entry_view = "lobby"
+	_delivery_batches.clear()
+	GameData.players = [
+		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck", false),
+		_fake_player("mock1", "Mock Police", "tagger", "aligator", true),
+		_fake_player("mock2", "Mock Duck", "duck", "duck", true),
+	]
+	GameData.room_state_changed.emit()
+
+func start_game() -> bool:
+	if not can_start_game():
+		return false
 	_broadcast_timer = 0.0
 	_second_timer = 0.0
-	GameData.phase = "playing"
+	_countdown_timer = float(COUNTDOWN_SECONDS)
+	GameData.phase = "countdown"
+	GameData.countdown_seconds = COUNTDOWN_SECONDS
 	GameData.remaining_seconds = GAME_DURATION
 	GameData.score = 0
 	GameData.winner = null
+	GameData.end_reason = ""
 	_wander_state.clear()
 	_carry_queues.clear()
 	_player_motion.clear()
@@ -131,29 +180,147 @@ func start_game() -> void:
 	for i in range(INITIAL_DUCKLING_COUNT):
 		ducklings.append(_fake_duckling("d%d" % (i + 1)))
 	GameData.ducklings = ducklings
-	GameData.game_event.emit("game_started", {})
+	_place_players_in_countdown()
+	GameData.game_state_changed.emit()
+	return true
+
+func can_start_game() -> bool:
+	return GameData.players.size() == MVP_PLAYER_LIMIT and _count_duck_players() == MVP_DUCK_COUNT and _count_tagger_players() == MVP_TAGGER_COUNT
+
+func can_add_mock_player() -> bool:
+	return GameData.phase == "lobby" and GameData.players.size() < MVP_PLAYER_LIMIT
+
+func add_mock_player() -> bool:
+	if not can_add_mock_player():
+		return false
+
+	var mock_index: int = 1
+	var player_id: String = "mock%d" % mock_index
+	while _player_exists(player_id):
+		mock_index += 1
+		player_id = "mock%d" % mock_index
+
+	var team: String = "duck"
+	var character: String = "duck"
+	var nickname: String = "Mock Duck"
+	if _count_tagger_players() < MVP_TAGGER_COUNT:
+		team = "tagger"
+		character = "aligator"
+		nickname = "Mock Police"
+
+	GameData.players.append(_fake_player(player_id, nickname, team, character, true))
+	GameData.room_state_changed.emit()
+	return true
+
+func set_player_nickname(player_id: String, nickname: String) -> void:
+	var normalized := nickname.strip_edges()
+	if normalized == "":
+		normalized = "Player"
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			player["nickname"] = normalized
+			if player_id == GameData.local_player_id:
+				GameData.local_nickname = normalized
+			return
+
+func can_set_player_team(player_id: String, team: String) -> bool:
+	if team != "duck" and team != "tagger":
+		return false
+
+	var current_team := ""
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			current_team = str(player.get("team", ""))
+			break
+
+	if current_team == team:
+		return true
+
+	var taggers := 0
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			continue
+		if str(player.get("team", "")) == "tagger":
+			taggers += 1
+
+	if team == "duck":
+		return true
+	return taggers < MVP_TAGGER_COUNT
+
+func set_player_team(player_id: String, team: String) -> bool:
+	if not can_set_player_team(player_id, team):
+		return false
+
+	for player in GameData.players:
+		if str(player.get("playerId", "")) != player_id:
+			continue
+		player["team"] = team
+		player["character"] = "aligator" if team == "tagger" else "duck"
+		GameData.room_state_changed.emit()
+		return true
+	return false
+
+func lobby_status_text() -> String:
+	var duck_count := _count_duck_players()
+	var tagger_count := _count_tagger_players()
+	var player_count := GameData.players.size()
+	if can_start_game():
+		return "시작 가능: 경찰 1명 / 오리 2명"
+	return "필요 조건: 경찰 %d/%d명, 오리 %d/%d명, 인원 %d/%d명" % [
+		tagger_count,
+		MVP_TAGGER_COUNT,
+		duck_count,
+		MVP_DUCK_COUNT,
+		player_count,
+		MVP_PLAYER_LIMIT,
+	]
+
+func return_to_lobby() -> void:
+	GameData.phase = "lobby"
+	GameData.countdown_seconds = 0
+	GameData.remaining_seconds = 0
+	GameData.winner = null
+	GameData.end_reason = ""
+	GameData.ducklings = []
+	GameData.menu_entry_view = "lobby"
+	_delivery_batches.clear()
+	_wander_state.clear()
+	_carry_queues.clear()
+	_player_motion.clear()
+	_delivering_settle.clear()
+	_reset_rescue()
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		player["state"] = "idle"
+		player["carryingDucklingId"] = null
+		player["jailedUntil"] = null
+		player.erase("jailRemaining")
+		var spawn: Vector3 = _spawn_position_for_character(str(player.get("character", "")))
+		player["position"] = {"x": spawn.x, "y": spawn.y, "z": spawn.z}
+		GameData.players[i] = player
+	GameData.room_state_changed.emit()
 	GameData.game_state_changed.emit()
 
 func finish_game_for_test(winner: String = "duck") -> void:
 	if winner != "duck" and winner != "tagger":
 		winner = "duck"
-	_end_game(winner)
+	var reason: String = "duck_goal" if winner == "duck" else "time_up"
+	_end_game(winner, reason)
 
 func _process(delta: float) -> void:
-	if GameData.phase != "playing":
+	if GameData.phase == "countdown":
+		_update_countdown(delta)
 		return
 
-	_npc_angle += delta * 0.5
-	for p in GameData.players:
-		if p["playerId"] == "npc1":
-			p["position"] = {"x": cos(_npc_angle) * 5.0, "y": 0.0, "z": sin(_npc_angle) * 5.0}
+	if GameData.phase != "playing":
+		return
 
 	_second_timer += delta
 	if _second_timer >= 1.0:
 		_second_timer -= 1.0
 		GameData.remaining_seconds = max(0, GameData.remaining_seconds - 1)
 		if GameData.remaining_seconds <= 0:
-			_end_game("tagger")
+			_end_game("tagger", "time_up")
 			return
 
 	_update_duckling_wander(delta)
@@ -293,7 +460,7 @@ func _update_duckling_follow(delta: float) -> void:
 				var current := _dict_to_vec3(d["position"])
 				var to_leader := current - leader_pos
 				var dist := to_leader.length()
-				var dir := to_leader.normalized() if dist > 0.01 else Vector3.BACK
+				var dir: Vector3 = to_leader.normalized() if dist > 0.01 else Vector3.BACK
 				var next_pos: Vector3
 				if dist > FOLLOW_LEASH:
 					# Rope pulled taut: hard-clamp the gap so it can never keep growing
@@ -432,7 +599,7 @@ func _rescue_duckling(d: Dictionary) -> void:
 	if batch_id == "" or not _delivery_batches.has(batch_id):
 		GameData.game_event.emit("duckling_delivered", {"ducklingId": d["ducklingId"], "count": 1})
 		if GameData.score >= GameData.target_score:
-			_end_game("duck")
+			_end_game("duck", "duck_goal")
 		return
 
 	var batch: Dictionary = _delivery_batches[batch_id]
@@ -450,7 +617,7 @@ func _rescue_duckling(d: Dictionary) -> void:
 		"playerName": str(batch["playerName"]),
 	})
 	if GameData.score >= GameData.target_score:
-		_end_game("duck")
+		_end_game("duck", "duck_goal")
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 감옥 / 구출 로직
@@ -464,13 +631,13 @@ func jail_player(player_id: String) -> void:
 		if p["state"] == "jailed":
 			return  # 이미 수감 중
 		p["state"] = "jailed"
+		p["jailRemaining"] = JAIL_SECONDS
 		var catch_pos := _dict_to_vec3(p["position"])
 		p["position"] = {"x": JAIL_POSITION.x, "y": JAIL_POSITION.y, "z": JAIL_POSITION.z}
 		release_ducklings(player_id, catch_pos)
 		break
 
 	# 1인 자동탈출 타이머 초기화
-	_jail_timer = JAIL_SECONDS
 	# 구출 진행 리셋
 	_reset_rescue()
 	GameData.game_event.emit("player_jailed", {"playerId": player_id})
@@ -484,6 +651,7 @@ func _release_player(player_id: String, is_rescue: bool) -> void:
 		if p["playerId"] != player_id:
 			continue
 		p["state"] = "idle"
+		p.erase("jailRemaining")
 		p["position"] = {
 			"x": release_pos.x,
 			"y": release_pos.y,
@@ -545,9 +713,34 @@ func _count_duck_players() -> int:
 			count += 1
 	return count
 
+func _count_tagger_players() -> int:
+	var count := 0
+	for p in GameData.players:
+		if str(p.get("team", "")) == "tagger":
+			count += 1
+	return count
+
+func _update_auto_jail_release(delta: float) -> void:
+	var release_ids: Array = []
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		if str(player.get("team", "")) != "duck":
+			continue
+		if str(player.get("state", "")) != "jailed":
+			continue
+		var remaining := float(player.get("jailRemaining", JAIL_SECONDS)) - delta
+		player["jailRemaining"] = remaining
+		GameData.players[i] = player
+		if remaining <= 0.0:
+			release_ids.append(str(player.get("playerId", "")))
+
+	for player_id in release_ids:
+		_active_rescuer_id = ""
+		_release_player(player_id, false)
+
 func _update_jail_and_rescue(delta: float) -> void:
+	_update_auto_jail_release(delta)
 	var jailed_count := _count_jailed_ducks()
-	var total_ducks := _count_duck_players()
 
 	# 수감된 오리가 없으면 리셋 후 종료
 	if jailed_count == 0:
@@ -556,7 +749,7 @@ func _update_jail_and_rescue(delta: float) -> void:
 		return
 
 	# ── 1인 모드: 자동 탈출 ──────────────────────────────────────────────────
-	if total_ducks == 1 or jailed_count == total_ducks:
+	if false:
 		# 모든 오리가 수감된 경우: 자동탈출 타이머만 진행
 		_jail_timer -= delta
 		if _jail_timer <= 0:
@@ -635,7 +828,7 @@ func debug_toggle_fake_duck() -> void:
 		_has_fake_duck = false
 	else:
 		# npc2 추가
-		GameData.players.append(_fake_player("npc2", "Mock Duck", "duck", "duck"))
+		GameData.players.append(_fake_player("npc2", "Mock Duck", "duck", "duck", true))
 		_has_fake_duck = true
 	GameData.game_state_changed.emit()
 
@@ -647,13 +840,31 @@ func debug_jail_fake_duck() -> void:
 func _dict_to_vec3(pos: Dictionary) -> Vector3:
 	return Vector3(pos["x"], pos["y"], pos["z"])
 
-func _end_game(winner: String) -> void:
-	GameData.phase = "ended"
-	GameData.winner = winner
-	GameData.game_event.emit("game_ended", {"winner": winner})
+func _update_countdown(delta: float) -> void:
+	_countdown_timer = max(0.0, _countdown_timer - delta)
+	var next_seconds := int(ceil(_countdown_timer))
+	if next_seconds != GameData.countdown_seconds:
+		GameData.countdown_seconds = next_seconds
+		GameData.game_state_changed.emit()
+	if _countdown_timer <= 0.0:
+		_begin_playing()
+
+func _begin_playing() -> void:
+	GameData.phase = "playing"
+	GameData.countdown_seconds = 0
+	_place_players_at_role_spawns()
+	GameData.game_event.emit("game_started", {})
 	GameData.game_state_changed.emit()
 
-func _fake_player(id: String, nickname: String, team: String, character: String) -> Dictionary:
+func _end_game(winner: String, reason: String = "") -> void:
+	GameData.phase = "ended"
+	GameData.countdown_seconds = 0
+	GameData.winner = winner
+	GameData.end_reason = reason
+	GameData.game_event.emit("game_ended", {"winner": winner, "reason": reason})
+	GameData.game_state_changed.emit()
+
+func _fake_player(id: String, nickname: String, team: String, character: String, is_mock: bool = false) -> Dictionary:
 	var spawn_pos := Vector3(-40.0, 0.0, 40.0) # 오리 기본 스폰 (남서쪽)
 	if character == "aligator":
 		spawn_pos = Vector3(40.0, 0.0, -40.0) # 악어 기본 스폰 (북동쪽)
@@ -663,12 +874,55 @@ func _fake_player(id: String, nickname: String, team: String, character: String)
 		"nickname": nickname,
 		"team": team,
 		"character": character,
+		"isMock": is_mock,
 		"position": {"x": spawn_pos.x, "y": spawn_pos.y, "z": spawn_pos.z},
 		"rotationY": 0.0,
 		"state": "idle",
 		"carryingDucklingId": null,
 		"jailedUntil": null,
 	}
+
+func _spawn_position_for_character(character: String) -> Vector3:
+	if character == "aligator":
+		return Vector3(40.0, 0.0, -40.0)
+	return Vector3(-40.0, 0.0, 40.0)
+
+func _countdown_position_for_index(index: int) -> Vector3:
+	var offsets: Array[Vector3] = [
+		Vector3(-4.0, 0.0, 0.0),
+		Vector3(4.0, 0.0, 0.0),
+		Vector3(0.0, 0.0, 4.0),
+	]
+	return JAIL_POSITION + offsets[index % offsets.size()]
+
+func _place_players_in_countdown() -> void:
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		var pos: Vector3 = _countdown_position_for_index(i)
+		player["state"] = "idle"
+		player["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
+		player["rotationY"] = 0.0
+		GameData.players[i] = player
+
+func _place_players_at_role_spawns() -> void:
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		var pos: Vector3 = _random_player_spawn_position()
+		player["state"] = "idle"
+		player["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
+		player["rotationY"] = randf_range(-PI, PI)
+		GameData.players[i] = player
+
+func _player_exists(player_id: String) -> bool:
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			return true
+	return false
+
+func _random_player_spawn_position() -> Vector3:
+	var angle: float = randf_range(0.0, TAU)
+	var distance: float = randf_range(24.0, 58.0)
+	return Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
 
 func _fake_duckling(id: String) -> Dictionary:
 	# 감옥 섬 외부(XZ 15.0 ~ 55.0 사이)의 랜덤 물 영역에 스폰시킴
