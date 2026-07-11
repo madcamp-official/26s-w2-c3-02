@@ -15,6 +15,9 @@ func go_to(screen: String) -> void:
 	if screen == "game":
 		if not MockServer.start_game():
 			return
+		AudioManager.play_game_bgm()
+	else:
+		AudioManager.play_lobby_bgm()
 
 	_clear_overlays()
 

@@ -461,20 +461,81 @@ size = Vector2i(360, 360)
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(660, 280)
+custom_minimum_size = Vector2(660, 340)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel"]
 layout_mode = 2
+theme_override_constants/separation = 24
 
-[node name="PlaceholderLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content"]
+[node name="SettingsTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content"]
 layout_mode = 2
-text = "설정 기능은 준비 중입니다."
+text = "설정"
 horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 44
+
+[node name="BgmVolumeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="BgmVolumeLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/BgmVolumeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(150, 0)
+text = "배경음악"
 vertical_alignment = 1
-size_flags_vertical = 3
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 28
+
+[node name="BgmVolumeSlider" type="HSlider" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/BgmVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 75.0
+
+[node name="BgmVolumeValueLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/BgmVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "75%"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="SfxVolumeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="SfxVolumeLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/SfxVolumeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(150, 0)
+text = "효과음"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="SfxVolumeSlider" type="HSlider" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/SfxVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 85.0
+
+[node name="SfxVolumeValueLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel/Content/SfxVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(70, 0)
+text = "85%"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
 
 [node name="LoginPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
 unique_name_in_owner = true

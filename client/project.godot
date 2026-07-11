@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 GameData="*res://scripts/autoload/GameData.gd"
 SceneRouter="*res://scripts/autoload/SceneRouter.gd"
 MockServer="*res://scripts/autoload/MockServer.gd"
+AudioManager="*res://scripts/autoload/AudioManager.gd"
 
 [display]
 
