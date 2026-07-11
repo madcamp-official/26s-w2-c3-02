@@ -225,5 +225,77 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
+[node name="LobbyPanel" type="PanelContainer" parent="MarginContainer/CenterContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(660, 0)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Content" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="LobbyTitleLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+layout_mode = 2
+text = "로비"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 50
+
+[node name="RoomCodeLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "방 코드: -"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="PlayersTitleLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+layout_mode = 2
+text = "참가자"
+theme_override_colors/font_color = Color(0.682353, 0.780392, 0.886275, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="PlayersList" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 104)
+theme_override_constants/separation = 8
+
+[node name="LobbyButtons" type="HBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 34
+
+[node name="BackButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 72)
+size_flags_horizontal = 3
+text = "뒤로"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
+theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+
+[node name="StartGameButton" type="Button" parent="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 72)
+size_flags_horizontal = 3
+text = "게임 시작"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_green")
+theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
+[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_back_button_pressed"]
+[connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/StartGameButton" to="." method="_on_start_game_button_pressed"]
