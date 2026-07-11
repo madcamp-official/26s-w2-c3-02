@@ -36,6 +36,8 @@ corner_radius_top_right = 28
 corner_radius_bottom_right = 28
 corner_radius_bottom_left = 28
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_no_panel"]
+
 [node name="GameHUD" type="CanvasLayer"]
 script = ExtResource("1")
 
@@ -55,9 +57,9 @@ anchor_right = 1.0
 offset_left = 24.0
 offset_top = 18.0
 offset_right = -24.0
-offset_bottom = 72.0
+offset_bottom = 96.0
 grow_horizontal = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
 
 [node name="Content" type="HBoxContainer" parent="Root/TopBar"]
 layout_mode = 2
@@ -71,7 +73,12 @@ size_flags_horizontal = 3
 text = "남은 시간 03:00"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 8
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 5
+theme_override_font_sizes/font_size = 34
 
 [node name="ScoreLabel" type="Label" parent="Root/TopBar/Content"]
 unique_name_in_owner = true
@@ -80,7 +87,12 @@ size_flags_horizontal = 3
 text = "새끼오리 0 / 5"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 8
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 5
+theme_override_font_sizes/font_size = 34
 
 [node name="JailedLabel" type="Label" parent="Root/TopBar/Content"]
 unique_name_in_owner = true
@@ -89,7 +101,12 @@ size_flags_horizontal = 3
 text = "수감 오리 0명"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 8
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 5
+theme_override_font_sizes/font_size = 34
 
 [node name="EventToast" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
@@ -101,9 +118,9 @@ anchor_right = 0.5
 offset_left = -260.0
 offset_top = 92.0
 offset_right = 260.0
-offset_bottom = 156.0
+offset_bottom = 176.0
 grow_horizontal = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
 
 [node name="EventContent" type="HBoxContainer" parent="Root/EventToast"]
 layout_mode = 2
@@ -115,7 +132,7 @@ layout_mode = 2
 text = "i"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.466667, 0.713726, 0.956863, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 
 [node name="EventMessageLabel" type="Label" parent="Root/EventToast/EventContent"]
 unique_name_in_owner = true
@@ -124,7 +141,12 @@ size_flags_horizontal = 3
 text = "이벤트 알림"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 7
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 30
 
 [node name="PlayerListPanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
@@ -137,7 +159,7 @@ offset_top = -110.0
 offset_right = 288.0
 offset_bottom = 110.0
 grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
 
 [node name="PlayerListContent" type="VBoxContainer" parent="Root/PlayerListPanel"]
 unique_name_in_owner = true
@@ -169,9 +191,12 @@ text = "▶"
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0.0313726, 0.117647, 0.211765, 0.9)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 34
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 7
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 42
 
 [node name="NestDirectionIndicator" type="Control" parent="Root"]
 unique_name_in_owner = true
@@ -198,9 +223,12 @@ text = "▶"
 horizontal_alignment = 1
 vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0.0313726, 0.117647, 0.211765, 0.9)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 34
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_colors/font_shadow_color = Color(0.04, 0.05, 0.06, 0.92)
+theme_override_constants/outline_size = 7
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 42
 
 [node name="RescueDonut" type="Control" parent="Root"]
 script = ExtResource("2")

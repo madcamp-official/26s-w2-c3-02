@@ -1,7 +1,9 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="Texture2D" path="res://assets/ui/main_menu/background.png" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/settings_icon.png" id="4"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 46.0
@@ -100,6 +102,24 @@ corner_radius_top_right = 10
 corner_radius_bottom_right = 10
 corner_radius_bottom_left = 10
 
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_icon_button"]
+
+[sub_resource type="Shader" id="Shader_icon_mask"]
+code = "shader_type canvas_item;
+uniform vec4 fill_color : source_color = vec4(1.0);
+void fragment() {
+	vec4 tex = texture(TEXTURE, UV);
+	COLOR = vec4(fill_color.rgb, tex.a * fill_color.a);
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_icon_black"]
+shader = SubResource("Shader_icon_mask")
+shader_parameter/fill_color = Color(0.04, 0.05, 0.06, 1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_icon_white"]
+shader = SubResource("Shader_icon_mask")
+shader_parameter/fill_color = Color(1, 1, 1, 1)
+
 [node name="MainMenu" type="Control"]
 layout_mode = 3
 anchors_preset = 15
@@ -119,6 +139,21 @@ grow_vertical = 2
 texture = ExtResource("2")
 expand_mode = 1
 stretch_mode = 6
+
+[node name="LiveBackground" type="SubViewportContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+stretch = true
+
+[node name="MenuViewport" type="SubViewport" parent="LiveBackground"]
+size = Vector2i(1280, 720)
+
+[node name="MenuBackground3D" parent="LiveBackground/MenuViewport" instance=ExtResource("3")]
 
 [node name="BackgroundTint" type="ColorRect" parent="."]
 layout_mode = 1
@@ -160,14 +195,14 @@ horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 58
+theme_override_font_sizes/font_size = 66
 
 [node name="SubtitleLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
 layout_mode = 2
-text = "닉네임을 정하고 방을 만들거나 참가하세요."
+text = "닉네임을 설정하고 방을 만들거나 참가하세요."
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 28
 
 [node name="NicknameInput" type="LineEdit" parent="MarginContainer/CenterContainer/Panel/Content"]
 unique_name_in_owner = true
@@ -177,7 +212,7 @@ placeholder_text = "닉네임"
 text = "Player"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 36
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
@@ -190,7 +225,7 @@ max_length = 4
 text = "1234"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 36
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
@@ -206,7 +241,7 @@ text = "방 만들기"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
@@ -220,7 +255,7 @@ text = "방 입장"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
@@ -243,7 +278,7 @@ horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 8
-theme_override_font_sizes/font_size = 50
+theme_override_font_sizes/font_size = 56
 
 [node name="RoomCodeLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
@@ -251,13 +286,13 @@ layout_mode = 2
 text = "방 코드: -"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 28
+theme_override_font_sizes/font_size = 32
 
 [node name="PlayersTitleLabel" type="Label" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
 text = "참가자"
 theme_override_colors/font_color = Color(0.682353, 0.780392, 0.886275, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 
 [node name="PlayersList" type="VBoxContainer" parent="MarginContainer/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
@@ -277,7 +312,7 @@ text = "뒤로"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
@@ -290,12 +325,101 @@ text = "게임 시작"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 34
 theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
+
+[node name="SettingsPanel" type="PanelContainer" parent="MarginContainer/CenterContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+custom_minimum_size = Vector2(660, 280)
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="SettingsButton" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -106.0
+offset_top = -106.0
+offset_right = -32.0
+offset_bottom = -32.0
+grow_horizontal = 0
+grow_vertical = 0
+tooltip_text = "설정"
+flat = true
+theme_override_styles/normal = SubResource("StyleBoxEmpty_icon_button")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_icon_button")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_icon_button")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_icon_button")
+
+[node name="ShadowDown" type="TextureRect" parent="SettingsButton"]
+material = SubResource("ShaderMaterial_icon_black")
+layout_mode = 1
+offset_left = 14.0
+offset_top = 20.0
+offset_right = 68.0
+offset_bottom = 74.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OutlineLeft" type="TextureRect" parent="SettingsButton"]
+material = SubResource("ShaderMaterial_icon_black")
+layout_mode = 1
+offset_left = 8.0
+offset_top = 12.0
+offset_right = 62.0
+offset_bottom = 66.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OutlineRight" type="TextureRect" parent="SettingsButton"]
+material = SubResource("ShaderMaterial_icon_black")
+layout_mode = 1
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 70.0
+offset_bottom = 66.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="OutlineUp" type="TextureRect" parent="SettingsButton"]
+material = SubResource("ShaderMaterial_icon_black")
+layout_mode = 1
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 66.0
+offset_bottom = 62.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Icon" type="TextureRect" parent="SettingsButton"]
+material = SubResource("ShaderMaterial_icon_white")
+layout_mode = 1
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 66.0
+offset_bottom = 66.0
+mouse_filter = 2
+texture = ExtResource("4")
+expand_mode = 1
+stretch_mode = 5
 
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/Panel/Content/Buttons/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_back_button_pressed"]
 [connection signal="pressed" from="MarginContainer/CenterContainer/LobbyPanel/Content/LobbyButtons/StartGameButton" to="." method="_on_start_game_button_pressed"]
+[connection signal="pressed" from="SettingsButton" to="." method="_on_settings_button_pressed"]

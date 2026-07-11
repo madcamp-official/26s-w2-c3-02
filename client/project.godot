@@ -28,6 +28,10 @@ window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/handheld/orientation="sensor_landscape"
 
+[gui]
+
+theme/custom="res://themes/GameTheme.tres"
+
 [input]
 
 move_up={
