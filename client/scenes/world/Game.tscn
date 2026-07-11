@@ -12,7 +12,7 @@ script = ExtResource("1")
 [node name="Pond" parent="." instance=ExtResource("2")]
 
 [node name="JailIsland" parent="." instance=ExtResource("5")]
-transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -32, 0.5, 32)
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, -32, 2.5, 32)
 
 [node name="DucklingSpawner" type="Node" parent="."]
 script = ExtResource("4")

@@ -38,10 +38,9 @@ func _check_jail() -> void:
 	var forward := -_aligator.global_transform.basis.z
 	var mouth := _aligator.global_position + forward * MOUTH_OFFSET
 	if _duck.global_position.distance_to(mouth) <= MOUTH_CATCH_RADIUS:
-		# Drop any carried ducklings at the catch spot, then haul the duck to jail.
-		MockServer.release_ducklings(GameData.local_player_id, _duck.global_position)
-		_duck.global_position = _jail_point.global_position
-		_duck.velocity = Vector3.ZERO
+		# 모든 수감/텔레포트 처리는 MockServer.jail_player()에 위임
+		MockServer.jail_player(GameData.local_player_id)
+
 
 func _sync_remote_players() -> void:
 	var seen_ids := {}
