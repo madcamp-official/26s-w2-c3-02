@@ -27,9 +27,9 @@ const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
 
 # 감옥 관련 상수
-const JAIL_POSITION := Vector3(-32, 7, 32)       # 감옥 텔레포트 목표 좌표 (섬 위)
-const JAIL_RELEASE_POSITION := Vector3(-15, 0, 15) # 석방 후 복귀 좌표
-const RESCUE_RADIUS := 10.0                        # 탈옥 시도 가능 거리
+const JAIL_POSITION := Vector3(-32, 6.7, 32)       # 감옥 텔레포트 목표 좌표 (섬 위, 높이 낮춤 반영)
+const JAIL_RELEASE_RADIUS := 16.0                  # 석방 시 스폰 원의 반지름 (섬 외곽)
+const RESCUE_RADIUS := 11.0                        # 탈옥 시도 가능 거리 (감옥 물리 경계 8.5보다 넓음)
 const RESCUE_DURATION := 3.0                       # 탈옥에 필요한 시간(초)
 const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 탈출 시간(초)
 
@@ -421,26 +421,43 @@ func jail_player(player_id: String) -> void:
 	GameData.game_state_changed.emit()
 
 func _release_player(player_id: String, is_rescue: bool) -> void:
-	# 플레이어를 석방하고 감옥 밖으로 이동시킨다.
+	# 감옥 중심 주변 원 위의 랜덤 위치를 생성해 플레이어를 석방한다.
+	var release_pos := _random_release_pos()
+
 	for p in GameData.players:
 		if p["playerId"] != player_id:
 			continue
 		p["state"] = "idle"
 		p["position"] = {
-			"x": JAIL_RELEASE_POSITION.x,
-			"y": JAIL_RELEASE_POSITION.y,
-			"z": JAIL_RELEASE_POSITION.z,
+			"x": release_pos.x,
+			"y": release_pos.y,
+			"z": release_pos.z,
 		}
 		break
 
+	var pos_dict := {"x": release_pos.x, "y": release_pos.y, "z": release_pos.z}
 	if is_rescue:
 		GameData.game_event.emit("player_rescued", {
 			"targetId": player_id,
 			"rescuerId": _active_rescuer_id,
+			"releasePosition": pos_dict,
 		})
 	else:
-		GameData.game_event.emit("player_released", {"playerId": player_id})
+		GameData.game_event.emit("player_released", {
+			"playerId": player_id,
+			"releasePosition": pos_dict,
+		})
 	GameData.game_state_changed.emit()
+
+func _random_release_pos() -> Vector3:
+	# 감옥 섬 XZ 중심에서 JAIL_RELEASE_RADIUS 거리의 원 위에서
+	# 랜덤 각도를 골라 석방 위치를 반환한다. Y=0 (연못 수면).
+	var angle := randf_range(0.0, TAU)
+	return Vector3(
+		JAIL_POSITION.x + cos(angle) * JAIL_RELEASE_RADIUS,
+		0.0,
+		JAIL_POSITION.z + sin(angle) * JAIL_RELEASE_RADIUS
+	)
 
 func _rescue_all_jailed() -> void:
 	# 현재 수감 중인 오리 플레이어를 전원 석방한다.
