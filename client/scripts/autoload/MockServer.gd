@@ -255,7 +255,10 @@ func set_player_team(player_id: String, team: String) -> bool:
 		if str(player.get("playerId", "")) != player_id:
 			continue
 		player["team"] = team
-		player["character"] = "aligator" if team == "tagger" else "duck"
+		if team == "tagger":
+			player["character"] = "aligator"
+		else:
+			player["character"] = "duck"
 		GameData.room_state_changed.emit()
 		return true
 	return false
@@ -304,7 +307,9 @@ func return_to_lobby() -> void:
 func finish_game_for_test(winner: String = "duck") -> void:
 	if winner != "duck" and winner != "tagger":
 		winner = "duck"
-	var reason: String = "duck_goal" if winner == "duck" else "time_up"
+	var reason := "time_up"
+	if winner == "duck":
+		reason = "duck_goal"
 	_end_game(winner, reason)
 
 func _process(delta: float) -> void:
@@ -460,7 +465,9 @@ func _update_duckling_follow(delta: float) -> void:
 				var current := _dict_to_vec3(d["position"])
 				var to_leader := current - leader_pos
 				var dist := to_leader.length()
-				var dir: Vector3 = to_leader.normalized() if dist > 0.01 else Vector3.BACK
+				var dir := Vector3.BACK
+				if dist > 0.01:
+					dir = to_leader.normalized()
 				var next_pos: Vector3
 				if dist > FOLLOW_LEASH:
 					# Rope pulled taut: hard-clamp the gap so it can never keep growing
@@ -631,7 +638,10 @@ func jail_player(player_id: String) -> void:
 		if p["state"] == "jailed":
 			return  # 이미 수감 중
 		p["state"] = "jailed"
-		p["jailRemaining"] = JAIL_SECONDS
+		if _count_duck_players() == 1:
+			p["jailRemaining"] = JAIL_SECONDS
+		else:
+			p.erase("jailRemaining")
 		var catch_pos := _dict_to_vec3(p["position"])
 		p["position"] = {"x": JAIL_POSITION.x, "y": JAIL_POSITION.y, "z": JAIL_POSITION.z}
 		release_ducklings(player_id, catch_pos)
@@ -641,6 +651,10 @@ func jail_player(player_id: String) -> void:
 	# 구출 진행 리셋
 	_reset_rescue()
 	GameData.game_event.emit("player_jailed", {"playerId": player_id})
+	var total_ducks := _count_duck_players()
+	if total_ducks > 1 and _count_jailed_ducks() >= total_ducks:
+		_end_game("tagger", "all_ducks_jailed")
+		return
 	GameData.game_state_changed.emit()
 
 func _release_player(player_id: String, is_rescue: bool) -> void:
@@ -721,6 +735,9 @@ func _count_tagger_players() -> int:
 	return count
 
 func _update_auto_jail_release(delta: float) -> void:
+	if _count_duck_players() != 1:
+		return
+
 	var release_ids: Array = []
 	for i in range(GameData.players.size()):
 		var player: Dictionary = GameData.players[i]

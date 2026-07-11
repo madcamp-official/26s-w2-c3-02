@@ -168,7 +168,9 @@ func _move_inside_jail(delta: float) -> void:
 
 
 func _input_direction() -> Vector3:
-	var action_suffix: String = "_arrow" if control_scheme == "arrows" else ""
+	var action_suffix := ""
+	if control_scheme == "arrows":
+		action_suffix = "_arrow"
 	var input_dir := Vector3.ZERO
 	if Input.is_action_pressed("move_up" + action_suffix):
 		input_dir.z -= 1.0

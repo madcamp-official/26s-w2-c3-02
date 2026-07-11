@@ -47,6 +47,8 @@ func _reason_text() -> String:
 			return "오리 팀이 목표 수를 달성했습니다."
 		"time_up":
 			return "시간 종료로 경찰 팀이 승리했습니다."
+		"all_ducks_jailed":
+			return "모든 오리가 감옥에 갇혀 경찰 팀이 승리했습니다."
 	return "게임이 종료되었습니다."
 
 

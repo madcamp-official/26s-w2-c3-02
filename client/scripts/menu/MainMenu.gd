@@ -141,7 +141,10 @@ func _make_player_row(player: Dictionary) -> Control:
 	var player_id: String = str(player.get("playerId", ""))
 	var role_label: Label = Label.new()
 	role_label.custom_minimum_size = Vector2(68, 0)
-	role_label.text = "본인" if player_id == GameData.local_player_id else "Mock"
+	if player_id == GameData.local_player_id:
+		role_label.text = "본인"
+	else:
+		role_label.text = "Mock"
 	role_label.add_theme_font_size_override("font_size", 24)
 	role_label.add_theme_color_override("font_color", Color.WHITE)
 	row.add_child(role_label)
@@ -158,7 +161,10 @@ func _make_player_row(player: Dictionary) -> Control:
 	team_select.add_item("오리", 0)
 	team_select.add_item("경찰", 1)
 	var team: String = str(player.get("team", "duck"))
-	team_select.select(1 if team == "tagger" else 0)
+	var selected_team_index := 0
+	if team == "tagger":
+		selected_team_index = 1
+	team_select.select(selected_team_index)
 	team_select.set_item_disabled(0, not MockServer.can_set_player_team(player_id, "duck"))
 	team_select.set_item_disabled(1, not MockServer.can_set_player_team(player_id, "tagger"))
 	team_select.add_theme_font_size_override("font_size", 24)
@@ -173,7 +179,9 @@ func _on_lobby_player_name_changed(new_text: String, player_id: String) -> void:
 
 
 func _on_lobby_player_team_selected(index: int, player_id: String) -> void:
-	var team: String = "tagger" if index == 1 else "duck"
+	var team := "duck"
+	if index == 1:
+		team = "tagger"
 	if not MockServer.set_player_team(player_id, team):
 		_show_alert("역할 구성이 올바르지 않습니다.")
 		_refresh_lobby()

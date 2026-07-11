@@ -2,8 +2,8 @@ extends CanvasLayer
 
 const TOAST_DURATION := 3.0
 const OBJECTIVE_TOAST_DURATION := 5.0
-const NEST_1_POSITION := Vector3(-58.5, 1.68, 58.5) (1.3배 멀어짐)
-const NEST_2_POSITION := Vector3(58.5, 1.68, -58.5) (1.3배 멀어짐)
+const NEST_1_POSITION := Vector3(-58.5, 1.68, 58.5) 
+const NEST_2_POSITION := Vector3(58.5, 1.68, -58.5) 
 const JAIL_FALLBACK_POSITION := Vector3(0, 0.5, 0)
 const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(116, 60)
@@ -128,7 +128,9 @@ func _local_team() -> String:
 
 
 func _on_end_test_button_pressed() -> void:
-	var winner: String = "duck" if GameData.score >= GameData.target_score else "tagger"
+	var winner := "tagger"
+	if GameData.score >= GameData.target_score:
+		winner = "duck"
 	MockServer.finish_game_for_test(winner)
 
 
@@ -138,7 +140,10 @@ func _on_debug_mode_button_pressed() -> void:
 
 func _on_debug_mode_changed(enabled: bool) -> void:
 	debug_panel.visible = enabled
-	debug_mode_button.text = "디버그 ON" if enabled else "디버그 OFF"
+	if enabled:
+		debug_mode_button.text = "디버그 ON"
+	else:
+		debug_mode_button.text = "디버그 OFF"
 	_refresh_debug_summary()
 
 
@@ -279,16 +284,16 @@ func _jailed_duck_count() -> int:
 func _event_message(event: String, data: Dictionary) -> String:
 	match event:
 		"player_jailed":
-			return "%s님이 감옥에 갇혔습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s가 감옥에 갇혔습니다! 🔒" % _player_name(data, "playerName", "playerId")
 		"player_released":
-			return "%s님이 감옥에서 탈출했습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s가 감옥에서 탈출했습니다! 🕊️" % _player_name(data, "playerName", "playerId")
 		"player_rescued":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
 			var target := _player_name(data, "targetName", "targetId")
-			return "%s님이 %s님을 구출했습니다!" % [rescuer, target]
+			return "%s이 %s를 구출했습니다! 🦸" % [rescuer, target]
 		"rescue_started":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
-			return "%s님이 구출을 시도하고 있습니다!" % rescuer
+			return "%s이 탈옥을 시도하고 있습니다! ⏳" % rescuer
 		"duckling_delivered":
 			var player_name := _player_name(data, "playerName", "playerId")
 			var count := int(data.get("count", 1))
@@ -355,8 +360,12 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 
 	var unit: Vector2 = direction.normalized()
 	var half_bounds: Vector2 = viewport_size * 0.5 - INDICATOR_SIZE * 0.5 - Vector2.ONE * INDICATOR_MARGIN
-	var distance_x: float = INF if abs(unit.x) < 0.001 else half_bounds.x / abs(unit.x)
-	var distance_y: float = INF if abs(unit.y) < 0.001 else half_bounds.y / abs(unit.y)
+	var distance_x := INF
+	if abs(unit.x) >= 0.001:
+		distance_x = half_bounds.x / abs(unit.x)
+	var distance_y := INF
+	if abs(unit.y) >= 0.001:
+		distance_y = half_bounds.y / abs(unit.y)
 	var edge_center: Vector2 = center + unit * min(distance_x, distance_y)
 	indicator.position = edge_center - INDICATOR_SIZE * 0.5
 
