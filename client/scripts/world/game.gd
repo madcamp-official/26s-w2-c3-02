@@ -3,19 +3,45 @@ extends Node3D
 const CAMERA_OFFSET := Vector3(0, 16, 14)
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 
+# Jail mechanic: if the duck touches the zone in front of the alligator's mouth,
+# it is instantly teleported onto the jail island. The mouth sits ~5u ahead of
+# the alligator body along its forward (-Z) axis (verified against the model).
+const MOUTH_OFFSET := 5.0
+const MOUTH_CATCH_RADIUS := 3.5
+
 var _target: Node3D = null
 var _remote_players: Dictionary = {}
+var _duck: Node3D = null
+var _aligator: Node3D = null
+var _jail_point: Marker3D = null
 
 func _ready() -> void:
 	if GameData.phase == "lobby":
 		MockServer.start_game()
 	_target = get_tree().get_first_node_in_group("controllable_player")
+	_duck = get_node_or_null("Duck")
+	_aligator = get_node_or_null("Aligator")
+	_jail_point = get_node_or_null("JailIsland/TeleportPoint")
 	GameData.game_state_changed.connect(_sync_remote_players)
 	_sync_remote_players()
 
 func _process(_delta: float) -> void:
 	if _target:
 		$Camera3D.position = _target.position + CAMERA_OFFSET
+
+func _physics_process(_delta: float) -> void:
+	_check_jail()
+
+func _check_jail() -> void:
+	if _duck == null or _aligator == null or _jail_point == null:
+		return
+	var forward := -_aligator.global_transform.basis.z
+	var mouth := _aligator.global_position + forward * MOUTH_OFFSET
+	if _duck.global_position.distance_to(mouth) <= MOUTH_CATCH_RADIUS:
+		# Drop any carried ducklings at the catch spot, then haul the duck to jail.
+		MockServer.release_ducklings(GameData.local_player_id, _duck.global_position)
+		_duck.global_position = _jail_point.global_position
+		_duck.velocity = Vector3.ZERO
 
 func _sync_remote_players() -> void:
 	var seen_ids := {}

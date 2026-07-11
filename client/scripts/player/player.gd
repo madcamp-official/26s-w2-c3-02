@@ -48,6 +48,12 @@ func _ready() -> void:
 	$CollisionShape3D.shape = shape
 	$CollisionShape3D.position = config["collision_pos"]
 
+	# The jail island is a low-poly trimesh with faceted, sloped grass. Allow steeper
+	# contact normals to count as floor (and snap down onto them) so the character
+	# stays grounded there instead of sliding/jittering.
+	floor_max_angle = deg_to_rad(60)
+	floor_snap_length = 1.5
+
 	if character == "duck":
 		GameData.register_local_player("duck", "duck")
 

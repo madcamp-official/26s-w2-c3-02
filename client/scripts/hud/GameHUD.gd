@@ -2,7 +2,7 @@ extends CanvasLayer
 
 const TOAST_DURATION := 3.0
 const NEST_POSITION := Vector3(0, 1.68, 65)
-const JAIL_POSITION := Vector3(-55, 1.0, -45) # TODO: replace with B track's actual jail position.
+const JAIL_FALLBACK_POSITION := Vector3(-32, 0.5, 32) # used only if the jail node isn't found
 const INDICATOR_MARGIN := 32.0
 const INDICATOR_SIZE := Vector2(144, 60)
 
@@ -20,6 +20,7 @@ const INDICATOR_SIZE := Vector2(144, 60)
 @onready var debug_summary_label: Label = %DebugSummaryLabel
 
 var _toast_remaining := 0.0
+var _jail_node: Node3D = null
 
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
@@ -135,7 +136,14 @@ func _update_direction_indicators() -> void:
 	if camera == null:
 		return
 	_update_direction_indicator(nest_direction_indicator, nest_arrow_label, NEST_POSITION, camera)
-	_update_direction_indicator(jail_direction_indicator, jail_arrow_label, JAIL_POSITION, camera)
+	_update_direction_indicator(jail_direction_indicator, jail_arrow_label, _jail_world_position(), camera)
+
+func _jail_world_position() -> Vector3:
+	if not is_instance_valid(_jail_node):
+		_jail_node = get_tree().get_first_node_in_group("jail") as Node3D
+	if is_instance_valid(_jail_node):
+		return _jail_node.global_position
+	return JAIL_FALLBACK_POSITION
 
 func _update_direction_indicator(indicator: Control, arrow_label: Label, world_position: Vector3, camera: Camera3D) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
@@ -152,7 +160,7 @@ func _update_direction_indicator(indicator: Control, arrow_label: Label, world_p
 	var half_bounds := viewport_size * 0.5 - INDICATOR_SIZE * 0.5 - Vector2.ONE * INDICATOR_MARGIN
 	var distance_x: float = INF if abs(unit.x) < 0.001 else half_bounds.x / abs(unit.x)
 	var distance_y: float = INF if abs(unit.y) < 0.001 else half_bounds.y / abs(unit.y)
-	var edge_center := center + unit * min(distance_x, distance_y)
+	var edge_center: Vector2 = center + unit * min(distance_x, distance_y)
 	indicator.position = edge_center - INDICATOR_SIZE * 0.5
 
 	if direction.length() < 1.0:
