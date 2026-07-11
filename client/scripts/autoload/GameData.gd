@@ -13,6 +13,8 @@ var winner = null # "duck" | "tagger" | null
 var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
 var debug_mode_enabled: bool = false
+var rescue_progress: float = 0.0   # 0.0 ~ 1.0, 구출 진행률
+var active_rescuer_id: String = "" # 현재 탈옥 시도 중인 플레이어 id
 
 signal room_state_changed
 signal game_state_changed

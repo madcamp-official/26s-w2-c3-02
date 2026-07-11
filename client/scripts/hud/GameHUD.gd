@@ -173,13 +173,16 @@ func _jailed_duck_count() -> int:
 func _event_message(event: String, data: Dictionary) -> String:
 	match event:
 		"player_jailed":
-			return "%s가 감옥에 갇혔습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s가 감옥에 갇혔습니다! 🔒" % _player_name(data, "playerName", "playerId")
 		"player_released":
-			return "%s가 감옥에서 탈출했습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s가 감옥에서 탈출했습니다! 🕊️" % _player_name(data, "playerName", "playerId")
 		"player_rescued":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
 			var target := _player_name(data, "targetName", "targetId")
-			return "%s이 %s를 구출했습니다!" % [rescuer, target]
+			return "%s이 %s를 구출했습니다! 🦸" % [rescuer, target]
+		"rescue_started":
+			var rescuer := _player_name(data, "rescuerName", "rescuerId")
+			return "%s이 탈옥을 시도하고 있습니다! ⏳" % rescuer
 		"duckling_delivered":
 			var player_name := _player_name(data, "playerName", "playerId")
 			var count := int(data.get("count", 1))
@@ -264,3 +267,15 @@ func _is_world_position_visible(screen_pos: Vector2, viewport_size: Vector2, is_
 		and screen_pos.y >= INDICATOR_MARGIN
 		and screen_pos.y <= viewport_size.y - INDICATOR_MARGIN
 	)
+
+
+# ── 디버그 버튼 핸들러 ──────────────────────────────────────────────────────
+
+func _on_debug_jail_me_pressed() -> void:
+	MockServer.debug_jail_local_player()
+
+func _on_debug_toggle_duck_pressed() -> void:
+	MockServer.debug_toggle_fake_duck()
+
+func _on_debug_jail_duck_pressed() -> void:
+	MockServer.debug_jail_fake_duck()

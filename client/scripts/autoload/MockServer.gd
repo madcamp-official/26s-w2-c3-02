@@ -26,6 +26,13 @@ const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
 
+# 감옥 관련 상수
+const JAIL_POSITION := Vector3(-32, 7, 32)       # 감옥 텔레포트 목표 좌표 (섬 위)
+const JAIL_RELEASE_POSITION := Vector3(-15, 0, 15) # 석방 후 복귀 좌표
+const RESCUE_RADIUS := 10.0                        # 탈옥 시도 가능 거리
+const RESCUE_DURATION := 3.0                       # 탈옥에 필요한 시간(초)
+const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 탈출 시간(초)
+
 var _broadcast_timer := 0.0
 var _second_timer := 0.0
 var _npc_angle := 0.0
@@ -37,6 +44,13 @@ var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_movi
 var _delivering_settle: Dictionary = {} # ducklingId -> seconds spent settled at the nest center
 var _delivery_batches: Dictionary = {} # batchId -> {playerId, playerName, total, delivered}
 var _next_delivery_batch_id := 1
+
+# 감옥/구출 내부 상태
+var _jail_timer: float = 0.0        # 1인 자동탈출 카운트다운
+var _rescue_timer: float = 0.0      # 현재 구출 진행 시간
+var _is_rescuing: bool = false      # 구출 진행 중 여부
+var _active_rescuer_id: String = "" # 구출 중인 플레이어 id
+var _has_fake_duck: bool = false     # 디버그: 가짜 오리(npc2) 존재 여부
 
 func _ready() -> void:
 	GameData.target_score = TARGET_SCORE
@@ -144,6 +158,7 @@ func _process(delta: float) -> void:
 	_update_duckling_follow(delta)
 	_check_deliver()
 	_update_delivering(delta)
+	_update_jail_and_rescue(delta)
 
 	_broadcast_timer += delta
 	if _broadcast_timer >= 1.0 / TICK_HZ:
@@ -380,6 +395,181 @@ func _rescue_duckling(d: Dictionary) -> void:
 	})
 	if GameData.score >= GameData.target_score:
 		_end_game("duck")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 감옥 / 구출 로직
+# ──────────────────────────────────────────────────────────────────────────────
+
+func jail_player(player_id: String) -> void:
+	# 해당 플레이어를 수감 상태로 전환하고 들고 있던 새끼오리를 떨어뜨린다.
+	for p in GameData.players:
+		if p["playerId"] != player_id:
+			continue
+		if p["state"] == "jailed":
+			return  # 이미 수감 중
+		p["state"] = "jailed"
+		var catch_pos := _dict_to_vec3(p["position"])
+		p["position"] = {"x": JAIL_POSITION.x, "y": JAIL_POSITION.y, "z": JAIL_POSITION.z}
+		release_ducklings(player_id, catch_pos)
+		break
+
+	# 1인 자동탈출 타이머 초기화
+	_jail_timer = JAIL_SECONDS
+	# 구출 진행 리셋
+	_reset_rescue()
+	GameData.game_event.emit("player_jailed", {"playerId": player_id})
+	GameData.game_state_changed.emit()
+
+func _release_player(player_id: String, is_rescue: bool) -> void:
+	# 플레이어를 석방하고 감옥 밖으로 이동시킨다.
+	for p in GameData.players:
+		if p["playerId"] != player_id:
+			continue
+		p["state"] = "idle"
+		p["position"] = {
+			"x": JAIL_RELEASE_POSITION.x,
+			"y": JAIL_RELEASE_POSITION.y,
+			"z": JAIL_RELEASE_POSITION.z,
+		}
+		break
+
+	if is_rescue:
+		GameData.game_event.emit("player_rescued", {
+			"targetId": player_id,
+			"rescuerId": _active_rescuer_id,
+		})
+	else:
+		GameData.game_event.emit("player_released", {"playerId": player_id})
+	GameData.game_state_changed.emit()
+
+func _rescue_all_jailed() -> void:
+	# 현재 수감 중인 오리 플레이어를 전원 석방한다.
+	var jailed_ids: Array = []
+	for p in GameData.players:
+		if p["team"] == "duck" and p["state"] == "jailed":
+			jailed_ids.append(p["playerId"])
+	for pid in jailed_ids:
+		_release_player(pid, true)
+
+func _reset_rescue() -> void:
+	_rescue_timer = 0.0
+	_is_rescuing = false
+	_active_rescuer_id = ""
+	GameData.rescue_progress = 0.0
+	GameData.active_rescuer_id = ""
+
+func _count_jailed_ducks() -> int:
+	var count := 0
+	for p in GameData.players:
+		if p["team"] == "duck" and p["state"] == "jailed":
+			count += 1
+	return count
+
+func _count_duck_players() -> int:
+	var count := 0
+	for p in GameData.players:
+		if p["team"] == "duck":
+			count += 1
+	return count
+
+func _update_jail_and_rescue(delta: float) -> void:
+	var jailed_count := _count_jailed_ducks()
+	var total_ducks := _count_duck_players()
+
+	# 수감된 오리가 없으면 리셋 후 종료
+	if jailed_count == 0:
+		if _is_rescuing:
+			_reset_rescue()
+		return
+
+	# ── 1인 모드: 자동 탈출 ──────────────────────────────────────────────────
+	if total_ducks == 1 or jailed_count == total_ducks:
+		# 모든 오리가 수감된 경우: 자동탈출 타이머만 진행
+		_jail_timer -= delta
+		if _jail_timer <= 0:
+			var jailed_ids: Array = []
+			for p in GameData.players:
+				if p["team"] == "duck" and p["state"] == "jailed":
+					jailed_ids.append(p["playerId"])
+			for pid in jailed_ids:
+				_active_rescuer_id = "" # 자동탈출은 구출자 없음
+				_release_player(pid, false)
+			_reset_rescue()
+		return
+
+	# ── 멀티 모드: 자유 오리가 감옥 근처에 있으면 구출 진행 ─────────────────
+	var jail_pos_vec := JAIL_POSITION
+	var potential_rescuer_id := ""
+
+	for p in GameData.players:
+		if p["team"] != "duck":
+			continue
+		if p["state"] == "jailed":
+			continue
+		var ppos := _dict_to_vec3(p["position"])
+		if ppos.distance_to(jail_pos_vec) <= RESCUE_RADIUS:
+			potential_rescuer_id = p["playerId"]
+			break
+
+	if potential_rescuer_id == "":
+		# 구출자가 구역을 벗어남 → 진행 리셋
+		if _is_rescuing:
+			_reset_rescue()
+		return
+
+	# 새 구출자가 들어왔을 때 또는 이미 진행 중인 경우
+	if not _is_rescuing:
+		_is_rescuing = true
+		_active_rescuer_id = potential_rescuer_id
+		_rescue_timer = 0.0
+		GameData.active_rescuer_id = potential_rescuer_id
+		GameData.game_event.emit("rescue_started", {"rescuerId": potential_rescuer_id})
+
+	# 같은 구출자가 계속 머무는 경우만 진행 (다른 사람이 오면 리셋)
+	if _active_rescuer_id != potential_rescuer_id:
+		_reset_rescue()
+		return
+
+	_rescue_timer += delta
+	GameData.rescue_progress = clamp(_rescue_timer / RESCUE_DURATION, 0.0, 1.0)
+
+	if _rescue_timer >= RESCUE_DURATION:
+		var rescuer_id := _active_rescuer_id
+		_rescue_all_jailed()
+		_reset_rescue()
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 디버그 헬퍼
+# ──────────────────────────────────────────────────────────────────────────────
+
+func debug_jail_local_player() -> void:
+	if GameData.phase != "playing":
+		return
+	jail_player(GameData.local_player_id)
+
+func debug_toggle_fake_duck() -> void:
+	if GameData.phase != "playing":
+		return
+	if _has_fake_duck:
+		# npc2 제거
+		var new_players: Array = []
+		for p in GameData.players:
+			if p["playerId"] != "npc2":
+				new_players.append(p)
+		GameData.players = new_players
+		_carry_queues.erase("npc2")
+		_player_motion.erase("npc2")
+		_has_fake_duck = false
+	else:
+		# npc2 추가
+		GameData.players.append(_fake_player("npc2", "Mock Duck", "duck", "duck"))
+		_has_fake_duck = true
+	GameData.game_state_changed.emit()
+
+func debug_jail_fake_duck() -> void:
+	if GameData.phase != "playing" or not _has_fake_duck:
+		return
+	jail_player("npc2")
 
 func _dict_to_vec3(pos: Dictionary) -> Vector3:
 	return Vector3(pos["x"], pos["y"], pos["z"])
