@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud/GameHUD.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/hud/RescueDonut.gd" id="2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0313726, 0.117647, 0.211765, 0.86)
@@ -201,6 +202,39 @@ theme_override_colors/font_outline_color = Color(0.0313726, 0.117647, 0.211765, 
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 34
 
+[node name="RescueDonut" type="Control" parent="Root"]
+script = ExtResource("2")
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = 50.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+visible = false
+
+[node name="PctLabel" type="Label" parent="Root/RescueDonut"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 0
+offset_bottom = 0
+grow_horizontal = 2
+grow_vertical = 2
+text = "0%"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 16
+
 [node name="EndTestButton" type="Button" parent="Root"]
 layout_mode = 1
 anchors_preset = 3
@@ -242,13 +276,32 @@ anchor_right = 1.0
 offset_left = -344.0
 offset_top = 88.0
 offset_right = -24.0
-offset_bottom = 248.0
+offset_bottom = 356.0
 grow_horizontal = 0
 
-[node name="DebugSummaryLabel" type="Label" parent="Root/DebugPanel"]
+[node name="VBox" type="VBoxContainer" parent="Root/DebugPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="DebugSummaryLabel" type="Label" parent="Root/DebugPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "phase: playing"
 
+[node name="DebugJailMeButton" type="Button" parent="Root/DebugPanel/VBox"]
+layout_mode = 2
+text = "🔒 나 수감"
+
+[node name="DebugToggleDuckButton" type="Button" parent="Root/DebugPanel/VBox"]
+layout_mode = 2
+text = "🦆 가짜 오리 추가/제거"
+
+[node name="DebugJailDuckButton" type="Button" parent="Root/DebugPanel/VBox"]
+layout_mode = 2
+text = "🔒 가짜 오리 수감"
+
 [connection signal="pressed" from="Root/EndTestButton" to="." method="_on_end_test_button_pressed"]
 [connection signal="pressed" from="Root/DebugModeButton" to="." method="_on_debug_mode_button_pressed"]
+[connection signal="pressed" from="Root/DebugPanel/VBox/DebugJailMeButton" to="." method="_on_debug_jail_me_pressed"]
+[connection signal="pressed" from="Root/DebugPanel/VBox/DebugToggleDuckButton" to="." method="_on_debug_toggle_duck_pressed"]
+[connection signal="pressed" from="Root/DebugPanel/VBox/DebugJailDuckButton" to="." method="_on_debug_jail_duck_pressed"]
