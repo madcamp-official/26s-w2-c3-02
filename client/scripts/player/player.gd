@@ -59,7 +59,7 @@ func _ready() -> void:
 	$CollisionShape3D.shape = shape
 	$CollisionShape3D.position = config["collision_pos"]
 
-	floor_max_angle = deg_to_rad(80)
+	floor_max_angle = deg_to_rad(40)
 	floor_snap_length = 2.5
 	max_slides = 6
 

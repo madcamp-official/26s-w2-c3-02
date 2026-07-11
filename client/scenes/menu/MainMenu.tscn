@@ -1,7 +1,6 @@
 [gd_scene load_steps=17 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/background.png" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/menu/InventoryPreview3D.tscn" id="4"]
 
@@ -177,31 +176,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1")
 
-[node name="Background" type="TextureRect" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-texture = ExtResource("2")
-expand_mode = 1
-stretch_mode = 6
-
-[node name="LiveBackground" type="SubViewportContainer" parent="."]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-stretch = true
-
-[node name="MenuViewport" type="SubViewport" parent="LiveBackground"]
-size = Vector2i(1280, 720)
-
-[node name="MenuBackground3D" parent="LiveBackground/MenuViewport" instance=ExtResource("3")]
+[node name="MenuBackground3D" parent="." instance=ExtResource("3")]
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -477,6 +452,7 @@ mouse_filter = 2
 stretch = true
 
 [node name="PreviewViewport" type="SubViewport" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer"]
+own_world_3d = true
 size = Vector2i(360, 360)
 
 [node name="InventoryPreview3D" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer/PreviewViewport" instance=ExtResource("4")]
