@@ -4,6 +4,9 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
+@onready var inventory_duck_tab_button: Button = %InventoryDuckTabButton
+@onready var inventory_tagger_tab_button: Button = %InventoryTaggerTabButton
+@onready var inventory_skin_grid: HFlowContainer = %InventorySkinGrid
 @onready var rules_panel: PanelContainer = %RulesPanel
 @onready var rules_card_index_label: Label = %RulesCardIndexLabel
 @onready var rules_prev_button: Button = %RulesPrevButton
@@ -55,6 +58,33 @@ const RULES_CARDS: Array[Dictionary] = [
 	},
 ]
 
+enum InventoryRole { DUCK, TAGGER }
+
+const SKIN_PREVIEW_SCENE := preload("res://scenes/menu/SkinPreview3D.tscn")
+
+const SKINS_BY_ROLE: Dictionary = {
+	InventoryRole.DUCK: [
+		{
+			"id": "duck_default",
+			"name": "기본",
+			"model": preload("res://assets/duck/duck.glb"),
+			"model_position": Vector3(0, 0.622, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(2.0, 2.0, 2.0),
+		},
+	],
+	InventoryRole.TAGGER: [
+		{
+			"id": "tagger_default",
+			"name": "기본",
+			"model": preload("res://assets/aligator/aligator.glb"),
+			"model_position": Vector3(0, 0.684, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(1.4, 1.4, 1.4),
+		},
+	],
+}
+
 var _normalizing_room_code := false
 var _normalizing_create_room_code := false
 var _normalizing_nickname := false
@@ -62,6 +92,9 @@ var _current_view: ContentView = ContentView.NONE
 var _rooms_by_id: Dictionary = {}
 var _selected_room: Dictionary = {}
 var _rules_card_index := 0
+var _inventory_role: InventoryRole = InventoryRole.DUCK
+var _selected_skin_by_role: Dictionary = {} # InventoryRole -> skin id
+var _skin_check_badges: Dictionary = {} # InventoryRole -> {skin id -> Control}
 
 
 func _ready() -> void:
@@ -74,6 +107,10 @@ func _ready() -> void:
 	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
 	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
 	_refresh_rules_card()
+	inventory_duck_tab_button.pressed.connect(_on_inventory_duck_tab_button_pressed)
+	inventory_tagger_tab_button.pressed.connect(_on_inventory_tagger_tab_button_pressed)
+	_init_inventory_selection()
+	_refresh_inventory_grid()
 	_init_audio_settings()
 
 	_set_content_view(ContentView.NONE)
@@ -252,6 +289,152 @@ func _refresh_rules_card() -> void:
 	rules_card_title_label.add_theme_color_override("font_color", card["color"])
 	rules_card_text_label.text = str(card["body"])
 	rules_card_index_label.text = "%d / %d" % [_rules_card_index + 1, RULES_CARDS.size()]
+
+
+func _init_inventory_selection() -> void:
+	for role in SKINS_BY_ROLE.keys():
+		var skins: Array = SKINS_BY_ROLE[role]
+		if not skins.is_empty():
+			_selected_skin_by_role[role] = skins[0]["id"]
+
+
+func _on_inventory_duck_tab_button_pressed() -> void:
+	_inventory_role = InventoryRole.DUCK
+	_refresh_inventory_grid()
+
+
+func _on_inventory_tagger_tab_button_pressed() -> void:
+	_inventory_role = InventoryRole.TAGGER
+	_refresh_inventory_grid()
+
+
+func _refresh_inventory_grid() -> void:
+	if not is_instance_valid(inventory_skin_grid):
+		return
+
+	inventory_duck_tab_button.button_pressed = _inventory_role == InventoryRole.DUCK
+	inventory_tagger_tab_button.button_pressed = _inventory_role == InventoryRole.TAGGER
+
+	for child in inventory_skin_grid.get_children():
+		inventory_skin_grid.remove_child(child)
+		child.queue_free()
+
+	_skin_check_badges[_inventory_role] = {}
+	var selected_id: String = str(_selected_skin_by_role.get(_inventory_role, ""))
+	for skin in SKINS_BY_ROLE.get(_inventory_role, []):
+		var result := _make_skin_box(skin, _inventory_role, str(skin["id"]) == selected_id)
+		inventory_skin_grid.add_child(result["box"])
+		_skin_check_badges[_inventory_role][skin["id"]] = result["check_badge"]
+
+
+func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) -> Dictionary:
+	var box: Button = Button.new()
+	box.flat = true
+	box.text = ""
+	box.focus_mode = Control.FOCUS_NONE
+	box.custom_minimum_size = Vector2(110, 134)
+	box.pressed.connect(_on_skin_box_pressed.bind(role, str(skin["id"])))
+
+	var content: VBoxContainer = VBoxContainer.new()
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_theme_constant_override("separation", 10)
+	box.add_child(content)
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var preview_stack: PanelContainer = PanelContainer.new()
+	preview_stack.custom_minimum_size = Vector2(110, 110)
+	preview_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview_stack.add_theme_stylebox_override("panel", _skin_preview_box_style())
+	content.add_child(preview_stack)
+
+	var viewport_container: SubViewportContainer = SubViewportContainer.new()
+	viewport_container.stretch = true
+	viewport_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview_stack.add_child(viewport_container)
+
+	var viewport: SubViewport = SubViewport.new()
+	viewport.own_world_3d = true
+	viewport.transparent_bg = true
+	viewport.size = Vector2i(110, 110)
+	viewport_container.add_child(viewport)
+
+	var preview: Node3D = SKIN_PREVIEW_SCENE.instantiate()
+	preview.model_scene = skin.get("model")
+	preview.model_position = skin.get("model_position", Vector3.ZERO)
+	preview.model_rotation_degrees = skin.get("model_rotation_degrees", Vector3(0, 180, 0))
+	preview.model_scale = skin.get("model_scale", Vector3.ONE)
+	viewport.add_child(preview)
+
+	var check_badge := _make_check_badge(is_selected)
+	preview_stack.add_child(check_badge)
+
+	var name_label: Label = Label.new()
+	name_label.text = str(skin.get("name", ""))
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
+	content.add_child(name_label)
+
+	return {"box": box, "check_badge": check_badge}
+
+
+func _make_check_badge(is_selected: bool) -> Control:
+	var anchor: Control = Control.new()
+	anchor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anchor.visible = is_selected
+
+	var badge: Panel = Panel.new()
+	badge.anchor_left = 1.0
+	badge.anchor_right = 1.0
+	badge.offset_left = -20.0
+	badge.offset_right = -4.0
+	badge.offset_top = 4.0
+	badge.offset_bottom = 20.0
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var badge_style := StyleBoxFlat.new()
+	badge_style.bg_color = Color(0.45098, 0.670588, 0.164706, 1)
+	badge_style.corner_radius_top_left = 8
+	badge_style.corner_radius_top_right = 8
+	badge_style.corner_radius_bottom_right = 8
+	badge_style.corner_radius_bottom_left = 8
+	badge.add_theme_stylebox_override("panel", badge_style)
+	anchor.add_child(badge)
+
+	var check_label: Label = Label.new()
+	check_label.text = "✓"
+	check_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	check_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	check_label.add_theme_font_size_override("font_size", 11)
+	check_label.add_theme_color_override("font_color", Color.WHITE)
+	check_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	check_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	badge.add_child(check_label)
+
+	return anchor
+
+
+func _skin_preview_box_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.0117647, 0.054902, 0.101961, 0.95)
+	style.border_width_left = 3
+	style.border_width_top = 3
+	style.border_width_right = 3
+	style.border_width_bottom = 3
+	style.border_color = Color(0.247059, 0.352941, 0.470588, 1)
+	style.corner_radius_top_left = 14
+	style.corner_radius_top_right = 14
+	style.corner_radius_bottom_right = 14
+	style.corner_radius_bottom_left = 14
+	return style
+
+
+func _on_skin_box_pressed(role: InventoryRole, skin_id: String) -> void:
+	if str(_selected_skin_by_role.get(role, "")) == skin_id:
+		return
+	_selected_skin_by_role[role] = skin_id
+	var badges: Dictionary = _skin_check_badges.get(role, {})
+	for id in badges:
+		badges[id].visible = str(id) == skin_id
 
 
 func _on_settings_nav_button_pressed() -> void:

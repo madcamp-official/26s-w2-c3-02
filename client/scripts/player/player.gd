@@ -365,10 +365,8 @@ func _apply_free_movement(delta: float) -> void:
 
 
 func _update_dash(delta: float) -> void:
-	# 이번 프레임의 이동을 계산하기 "전에" 대시 종료 여부를 먼저 확정해야, game.gd가
-	# 같은 프레임에 읽는 dash_active 값과 실제 이번 프레임 이동이 항상 일치한다
-	# (이동 계산 이후에 끄면 "대시가 끝난 마지막 이동 프레임"이 dash_active=false로
-	# 보고돼 game.gd의 대시 경로 판정에서 그 구간이 누락된다).
+	# 이번 프레임의 이동을 계산하기 "전에" 대시 종료 여부를 먼저 확정해야, 이번 프레임의
+	# 실제 이동이 dash_active 값과 항상 일치한다(로컬 애니메이션/이동 처리용).
 	if dash_active:
 		_dash_time_left -= delta
 		if _dash_time_left <= 0.0:
@@ -382,11 +380,13 @@ func _update_dash(delta: float) -> void:
 		dash_active = true
 		_dash_time_left = DASH_DURATION
 		_dash_direction = -global_transform.basis.z
-		# 대시를 누른 순간의 시작/도착 지점을 고정해 두면, game.gd가 매 프레임 위치를
-		# 다시 계산할 필요 없이 항상 같은 전체 경로 사각형으로 판정할 수 있다.
+		# 대시를 누른 순간의 시작/도착 지점을 고정해 로컬 이동에 사용한다.
 		dash_start_pos = global_position
 		dash_end_pos = dash_start_pos + _dash_direction * DASH_DISTANCE
 		dash_cooldown_remaining = DASH_COOLDOWN
+		# "player:dash" 격: 입력(시작/도착 지점)만 서버(MockServer)에 보고한다. 그 경로 위에
+		# 오리가 겹치는지 판정하는 건 서버 몫이므로 여기서는 판정하지 않는다.
+		MockServer.begin_dash(controlled_player_id, dash_start_pos, dash_end_pos, DASH_DURATION)
 
 	GameData.dash_cooldown_duration = DASH_COOLDOWN
 	GameData.dash_cooldown_remaining = dash_cooldown_remaining

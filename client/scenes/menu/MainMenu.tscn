@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
-[ext_resource type="PackedScene" path="res://scenes/menu/InventoryPreview3D.tscn" id="4"]
 [ext_resource type="Texture2D" path="res://assets/ui/logo/main_logo.png" id="5_logo"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
@@ -167,6 +166,8 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_sidebar"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_inventory_tab"]
 
 [node name="MainMenu" type="Control"]
 layout_mode = 3
@@ -469,7 +470,6 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel"]
 layout_mode = 2
 theme_override_constants/separation = 18
-alignment = 1
 
 [node name="InventoryTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
 layout_mode = 2
@@ -480,24 +480,57 @@ theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 40
 
-[node name="PreviewBoxCenter" type="CenterContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
+[node name="InventoryTabRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
+unique_name_in_owner = true
 layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 16
 
-[node name="PreviewBox" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter"]
+[node name="InventoryDuckTabButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/InventoryTabRow"]
+unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(260, 260)
-theme_override_styles/panel = SubResource("StyleBoxFlat_preview_box")
+custom_minimum_size = Vector2(140, 0)
+toggle_mode = true
+button_pressed = true
+button_group = SubResource("ButtonGroup_inventory_tab")
+text = "오리"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
 
-[node name="PreviewViewportContainer" type="SubViewportContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox"]
+[node name="InventoryTaggerTabButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/InventoryTabRow"]
+unique_name_in_owner = true
 layout_mode = 2
-mouse_filter = 2
-stretch = true
+custom_minimum_size = Vector2(140, 0)
+toggle_mode = true
+button_group = SubResource("ButtonGroup_inventory_tab")
+text = "경찰"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
+theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
 
-[node name="PreviewViewport" type="SubViewport" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer"]
-own_world_3d = true
-size = Vector2i(260, 260)
+[node name="InventorySkinScroll" type="ScrollContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
 
-[node name="InventoryPreview3D" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer/PreviewViewport" instance=ExtResource("4")]
+[node name="InventorySkinGrid" type="HFlowContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/InventorySkinScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 0
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
 
 [node name="RulesPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea"]
 unique_name_in_owner = true
