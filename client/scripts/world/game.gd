@@ -1,6 +1,7 @@
 extends Node3D
 
 const CAMERA_OFFSET := Vector3(0, 16, 14)
+const WARNING_BGM_RADIUS := 30.0
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 
 var _target: Node3D = null
@@ -8,6 +9,7 @@ var _remote_players: Dictionary = {}
 var _duck: Node3D = null
 var _aligator: Node3D = null
 var _arrow_control_player_id := ""
+var _warning_bgm_active := false
 
 func _ready() -> void:
 	_duck = get_node_or_null("Duck")
@@ -17,6 +19,7 @@ func _ready() -> void:
 	_register_pond_obstacles()
 	if GameData.phase == "lobby":
 		MockServer.start_game()
+	AudioManager.play_game_bgm()
 	_configure_controlled_players()
 	GameData.game_state_changed.connect(_sync_remote_players)
 	GameData.game_event.connect(_on_game_event)
@@ -84,6 +87,7 @@ func _exit_tree() -> void:
 func _process(_delta: float) -> void:
 	if _target:
 		$Camera3D.position = _target.position + CAMERA_OFFSET
+	_update_warning_bgm()
 
 func _on_game_event(event: String, _data: Dictionary) -> void:
 	if event == "game_started":
@@ -176,3 +180,28 @@ func _sync_remote_players() -> void:
 
 func _dict_to_vec3(pos: Dictionary) -> Vector3:
 	return Vector3(float(pos["x"]), float(pos["y"]), float(pos["z"]))
+
+func _update_warning_bgm() -> void:
+	var should_play_warning := _should_play_warning_bgm()
+	if should_play_warning == _warning_bgm_active:
+		return
+	_warning_bgm_active = should_play_warning
+	if _warning_bgm_active:
+		AudioManager.play_warning_bgm()
+	else:
+		AudioManager.play_game_bgm()
+
+func _should_play_warning_bgm() -> bool:
+	if GameData.phase != "playing":
+		return false
+	if _duck == null or _aligator == null:
+		return false
+
+	var duck_player_id := str(_duck.get("controlled_player_id"))
+	var duck_player := _player_by_id(duck_player_id)
+	if duck_player.is_empty() or str(duck_player.get("state", "")) == "jailed":
+		return false
+
+	var duck_pos := Vector2(_duck.global_position.x, _duck.global_position.z)
+	var aligator_pos := Vector2(_aligator.global_position.x, _aligator.global_position.z)
+	return duck_pos.distance_to(aligator_pos) <= WARNING_BGM_RADIUS
