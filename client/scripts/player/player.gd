@@ -5,9 +5,16 @@ const GRAVITY := 20.0
 const TURN_SPEED := 6.0
 const REMOTE_LERP_SPEED := 10.0
 
-const JAIL_BOUND_RADIUS := 15.0
-const JAIL_MIN_Y := 0.45
+# 경찰(악어) 전용 대시: 현재 바라보는 방향으로 짧게 돌진해 경로 위의 오리를 잡는다.
+const DASH_DISTANCE := 14.0
+const DASH_DURATION := 0.25
+const DASH_SPEED := DASH_DISTANCE / DASH_DURATION
+const DASH_COOLDOWN := 5.0
+
 const DEFAULT_STEALTH_RADIUS := 8.0
+# 실측 결과 섬의 실제 해안선(마른 땅의 마지막 표면)은 y≈0.3, 물 표면은 y=0.0
+# (오리 원점 = 발 높이 기준). 그 사이에서 물에 거의 닿았을 때만 반응하도록 0.1로 설정.
+const JAIL_WATER_MARGIN_Y := 0.3
 
 const CHARACTER_CONFIG := {
 	"duck": {
@@ -16,6 +23,7 @@ const CHARACTER_CONFIG := {
 		"model_scale": 3.0,
 		"collision_size": Vector3(1.2, 3.6, 1.5),
 		"collision_pos": Vector3(0, 1.8, 0),
+		"water_submerge_depth": 0.0,
 	},
 	"aligator": {
 		"model": "res://assets/aligator/aligator.glb",
@@ -23,6 +31,10 @@ const CHARACTER_CONFIG := {
 		"model_scale": 6.0,
 		"collision_size": Vector3(4.0, 3.36, 12.0),
 		"collision_pos": Vector3(0, 1.68, 0),
+		# 실측 결과 model_pos.y=1.684는 모델 바닥이 정확히 수면(y=0)에 딱 맞아 전혀 잠기지
+		# 않았음(전신 높이 약 3.37). 물(연못 바닥)을 밟고 있을 때만 이만큼 모델을 내려서
+		# 다리와 몸통 아랫부분이 잠기게 하고, 섬(땅) 위에서는 원래 높이(발 기준)를 유지한다.
+		"water_submerge_depth": 0.5,
 	},
 }
 
@@ -36,6 +48,17 @@ var _remote_target_rot: float
 var _has_remote_target := false
 var _is_jailed := false
 var _display_name_text := ""
+
+var dash_active := false
+var dash_cooldown_remaining := 0.0
+var dash_start_pos := Vector3.ZERO
+var dash_end_pos := Vector3.ZERO
+var _dash_time_left := 0.0
+var _dash_direction := Vector3.ZERO
+
+var _model_node: Node3D = null
+var _base_model_pos_y := 0.0
+var _water_submerge_depth := 0.0
 
 
 func _ready() -> void:
@@ -53,6 +76,9 @@ func _ready() -> void:
 	model.scale = Vector3.ONE * float(config["model_scale"])
 	model.rotation_degrees = Vector3(0, 180, 0)
 	$ModelSlot.add_child(model)
+	_model_node = model
+	_base_model_pos_y = float(config["model_pos"].y)
+	_water_submerge_depth = float(config.get("water_submerge_depth", 0.0))
 
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = config["collision_size"]
@@ -158,9 +184,25 @@ func _physics_process(delta: float) -> void:
 		_move_inside_jail(delta)
 		return
 
+	if character == "aligator":
+		_update_dash(delta)
+
 	_apply_free_movement(delta)
 	move_and_slide()
+	_update_water_submersion()
 	_update_local_transform_if_needed()
+
+
+func _update_water_submersion() -> void:
+	if _model_node == null or _water_submerge_depth <= 0.0:
+		return
+	var on_water := false
+	for i in range(get_slide_collision_count()):
+		var collider := get_slide_collision(i).get_collider()
+		if collider is Node and (collider as Node).is_in_group("water_surface"):
+			on_water = true
+			break
+	_model_node.position.y = _base_model_pos_y - _water_submerge_depth if on_water else _base_model_pos_y
 
 
 func _apply_free_movement(delta: float) -> void:
@@ -169,10 +211,43 @@ func _apply_free_movement(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	if dash_active:
+		velocity.x = _dash_direction.x * DASH_SPEED
+		velocity.z = _dash_direction.z * DASH_SPEED
+		return
+
 	var input_dir := _input_direction()
 	velocity.x = input_dir.x * SPEED
 	velocity.z = input_dir.z * SPEED
 	_face_input_direction(input_dir, delta)
+
+
+func _update_dash(delta: float) -> void:
+	# 이번 프레임의 이동을 계산하기 "전에" 대시 종료 여부를 먼저 확정해야, game.gd가
+	# 같은 프레임에 읽는 dash_active 값과 실제 이번 프레임 이동이 항상 일치한다
+	# (이동 계산 이후에 끄면 "대시가 끝난 마지막 이동 프레임"이 dash_active=false로
+	# 보고돼 game.gd의 대시 경로 판정에서 그 구간이 누락된다).
+	if dash_active:
+		_dash_time_left -= delta
+		if _dash_time_left <= 0.0:
+			dash_active = false
+
+	if dash_cooldown_remaining > 0.0:
+		dash_cooldown_remaining = max(0.0, dash_cooldown_remaining - delta)
+
+	var action_suffix := "_arrow" if control_scheme == "arrows" else ""
+	if not dash_active and dash_cooldown_remaining <= 0.0 and Input.is_action_just_pressed("dash" + action_suffix):
+		dash_active = true
+		_dash_time_left = DASH_DURATION
+		_dash_direction = -global_transform.basis.z
+		# 대시를 누른 순간의 시작/도착 지점을 고정해 두면, game.gd가 매 프레임 위치를
+		# 다시 계산할 필요 없이 항상 같은 전체 경로 사각형으로 판정할 수 있다.
+		dash_start_pos = global_position
+		dash_end_pos = dash_start_pos + _dash_direction * DASH_DISTANCE
+		dash_cooldown_remaining = DASH_COOLDOWN
+
+	GameData.dash_cooldown_duration = DASH_COOLDOWN
+	GameData.dash_cooldown_remaining = dash_cooldown_remaining
 
 
 func _move_inside_jail(delta: float) -> void:
@@ -180,17 +255,13 @@ func _move_inside_jail(delta: float) -> void:
 	var prev_pos := global_position
 	move_and_slide()
 
-	var flat_pos := Vector2(global_position.x, global_position.z)
-	var jail_center := Vector2(MockServer.JAIL_POSITION.x, MockServer.JAIL_POSITION.z)
-	var fell_to_water := global_position.y < JAIL_MIN_Y
-	var left_boundary := flat_pos.distance_to(jail_center) > JAIL_BOUND_RADIUS
-	if fell_to_water or left_boundary:
+	# 섬의 실제 트라이메시 콜리전 위를 그대로 걸어다니게 하되(다리가 지형 높이를
+	# 따라 자연스럽게 보임), 발이 물 표면(y=0)에 닿을 만큼 내려가면 그 스텝을 되돌린다.
+	if global_position.y <= JAIL_WATER_MARGIN_Y:
 		global_position = prev_pos
-		velocity.x = 0.0
-		velocity.z = 0.0
-		if fell_to_water:
-			velocity.y = 0.0
+		velocity = Vector3.ZERO
 
+	_update_water_submersion()
 	_update_local_transform_if_needed()
 
 

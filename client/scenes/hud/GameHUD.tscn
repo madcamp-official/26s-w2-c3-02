@@ -1,7 +1,8 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=14 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud/GameHUD.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/hud/RescueDonut.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/hud/DashCooldownIndicator.gd" id="7"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/jail_thumbnail.png" id="3_jail"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/nest_thumbnail.png" id="4_nest"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/arrow_icon.png" id="5_arrow"]
@@ -519,6 +520,40 @@ text = "🦆 가짜 오리 추가/제거"
 [node name="DebugJailDuckButton" type="Button" parent="Root/DebugPanel/VBox"]
 layout_mode = 2
 text = "🔒 가짜 오리 수감"
+
+[node name="DashCooldownIndicator" type="Control" parent="Root"]
+script = ExtResource("7")
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -36.0
+offset_top = -104.0
+offset_right = 36.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+visible = false
+
+[node name="Label" type="Label" parent="Root/DashCooldownIndicator"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+text = "대시"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
 
 [node name="SettingsButton" type="TextureButton" parent="Root"]
 unique_name_in_owner = true
