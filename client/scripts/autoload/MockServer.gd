@@ -86,17 +86,17 @@ func _seed_lobby() -> void:
 	GameData.players = [_fake_player("npc1", "Mock Police", "tagger", "aligator")]
 	GameData.room_state_changed.emit()
 
-func create_room(nickname: String, room_id: String = "", _room_name: String = "") -> Dictionary:
+func create_room(nickname: String, room_id: String = "", _room_name: String = "", character_skin: String = "duck") -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
 	if normalized_room_id != "":
 		if normalized_room_id.length() != ROOM_CODE_LENGTH:
 			return {"ok": false, "message": "방 코드는 네 자리 숫자로 입력해주세요."}
 		if normalized_room_id == MOCK_JOIN_ROOM_CODE:
 			return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
-	_prepare_lobby(nickname, normalized_room_id)
+	_prepare_lobby(nickname, normalized_room_id, character_skin)
 	return {"ok": true}
 
-func join_room(nickname: String, room_id: String, join_code: String = "") -> Dictionary:
+func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck") -> Dictionary:
 	var room := _find_mock_room(room_id)
 	if room.is_empty():
 		return {"ok": false, "message": "존재하지 않는 방입니다."}
@@ -104,7 +104,7 @@ func join_room(nickname: String, room_id: String, join_code: String = "") -> Dic
 		var normalized_join_code := _normalize_room_code(join_code)
 		if normalized_join_code != str(room.get("join_code", "")):
 			return {"ok": false, "message": "참가 코드가 올바르지 않습니다."}
-	_prepare_mock_join_lobby(nickname, str(room.get("display_room_id", "")))
+	_prepare_mock_join_lobby(nickname, str(room.get("display_room_id", "")), character_skin)
 	return {"ok": true}
 
 func list_rooms() -> Array:
@@ -155,7 +155,7 @@ func _normalize_room_code(room_id: String) -> String:
 			break
 	return code
 
-func _prepare_lobby(nickname: String, room_id: String) -> void:
+func _prepare_lobby(nickname: String, room_id: String, character_skin: String = "duck") -> void:
 	var normalized_nickname := nickname.strip_edges()
 	if normalized_nickname == "":
 		normalized_nickname = "Player"
@@ -172,11 +172,11 @@ func _prepare_lobby(nickname: String, room_id: String) -> void:
 	GameData.menu_entry_view = "lobby"
 	_delivery_batches.clear()
 	GameData.players = [
-		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck", false),
+		_fake_player(GameData.local_player_id, normalized_nickname, "duck", character_skin, false),
 	]
 	GameData.room_state_changed.emit()
 
-func _prepare_mock_join_lobby(nickname: String, display_room_id: String = MOCK_JOIN_ROOM_CODE) -> void:
+func _prepare_mock_join_lobby(nickname: String, display_room_id: String = MOCK_JOIN_ROOM_CODE, character_skin: String = "duck") -> void:
 	var normalized_nickname := nickname.strip_edges()
 	if normalized_nickname == "":
 		normalized_nickname = "Player"
@@ -193,7 +193,7 @@ func _prepare_mock_join_lobby(nickname: String, display_room_id: String = MOCK_J
 	GameData.menu_entry_view = "lobby"
 	_delivery_batches.clear()
 	GameData.players = [
-		_fake_player(GameData.local_player_id, normalized_nickname, "duck", "duck", false),
+		_fake_player(GameData.local_player_id, normalized_nickname, "duck", character_skin, false),
 		_fake_player("mock1", "Mock Police", "tagger", "aligator", true),
 		_fake_player("mock2", "Mock Duck", "duck", "duck", true),
 	]
@@ -295,7 +295,7 @@ func can_set_player_team(player_id: String, team: String) -> bool:
 		return true
 	return taggers < MVP_TAGGER_COUNT
 
-func set_player_team(player_id: String, team: String) -> bool:
+func set_player_team(player_id: String, team: String, character_skin: String = "duck") -> bool:
 	if not can_set_player_team(player_id, team):
 		return false
 
@@ -306,7 +306,7 @@ func set_player_team(player_id: String, team: String) -> bool:
 		if team == "tagger":
 			player["character"] = "aligator"
 		else:
-			player["character"] = "duck"
+			player["character"] = character_skin
 		GameData.room_state_changed.emit()
 		return true
 	return false
