@@ -329,8 +329,9 @@ theme_override_constants/separation = 28
 
 [node name="RoomListSection" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody"]
 layout_mode = 2
-custom_minimum_size = Vector2(380, 0)
+custom_minimum_size = Vector2(350, 0)
 size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 10
 
 [node name="RoomListHeader" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/RoomListSection"]
@@ -360,6 +361,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 [node name="RoomListScroll" type="ScrollContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/RoomListSection"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 276)
+size_flags_vertical = 3
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 1
 
@@ -371,12 +373,10 @@ theme_override_constants/separation = 10
 
 [node name="JoinCreateColumn" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody"]
 layout_mode = 2
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(350, 0)
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 10
-
-[node name="JoinTopSpacer" type="Control" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 42)
 
 [node name="JoinDetails" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
 unique_name_in_owner = true
@@ -413,8 +413,8 @@ unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 60)
 size_flags_horizontal = 3
-placeholder_text = "닉네임"
-max_length = 8
+placeholder_text = "한/영 10자 이내"
+max_length = 10
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
 theme_override_font_sizes/font_size = 26
@@ -544,6 +544,7 @@ layout_mode = 2
 theme_override_constants/separation = 16
 
 [node name="RulesTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/ContentArea/RulesPanel/Content"]
+visible = false
 layout_mode = 2
 text = "게임 규칙"
 horizontal_alignment = 1
@@ -562,6 +563,7 @@ theme_override_font_sizes/font_size = 20
 
 [node name="RulesCardRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/RulesPanel/Content"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 300)
 size_flags_vertical = 3
 theme_override_constants/separation = 20
 
@@ -578,6 +580,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="RulesCardBody" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/RulesPanel/Content/RulesCardRow"]
 layout_mode = 2
+custom_minimum_size = Vector2(0, 300)
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
@@ -595,10 +598,11 @@ theme_override_font_sizes/font_size = 28
 [node name="RulesCardTextLabel" type="RichTextLabel" parent="MarginContainer/RootLayout/BodyRow/ContentArea/RulesPanel/Content/RulesCardRow/RulesCardBody"]
 unique_name_in_owner = true
 layout_mode = 2
+custom_minimum_size = Vector2(0, 230)
 size_flags_vertical = 3
 bbcode_enabled = true
-fit_content = true
-scroll_active = false
+fit_content = false
+scroll_active = true
 theme_override_colors/default_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/normal_font_size = 24
 theme_override_font_sizes/bold_font_size = 24
@@ -900,7 +904,8 @@ unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 58)
 size_flags_horizontal = 3
-placeholder_text = "방 이름"
+placeholder_text = "한/영 10자 이내"
+max_length = 10
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
 theme_override_font_sizes/font_size = 26
