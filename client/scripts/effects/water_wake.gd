@@ -5,7 +5,7 @@ extends MeshInstance3D
 ## 사각 쿼드 대신 뾰족한 두 팔이 뒤로 벌어지는 화살촉 모양 메쉬를 직접 그려서
 ## 각진 느낌 없이 자연스러운 V자 실루엣을 만든다.
 
-const LIFETIME := 1.4
+const LIFETIME := 1.0
 const START_SCALE := 0.6
 const END_SCALE := 1.8
 const START_ALPHA := 0.5

@@ -5,6 +5,11 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
 @onready var rules_panel: PanelContainer = %RulesPanel
+@onready var rules_card_index_label: Label = %RulesCardIndexLabel
+@onready var rules_prev_button: Button = %RulesPrevButton
+@onready var rules_next_button: Button = %RulesNextButton
+@onready var rules_card_title_label: Label = %RulesCardTitleLabel
+@onready var rules_card_text_label: RichTextLabel = %RulesCardTextLabel
 @onready var settings_panel: PanelContainer = %SettingsPanel
 @onready var login_panel: PanelContainer = %LoginPanel
 @onready var room_list: VBoxContainer = %RoomList
@@ -32,12 +37,31 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 const NICKNAME_MAX_LENGTH := 8
 const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
+const RULES_CARDS: Array[Dictionary] = [
+	{
+		"title": "게임 개요",
+		"color": Color(0.466667, 0.713726, 0.956863, 1),
+		"body": "\n[b]오리 팀: [/b]  시간 안에 목표한 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n[b]경찰 팀: [/b]  시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
+	},
+	{
+		"title": "오리 팀",
+		"color": Color(1, 0.85, 0.35, 1),
+		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n\n[b]목표[/b]\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n[b]감옥 탈출[/b]\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 한꺼번에 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
+	},
+	{
+		"title": "경찰 팀",
+		"color": Color(1, 0.55, 0.5, 1),
+		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n대시: Space 키로 바라보는 방향으로 돌진한다\n\n[b]목표[/b]\n돌진으로 오리를 잡아 감옥으로 보낸다\n\n[b]승리 조건[/b]\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
+	},
+]
+
 var _normalizing_room_code := false
 var _normalizing_create_room_code := false
 var _normalizing_nickname := false
 var _current_view: ContentView = ContentView.NONE
 var _rooms_by_id: Dictionary = {}
 var _selected_room: Dictionary = {}
+var _rules_card_index := 0
 
 
 func _ready() -> void:
@@ -47,6 +71,9 @@ func _ready() -> void:
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
 	_on_nickname_input_text_changed(nickname_input.text)
 	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
+	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
+	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
+	_refresh_rules_card()
 	_init_audio_settings()
 
 	_set_content_view(ContentView.NONE)
@@ -201,7 +228,30 @@ func _on_inventory_button_pressed() -> void:
 
 
 func _on_rules_button_pressed() -> void:
+	_rules_card_index = 0
+	_refresh_rules_card()
 	_set_content_view(ContentView.RULES)
+
+
+func _on_rules_prev_button_pressed() -> void:
+	_rules_card_index = (_rules_card_index - 1 + RULES_CARDS.size()) % RULES_CARDS.size()
+	_refresh_rules_card()
+
+
+func _on_rules_next_button_pressed() -> void:
+	_rules_card_index = (_rules_card_index + 1) % RULES_CARDS.size()
+	_refresh_rules_card()
+
+
+func _refresh_rules_card() -> void:
+	if not is_instance_valid(rules_card_title_label):
+		return
+
+	var card: Dictionary = RULES_CARDS[_rules_card_index]
+	rules_card_title_label.text = str(card["title"])
+	rules_card_title_label.add_theme_color_override("font_color", card["color"])
+	rules_card_text_label.text = str(card["body"])
+	rules_card_index_label.text = "%d / %d" % [_rules_card_index + 1, RULES_CARDS.size()]
 
 
 func _on_settings_nav_button_pressed() -> void:

@@ -44,6 +44,12 @@ const RESCUE_DURATION := 3.0                       # 탈옥에 필요한 시간(
 const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 탈출 시간(초)
 const ALL_JAILED_END_DELAY := 0.2                  # 모든 오리가 갇힌 뒤 종료 메세지가 뜨기까지의 유예 시간(초)
 
+# 경찰(악어) 대시 판정: player.gd는 대시 시작 순간 시작/도착 지점만 계산해 begin_dash()로
+# 알려주고("player:dash" 격), 그 경로 위에 오리가 겹치는지 판정하는 건 서버 몫이므로 여기서
+# 한다(이전엔 game.gd가 Player 씬 노드를 직접 들여다보며 판정하고 있었음). DASH_CATCH_HALF_WIDTH는
+# player.gd의 aligator collision_size.x(4.0)의 2배, 즉 대시 경로 양옆으로 악어 몸통 폭만큼 여유를 둔다.
+const DASH_CATCH_HALF_WIDTH := 4.0
+
 var _broadcast_timer := 0.0
 var _second_timer := 0.0
 var _countdown_timer := 0.0
@@ -67,6 +73,7 @@ var _is_rescuing: bool = false      # 구출 진행 중 여부
 var _active_rescuer_id: String = "" # 구출 중인 플레이어 id
 var _has_fake_duck: bool = false     # 디버그: 가짜 오리(npc2) 존재 여부
 var _all_jailed_timer: float = -1.0  # 0 이상이면 "모든 오리 수감" 종료 대기 중 (음수면 비활성)
+var _active_dashes: Dictionary = {}  # playerId -> {"a": Vector2, "b": Vector2, "time_left": float} — 판정 중인 대시 경로
 
 func _ready() -> void:
 	GameData.target_score = TARGET_SCORE
@@ -209,10 +216,14 @@ func start_game() -> bool:
 	_player_motion.clear()
 	_delivering_settle.clear()
 	_delivery_batches.clear()
+	_active_dashes.clear()
 	_next_delivery_batch_id = 1
 	var ducklings: Array = []
+	var placed_positions: Array[Vector2] = []
 	for i in range(INITIAL_DUCKLING_COUNT):
-		ducklings.append(_fake_duckling("d%d" % (i + 1)))
+		var d := _fake_duckling("d%d" % (i + 1), placed_positions)
+		ducklings.append(d)
+		placed_positions.append(Vector2(d["position"]["x"], d["position"]["z"]))
 	GameData.ducklings = ducklings
 	_place_players_in_countdown()
 	GameData.game_state_changed.emit()
@@ -343,6 +354,7 @@ func return_to_lobby() -> void:
 	_carry_queues.clear()
 	_player_motion.clear()
 	_delivering_settle.clear()
+	_active_dashes.clear()
 	_reset_rescue()
 	for i in range(GameData.players.size()):
 		var player: Dictionary = GameData.players[i]
@@ -386,6 +398,7 @@ func _process(delta: float) -> void:
 	_update_duckling_follow(delta)
 	_check_deliver()
 	_update_delivering(delta)
+	_update_dash_catches(delta)
 	_update_jail_and_rescue(delta)
 	_update_all_jailed_end(delta)
 
@@ -672,6 +685,51 @@ func _rescue_duckling(d: Dictionary) -> void:
 	})
 	if GameData.score >= GameData.target_score:
 		_end_game("duck", "duck_goal")
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 대시 판정 (경찰 전용) — player.gd는 입력만 보고하고, 오리와의 겹침 판정은 여기서 한다.
+# ──────────────────────────────────────────────────────────────────────────────
+
+func begin_dash(_player_id: String, start_pos: Vector3, end_pos: Vector3, duration: float) -> void:
+	# "player:dash" 격: player.gd가 대시를 시작하는 순간 시작/도착 지점을 알려주면,
+	# 그 경로가 유지되는 동안(매 틱) 오리와 겹치는지는 서버(MockServer)가 자체적으로 판정한다.
+	# 경로 자체는 시작 시점에 고정되므로 프레임마다 다시 계산할 필요가 없고, duration 동안
+	# 매 틱 최신 오리 위치와 비교해 어느 프레임에 겹치든 놓치지 않는다.
+	_active_dashes[_player_id] = {
+		"a": Vector2(start_pos.x, start_pos.z),
+		"b": Vector2(end_pos.x, end_pos.z),
+		"time_left": duration,
+	}
+
+func _update_dash_catches(delta: float) -> void:
+	for dasher_id in _active_dashes.keys():
+		var dash: Dictionary = _active_dashes[dasher_id]
+		dash["time_left"] -= delta
+		if dash["time_left"] <= 0.0:
+			_active_dashes.erase(dasher_id)
+			continue
+		_active_dashes[dasher_id] = dash
+		_check_dash_catch(dash["a"], dash["b"])
+
+func _check_dash_catch(seg_a: Vector2, seg_b: Vector2) -> void:
+	for player in GameData.players:
+		if str(player.get("team", "")) != "duck":
+			continue
+		if str(player.get("state", "")) == "jailed":
+			continue
+		var pos := _dict_to_vec3(player["position"])
+		var p := Vector2(pos.x, pos.z)
+		if _distance_point_to_segment(p, seg_a, seg_b) <= DASH_CATCH_HALF_WIDTH:
+			# 경로와 겹치는 그 틱에 바로 수감 처리해 "부딪힌 순간 = 잡힘"이 명확하게 보이도록 한다.
+			jail_player(str(player["playerId"]))
+
+func _distance_point_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
+	var ab := b - a
+	var len_sq := ab.length_squared()
+	if len_sq < 0.0001:
+		return p.distance_to(a)
+	var t: float = clamp((p - a).dot(ab) / len_sq, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 감옥 / 구출 로직
@@ -1013,15 +1071,29 @@ func _random_player_spawn_position() -> Vector3:
 	var distance: float = randf_range(24.0, 58.0)
 	return Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
 
-func _fake_duckling(id: String) -> Dictionary:
+const DUCKLING_MIN_SEPARATION := 30.0
+const DUCKLING_PLACEMENT_ATTEMPTS := 30
+
+func _fake_duckling(id: String, existing_positions: Array[Vector2] = []) -> Dictionary:
 	# 감옥 섬 외부(XZ 15.0 ~ 88.0 사이)의 물 영역 전체에 균일한 밀도로 스폰시킴.
 	# dist를 randf_range로 바로 뽑으면 중심부일수록 단위 면적당 표본 밀도가 높아져
 	# 섬 근처에 몰리는 것처럼 보이므로, 반지름 제곱을 균일 분포시켜 면적 기준으로 고르게 뽑는다.
-	var angle := randf_range(0.0, TAU)
+	# 또한 완전 독립 랜덤은 우연히 서로 가까이 뭉칠 수 있으므로, 이미 배치된 오리들과
+	# 최소 거리(DUCKLING_MIN_SEPARATION) 이상 떨어질 때까지 재시도(블루노이즈 방식)한다.
 	var min_dist := 15.0
 	var max_dist := 88.0
-	var dist := sqrt(randf_range(min_dist * min_dist, max_dist * max_dist))
-	var spawn_pos := _push_out_of_props(Vector2(cos(angle) * dist, sin(angle) * dist))
+	var spawn_pos := Vector2.ZERO
+	for attempt in range(DUCKLING_PLACEMENT_ATTEMPTS):
+		var angle := randf_range(0.0, TAU)
+		var dist := sqrt(randf_range(min_dist * min_dist, max_dist * max_dist))
+		spawn_pos = _push_out_of_props(Vector2(cos(angle) * dist, sin(angle) * dist))
+		var far_enough := true
+		for other in existing_positions:
+			if spawn_pos.distance_to(other) < DUCKLING_MIN_SEPARATION:
+				far_enough = false
+				break
+		if far_enough:
+			break
 
 	return {
 		"ducklingId": id,

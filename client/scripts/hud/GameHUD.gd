@@ -15,7 +15,6 @@ const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
-@onready var jailed_label: Label = %JailedLabel
 @onready var event_toast: PanelContainer = %EventToast
 @onready var event_message_label: Label = %EventMessageLabel
 @onready var countdown_overlay: Control = %CountdownOverlay
@@ -148,8 +147,7 @@ func _on_hud_sfx_volume_slider_value_changed(value: float) -> void:
 
 func _refresh() -> void:
 	timer_label.text = "남은 시간 %s" % _format_time(GameData.remaining_seconds)
-	score_label.text = "새끼오리 %d / %d" % [GameData.score, GameData.target_score]
-	jailed_label.text = "수감 중 오리 %d명" % _jailed_duck_count()
+	score_label.text = "남은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
 	_refresh_countdown()
 	_refresh_player_list()
 	_refresh_debug_summary()
@@ -390,7 +388,6 @@ func _make_circle_photo_mask_material() -> ShaderMaterial:
 func _apply_static_text_styles() -> void:
 	_apply_game_text_style(timer_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(score_label, 34, Color.WHITE, 8, 5)
-	_apply_game_text_style(jailed_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(event_message_label, 30, Color.WHITE, 7, 4)
 	_apply_game_text_style(countdown_label, 96, Color.WHITE, 12, 7)
 	_apply_game_text_style(objective_label, 34, Color.WHITE, 7, 4)
