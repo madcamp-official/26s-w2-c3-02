@@ -2,8 +2,8 @@ extends Node3D
 
 const DUCK_ROUTE_CENTER := Vector2(30.0, 4.0)
 const DUCK_ROUTE_RADIUS := Vector2(12.0, 7.0)
-const ALIGATOR_ROUTE_CENTER := Vector2(14.0, 22.0)
-const ALIGATOR_ROUTE_RADIUS := Vector2(11.0, 7.0)
+const ALIGATOR_ROUTE_CENTER := Vector2(-20.0, 15.0)
+const ALIGATOR_ROUTE_RADIUS := Vector2(38.0, 25.0)
 const DUCK_WATER_BASE_Y := 0.622
 const ALIGATOR_WATER_BASE_Y := -0.016
 const WATER_BOB_SPEED := 1.6

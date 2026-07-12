@@ -2,6 +2,7 @@ extends Node
 
 const LOBBY_BGM_PATH := "res://assets/audio/bgm/lobby_bgm_loop.mp3"
 const GAME_BGM_PATH := "res://assets/audio/bgm/game_bgm_loop.mp3"
+const WARNING_BGM_PATH := "res://assets/audio/bgm/warning_bgm_loop.mp3"
 const CLICK_SFX_PATH := "res://assets/audio/sfx/click.ogg"
 const DASH_SFX_PATH := "res://assets/audio/sfx/dash_sound.mp3"
 const DELIVERY_SFX_PATH := "res://assets/audio/sfx/delivery_sound.mp3"
@@ -60,6 +61,11 @@ func play_game_bgm() -> void:
 	_play_bgm("game", GAME_BGM_PATH)
 
 
+func play_warning_bgm() -> void:
+	_quack_timer = 0.0
+	_play_bgm("warning", WARNING_BGM_PATH)
+
+
 func set_bgm_volume(value: float) -> void:
 	_bgm_volume = clamp(value, 0.0, 1.0)
 	_apply_volumes()
@@ -95,7 +101,7 @@ func play_sfx(key: String) -> void:
 
 
 func _process(delta: float) -> void:
-	if _current_bgm != "game" or (GameData.phase != "countdown" and GameData.phase != "playing"):
+	if (_current_bgm != "game" and _current_bgm != "warning") or (GameData.phase != "countdown" and GameData.phase != "playing"):
 		return
 	_quack_timer += delta
 	if _quack_timer >= QUACK_INTERVAL:
