@@ -348,7 +348,7 @@ func _on_add_mock_player_button_pressed() -> void:
 
 func _on_start_game_button_pressed() -> void:
 	if not MockServer.can_start_game():
-		_show_alert("경찰 1명, 오리 2명이 필요합니다.")
+		_show_alert("경찰 1명, 오리 1~2명이 필요합니다.")
 		return
 	SceneRouter.go_to("game")
 

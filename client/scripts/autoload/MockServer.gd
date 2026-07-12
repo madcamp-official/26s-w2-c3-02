@@ -192,7 +192,10 @@ func start_game() -> bool:
 	return true
 
 func can_start_game() -> bool:
-	return GameData.players.size() == MVP_PLAYER_LIMIT and _count_duck_players() == MVP_DUCK_COUNT and _count_tagger_players() == MVP_TAGGER_COUNT
+	var duck_count := _count_duck_players()
+	var tagger_count := _count_tagger_players()
+	var player_count := GameData.players.size()
+	return tagger_count == MVP_TAGGER_COUNT and duck_count >= 1 and duck_count <= MVP_DUCK_COUNT and player_count == tagger_count + duck_count
 
 func can_add_mock_player() -> bool:
 	return GameData.phase == "lobby" and GameData.players.size() < MVP_PLAYER_LIMIT
@@ -272,18 +275,9 @@ func set_player_team(player_id: String, team: String) -> bool:
 
 func lobby_status_text() -> String:
 	var duck_count := _count_duck_players()
-	var tagger_count := _count_tagger_players()
-	var player_count := GameData.players.size()
 	if can_start_game():
-		return "시작 가능: 경찰 1명 / 오리 2명"
-	return "필요 조건: 경찰 %d/%d명, 오리 %d/%d명, 인원 %d/%d명" % [
-		tagger_count,
-		MVP_TAGGER_COUNT,
-		duck_count,
-		MVP_DUCK_COUNT,
-		player_count,
-		MVP_PLAYER_LIMIT,
-	]
+		return "시작 가능: 경찰 1명, 오리 %d명" % duck_count
+	return "필요 조건: 경찰 1명, 오리 1~2명"
 
 func local_player_team() -> String:
 	for player in GameData.players:
