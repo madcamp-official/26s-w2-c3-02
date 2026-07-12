@@ -162,7 +162,7 @@ func _refresh_countdown() -> void:
 		return
 
 	if GameData.countdown_seconds > 0:
-		countdown_label.text = str(GameData.countdown_seconds)
+		countdown_label.text = "게임 시작 %d초 전" % GameData.countdown_seconds
 	else:
 		countdown_label.text = "시작!"
 
@@ -433,15 +433,16 @@ func _jailed_duck_count() -> int:
 func _event_message(event: String, data: Dictionary) -> String:
 	match event:
 		"player_jailed":
-			return "%s이(가) 감옥에 갇혔습니다! 🔒" % _player_name(data, "playerName", "playerId")
+			return "%s님이 감옥에 갇혔습니다!" % _player_name(data, "playerName", "playerId")
 		"player_released":
-			return "%s이(가) 감옥에서 탈출했습니다! 🕊️" % _player_name(data, "playerName", "playerId")
+			return "%s님이 감옥에서 탈출했습니다!" % _player_name(data, "playerName", "playerId")
 		"player_rescued":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
-			return "%s이(가) 모든 오리들을 구출했습니다!" % [rescuer]
+			var target := _player_name(data, "targetName", "targetId")
+			return "모든 오리들이 탈옥했습니다!" 
 		"rescue_started":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
-			return "%s이(가) 탈옥을 시도하고 있습니다! ⏳" % rescuer
+			return "%s님이 수감된 오리를 구출하고 있습니다!" % rescuer
 		"duckling_delivered":
 			var player_name := _player_name(data, "playerName", "playerId")
 			var count := int(data.get("count", 1))
