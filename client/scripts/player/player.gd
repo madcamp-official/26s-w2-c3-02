@@ -4,9 +4,10 @@ const SPEED := 10.0
 const GRAVITY := 20.0
 const TURN_SPEED := 6.0
 const REMOTE_LERP_SPEED := 10.0
+const WATER_SUBMERGE_LERP_SPEED := 6.0 # 물/땅 전환 시 모델이 순간이동하지 않고 부드럽게 오르내리도록
 
 # 경찰(악어) 전용 대시: 현재 바라보는 방향으로 짧게 돌진해 경로 위의 오리를 잡는다.
-const DASH_DISTANCE := 14.0
+const DASH_DISTANCE := 9.8
 const DASH_DURATION := 0.25
 const DASH_SPEED := DASH_DISTANCE / DASH_DURATION
 const DASH_COOLDOWN := 5.0
@@ -34,7 +35,8 @@ const CHARACTER_CONFIG := {
 		# 실측 결과 model_pos.y=1.684는 모델 바닥이 정확히 수면(y=0)에 딱 맞아 전혀 잠기지
 		# 않았음(전신 높이 약 3.37). 물(연못 바닥)을 밟고 있을 때만 이만큼 모델을 내려서
 		# 다리와 몸통 아랫부분이 잠기게 하고, 섬(땅) 위에서는 원래 높이(발 기준)를 유지한다.
-		"water_submerge_depth": 0.5,
+		# (0.5는 발끝만 잠겨서 1.1로 높여 몸통 아랫부분까지 잠기게 조정.)
+		"water_submerge_depth": 1.7,
 	},
 }
 
@@ -189,20 +191,32 @@ func _physics_process(delta: float) -> void:
 
 	_apply_free_movement(delta)
 	move_and_slide()
-	_update_water_submersion()
+	_update_water_submersion(delta)
 	_update_local_transform_if_needed()
 
 
-func _update_water_submersion() -> void:
+func _update_water_submersion(delta: float) -> void:
 	if _model_node == null or _water_submerge_depth <= 0.0:
 		return
-	var on_water := false
-	for i in range(get_slide_collision_count()):
-		var collider := get_slide_collision(i).get_collider()
-		if collider is Node and (collider as Node).is_in_group("water_surface"):
-			on_water = true
-			break
-	_model_node.position.y = _base_model_pos_y - _water_submerge_depth if on_water else _base_model_pos_y
+	var on_water := _is_water_directly_below()
+	var target_y: float = _base_model_pos_y - _water_submerge_depth if on_water else _base_model_pos_y
+	_model_node.position.y = lerp(_model_node.position.y, target_y, clamp(delta * WATER_SUBMERGE_LERP_SPEED, 0.0, 1.0))
+
+
+func _is_water_directly_below() -> bool:
+	# 발밑을 직접 레이캐스트로 확인한다 — 이번 프레임에 오리/바위 등 옆에서 스친
+	# 충돌이 있어도(get_slide_collision은 그런 것도 섞여 들어옴) 전혀 영향받지 않고,
+	# 매 프레임 "지금 이 자리 밑에 뭐가 있는가"만 새로 판정하므로 이전에 섬을 밟았던
+	# 기록에 발목 잡혀 계속 안 잠기는 현상도 생기지 않는다.
+	var space_state := get_world_3d().direct_space_state
+	var origin := global_position
+	var query := PhysicsRayQueryParameters3D.create(origin + Vector3.UP * 0.3, origin + Vector3.DOWN * 0.5)
+	query.exclude = [self]
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		return false
+	var collider = result.get("collider")
+	return collider is Node and (collider as Node).is_in_group("water_surface")
 
 
 func _apply_free_movement(delta: float) -> void:
@@ -261,7 +275,7 @@ func _move_inside_jail(delta: float) -> void:
 		global_position = prev_pos
 		velocity = Vector3.ZERO
 
-	_update_water_submersion()
+	_update_water_submersion(delta)
 	_update_local_transform_if_needed()
 
 
