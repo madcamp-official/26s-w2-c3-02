@@ -1,15 +1,21 @@
 extends Control
 
-enum ContentView { NONE, PLAY, INVENTORY, SETTINGS, LOGIN }
+enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
+@onready var rules_panel: PanelContainer = %RulesPanel
 @onready var settings_panel: PanelContainer = %SettingsPanel
 @onready var login_panel: PanelContainer = %LoginPanel
 @onready var room_list: VBoxContainer = %RoomList
+@onready var join_details: VBoxContainer = %JoinDetails
+@onready var selected_room_label: Label = %SelectedRoomLabel
 @onready var nickname_input: LineEdit = %NicknameInput
 @onready var room_code_input: LineEdit = %RoomCodeInput
 @onready var join_room_button: Button = %JoinRoomButton
+@onready var create_room_overlay: Control = %CreateRoomOverlay
+@onready var create_room_name_input: LineEdit = %CreateRoomNameInput
+@onready var create_room_code_input: LineEdit = %CreateRoomCodeInput
 @onready var lobby_overlay: Control = %LobbyOverlay
 @onready var room_code_label: Label = %RoomCodeLabel
 @onready var players_list: VBoxContainer = %PlayersList
@@ -24,10 +30,14 @@ enum ContentView { NONE, PLAY, INVENTORY, SETTINGS, LOGIN }
 @onready var sfx_volume_value_label: Label = %SfxVolumeValueLabel
 
 const NICKNAME_MAX_LENGTH := 8
+const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 var _normalizing_room_code := false
+var _normalizing_create_room_code := false
 var _normalizing_nickname := false
 var _current_view: ContentView = ContentView.NONE
+var _rooms_by_id: Dictionary = {}
+var _selected_room: Dictionary = {}
 
 
 func _ready() -> void:
@@ -36,10 +46,13 @@ func _ready() -> void:
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
 	_on_nickname_input_text_changed(nickname_input.text)
+	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
 	_init_audio_settings()
 
 	_set_content_view(ContentView.NONE)
 	lobby_overlay.visible = false
+	create_room_overlay.visible = false
+	_clear_selected_room()
 
 	if GameData.menu_entry_view == "lobby":
 		GameData.menu_entry_view = "menu"
@@ -52,15 +65,35 @@ func _exit_tree() -> void:
 
 
 func _on_create_room_button_pressed() -> void:
-	var result: Dictionary = MockServer.create_room(nickname_input.text, room_code_input.text)
+	create_room_name_input.text = ""
+	create_room_code_input.text = ""
+	create_room_overlay.visible = true
+	alert_overlay.visible = false
+	create_room_name_input.grab_focus()
+
+
+func _on_create_room_confirm_button_pressed() -> void:
+	var room_code := create_room_code_input.text.strip_edges()
+	if room_code != "" and room_code.length() != 4:
+		_show_alert("방 코드는 네 자리 숫자로 입력해주세요.")
+		return
+	var result: Dictionary = MockServer.create_room("Player", room_code, create_room_name_input.text)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
+	create_room_overlay.visible = false
 	_show_lobby()
 
 
+func _on_create_room_close_button_pressed() -> void:
+	create_room_overlay.visible = false
+
+
 func _on_join_room_button_pressed() -> void:
-	var result: Dictionary = MockServer.join_room(nickname_input.text, room_code_input.text)
+	if _selected_room.is_empty():
+		_show_alert("참가할 방을 먼저 선택해주세요.")
+		return
+	var result: Dictionary = MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -78,7 +111,26 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 		room_code_input.caret_column = normalized.length()
 		_normalizing_room_code = false
 
-	join_room_button.disabled = normalized.length() != 4
+	if _selected_room.is_empty():
+		join_room_button.disabled = true
+		return
+	if bool(_selected_room.get("is_private", false)):
+		join_room_button.disabled = normalized.length() != 4
+	else:
+		join_room_button.disabled = false
+
+
+func _on_create_room_code_input_text_changed(new_text: String) -> void:
+	if _normalizing_create_room_code:
+		return
+
+	var normalized := _room_code_digits(new_text)
+	if normalized == new_text:
+		return
+	_normalizing_create_room_code = true
+	create_room_code_input.text = normalized
+	create_room_code_input.caret_column = normalized.length()
+	_normalizing_create_room_code = false
 
 
 func _on_nickname_input_text_changed(new_text: String) -> void:
@@ -109,9 +161,11 @@ func _set_content_view(view: ContentView) -> void:
 	_current_view = view
 	play_panel.visible = view == ContentView.PLAY
 	inventory_panel.visible = view == ContentView.INVENTORY
+	rules_panel.visible = view == ContentView.RULES
 	settings_panel.visible = view == ContentView.SETTINGS
 	login_panel.visible = view == ContentView.LOGIN
 	if view == ContentView.PLAY:
+		_clear_selected_room()
 		_refresh_room_list()
 
 
@@ -146,6 +200,10 @@ func _on_inventory_button_pressed() -> void:
 	_set_content_view(ContentView.INVENTORY)
 
 
+func _on_rules_button_pressed() -> void:
+	_set_content_view(ContentView.RULES)
+
+
 func _on_settings_nav_button_pressed() -> void:
 	_set_content_view(ContentView.SETTINGS)
 
@@ -158,11 +216,13 @@ func _refresh_room_list() -> void:
 	if not is_instance_valid(room_list):
 		return
 
+	_rooms_by_id.clear()
 	for child in room_list.get_children():
 		room_list.remove_child(child)
 		child.queue_free()
 
 	for room in MockServer.list_rooms():
+		_rooms_by_id[str(room.get("room_id", ""))] = room
 		room_list.add_child(_make_room_row(room))
 
 
@@ -187,9 +247,10 @@ func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
 
 func _make_room_row(room: Dictionary) -> Control:
 	var room_id: String = str(room.get("room_id", "----"))
-	var host_nickname: String = str(room.get("host_nickname", "-"))
+	var room_name: String = str(room.get("room_name", room.get("host_nickname", "-")))
 	var player_count: int = int(room.get("player_count", 0))
 	var is_full: bool = player_count >= MockServer.MVP_PLAYER_LIMIT
+	var is_private := bool(room.get("is_private", false))
 
 	var row: Button = Button.new()
 	row.custom_minimum_size = Vector2(0, 54)
@@ -222,21 +283,28 @@ func _make_room_row(room: Dictionary) -> Control:
 	dot.add_theme_stylebox_override("panel", dot_style)
 	content.add_child(dot)
 
-	var code_label: Label = Label.new()
-	code_label.text = room_id
-	code_label.custom_minimum_size = Vector2(70, 0)
-	code_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	code_label.add_theme_font_size_override("font_size", 24)
-	code_label.add_theme_color_override("font_color", Color.WHITE)
-	content.add_child(code_label)
+	var room_name_row: HBoxContainer = HBoxContainer.new()
+	room_name_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	room_name_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_name_row.add_theme_constant_override("separation", 6)
+	content.add_child(room_name_row)
 
-	var host_label: Label = Label.new()
-	host_label.text = host_nickname
-	host_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	host_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	host_label.add_theme_font_size_override("font_size", 22)
-	host_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
-	content.add_child(host_label)
+	var room_name_label: Label = Label.new()
+	room_name_label.text = room_name
+	room_name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_name_label.add_theme_font_size_override("font_size", 22)
+	room_name_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
+	room_name_row.add_child(room_name_label)
+
+	if is_private:
+		var lock_icon := TextureRect.new()
+		lock_icon.custom_minimum_size = Vector2(22, 22)
+		lock_icon.texture = load(LOCK_ICON_PATH)
+		lock_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		lock_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		lock_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lock_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		room_name_row.add_child(lock_icon)
 
 	var count_label: Label = Label.new()
 	count_label.text = "%d/%d" % [player_count, MockServer.MVP_PLAYER_LIMIT]
@@ -249,8 +317,32 @@ func _make_room_row(room: Dictionary) -> Control:
 
 
 func _on_room_row_pressed(room_id: String) -> void:
-	room_code_input.text = room_id
-	_on_room_code_input_text_changed(room_id)
+	_selected_room = _rooms_by_id.get(room_id, {})
+	if _selected_room.is_empty():
+		_clear_selected_room()
+		return
+
+	var room_name := str(_selected_room.get("room_name", _selected_room.get("host_nickname", "-")))
+	var is_private := bool(_selected_room.get("is_private", false))
+	selected_room_label.text = "%s 선택됨" % room_name
+	join_details.visible = true
+	nickname_input.text = ""
+	room_code_input.text = ""
+	room_code_input.editable = is_private
+	room_code_input.placeholder_text = "4자리 숫자" if is_private else "공개 방"
+	_on_room_code_input_text_changed(room_code_input.text)
+
+
+func _clear_selected_room() -> void:
+	_selected_room.clear()
+	if not is_instance_valid(join_details):
+		return
+	join_details.visible = false
+	selected_room_label.text = "방을 선택하세요"
+	nickname_input.text = ""
+	room_code_input.text = ""
+	room_code_input.editable = true
+	join_room_button.disabled = true
 
 
 func _show_lobby() -> void:
@@ -263,7 +355,8 @@ func _refresh_lobby() -> void:
 	if not is_instance_valid(room_code_label) or not is_instance_valid(players_list):
 		return
 
-	room_code_label.text = "방 코드: %s" % GameData.room_id
+	var display_room_id := GameData.room_id.strip_edges()
+	room_code_label.text = "방 코드: %s" % ("-" if display_room_id == "" else display_room_id)
 	lobby_status_label.text = MockServer.lobby_status_text()
 	start_game_button.disabled = not MockServer.can_start_game()
 	add_mock_player_button.visible = MockServer.can_add_mock_player()
