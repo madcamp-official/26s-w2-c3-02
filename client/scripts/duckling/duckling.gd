@@ -5,11 +5,14 @@ const BOB_HEIGHT := 0.15
 const BOB_SPEED := 4.0
 const TURN_SPEED := 6.0
 const MIN_MOVE_DIST := 0.01
+const WATER_ROLL_DEGREES := 5.0
+const WATER_ROLL_SPEED := 0.9
 
 var duckling_id: String = ""
 
 var _base_y := 0.0
 var _bob_time := randf_range(0.0, TAU)
+var _roll_time := randf_range(0.0, TAU)
 
 func _process(delta: float) -> void:
 	var entry := _find_entry()
@@ -17,10 +20,13 @@ func _process(delta: float) -> void:
 		queue_free()
 		return
 
+	var on_water := _is_water_directly_below()
+
 	var pos: Dictionary = entry["position"]
 	_base_y = pos["y"]
 	_bob_time += delta * BOB_SPEED
-	var target := Vector3(pos["x"], _base_y + sin(_bob_time) * BOB_HEIGHT, pos["z"])
+	var bob := sin(_bob_time) * BOB_HEIGHT if on_water else 0.0
+	var target := Vector3(pos["x"], _base_y + bob, pos["z"])
 
 	var dx := target.x - position.x
 	var dz := target.z - position.z
@@ -32,6 +38,20 @@ func _process(delta: float) -> void:
 		rotation.y = lerp_angle(rotation.y, target_angle, clamp(delta * TURN_SPEED, 0.0, 1.0))
 
 	position = position.lerp(target, clamp(delta * LERP_SPEED, 0.0, 1.0))
+
+	_roll_time += delta
+	var target_roll := sin(_roll_time * WATER_ROLL_SPEED) * deg_to_rad(WATER_ROLL_DEGREES) if on_water else 0.0
+	rotation.z = lerp_angle(rotation.z, target_roll, clamp(delta * TURN_SPEED, 0.0, 1.0))
+
+func _is_water_directly_below() -> bool:
+	var space_state := get_world_3d().direct_space_state
+	var origin := Vector3(position.x, _base_y, position.z)
+	var query := PhysicsRayQueryParameters3D.create(origin + Vector3.UP * 0.3, origin + Vector3.DOWN * 0.5)
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		return false
+	var collider = result.get("collider")
+	return collider is Node and (collider as Node).is_in_group("water_surface")
 
 func _find_entry() -> Dictionary:
 	for d in GameData.ducklings:

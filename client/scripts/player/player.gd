@@ -5,6 +5,14 @@ const GRAVITY := 20.0
 const TURN_SPEED := 6.0
 const REMOTE_LERP_SPEED := 10.0
 const WATER_SUBMERGE_LERP_SPEED := 6.0 # 물/땅 전환 시 모델이 순간이동하지 않고 부드럽게 오르내리도록
+# 물 위에 떠 있을 때의 출렁임(상하) + 롤링(좌우 기울임) 애니메이션
+const WATER_BOB_HEIGHT := 0.3
+const WATER_BOB_SPEED := 1.6
+const WATER_ROLL_DEGREES := 8.0
+const WATER_ROLL_SPEED := 2.0
+const FOAM_MOVE_SPEED_THRESHOLD := 1.0 # 물 위에서 이 속도 이상으로 움직일 때만 물결 파티클 방출
+const WAKE_SPAWN_INTERVAL := 0.12 # 웨이크 자국을 새로 찍는 간격(초)
+const WakeScene := preload("res://scenes/effects/WaterWake.tscn")
 
 # 경찰(악어) 전용 대시: 현재 바라보는 방향으로 짧게 돌진해 경로 위의 오리를 잡는다.
 const DASH_DISTANCE := 9.8
@@ -13,6 +21,12 @@ const DASH_SPEED := DASH_DISTANCE / DASH_DURATION
 const DASH_COOLDOWN := 5.0
 
 const DEFAULT_STEALTH_RADIUS := 8.0
+
+# CharacterBody3D는 Unity의 stepOffset 같은 자동 계단 오르기가 없어서, floor_max_angle을
+# 넘는 낮은 턱(수직면)에도 그냥 막힌다. 이 정도 높이는 자연스럽게 넘어가야 하므로,
+# 진행 방향 앞에 STEP_HEIGHT보다 낮은 턱만 있으면 그만큼 미리 들어올려 넘어가게 한다.
+const STEP_HEIGHT := 1.0
+const STEP_CHECK_DISTANCE := 2.0
 # 실측 결과 섬의 실제 해안선(마른 땅의 마지막 표면)은 y≈0.3, 물 표면은 y=0.0
 # (오리 원점 = 발 높이 기준). 그 사이에서 물에 거의 닿았을 때만 반응하도록 0.1로 설정.
 const JAIL_WATER_MARGIN_Y := 0.3
@@ -20,11 +34,16 @@ const JAIL_WATER_MARGIN_Y := 0.3
 const CHARACTER_CONFIG := {
 	"duck": {
 		"model": "res://assets/duck/duck.glb",
-		"model_pos": Vector3(0, 0.622, 0),
+		# 실측 결과 duck.glb는 로컬 원점 기준 발끝이 y=-1.182에 있어, 땅(발 기준 y=0) 위에서
+		# 완전히 선 모습을 보이려면 model_pos.y=1.182여야 한다. 기존 값(0.622)은 발이 항상
+		# y≈-0.56에 오게 해 물에 뜬 모습만 맞춰둔 값이었으므로, 그 차이(0.56)를
+		# water_submerge_depth로 옮겨 물 위에서는 기존과 동일하게 잠기고 땅에서는 다리가 보이게 한다.
+		"model_pos": Vector3(0, 1.182, 0),
 		"model_scale": 3.0,
 		"collision_size": Vector3(1.2, 3.6, 1.5),
 		"collision_pos": Vector3(0, 1.8, 0),
-		"water_submerge_depth": 0.0,
+		"water_submerge_depth": 0.56,
+		"water_effect_scale": 1.0,
 	},
 	"aligator": {
 		"model": "res://assets/aligator/aligator.glb",
@@ -37,6 +56,8 @@ const CHARACTER_CONFIG := {
 		# 다리와 몸통 아랫부분이 잠기게 하고, 섬(땅) 위에서는 원래 높이(발 기준)를 유지한다.
 		# (0.5는 발끝만 잠겨서 1.1로 높여 몸통 아랫부분까지 잠기게 조정.)
 		"water_submerge_depth": 1.7,
+		# 악어는 오리보다 몸집이 훨씬 크므로(model_scale 2배), 물결/포말 효과도 그만큼 크게 보이도록.
+		"water_effect_scale": 1.8,
 	},
 }
 
@@ -58,9 +79,16 @@ var dash_end_pos := Vector3.ZERO
 var _dash_time_left := 0.0
 var _dash_direction := Vector3.ZERO
 
+@onready var _foam_particles: GPUParticles3D = $WaterFoamParticles
+
 var _model_node: Node3D = null
 var _base_model_pos_y := 0.0
 var _water_submerge_depth := 0.0
+var _water_base_y := 0.0
+var _water_motion_time := randf_range(0.0, TAU) # 캐릭터마다 위상을 다르게 해 동시에 출렁이지 않도록
+var _step_probe_half_width := 0.0
+var _wake_spawn_timer := 0.0
+var _water_effect_scale := 1.0
 
 
 func _ready() -> void:
@@ -81,10 +109,16 @@ func _ready() -> void:
 	_model_node = model
 	_base_model_pos_y = float(config["model_pos"].y)
 	_water_submerge_depth = float(config.get("water_submerge_depth", 0.0))
+	_water_base_y = _base_model_pos_y
+	_water_effect_scale = float(config.get("water_effect_scale", 1.0))
+	_foam_particles.scale = Vector3.ONE * _water_effect_scale
 
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = config["collision_size"]
 	$CollisionShape3D.shape = shape
+	# 콜리전 박스 절반 폭의 80% 지점을 좌우 스텝업 프로브 위치로 삼는다(모서리 근처에서
+	# 턱을 밟는 경우도 감지하되, 박스 바깥으로 나가 벽을 뚫고 감지하지 않도록 안쪽으로 여유를 둔다).
+	_step_probe_half_width = float(config["collision_size"].x) * 0.48
 	$CollisionShape3D.position = config["collision_pos"]
 
 	floor_max_angle = deg_to_rad(40)
@@ -190,17 +224,111 @@ func _physics_process(delta: float) -> void:
 		_update_dash(delta)
 
 	_apply_free_movement(delta)
+	_apply_step_up()
 	move_and_slide()
 	_update_water_submersion(delta)
 	_update_local_transform_if_needed()
 
 
+func _apply_step_up() -> void:
+	if not is_on_floor():
+		return
+	var horizontal_vel := Vector3(velocity.x, 0.0, velocity.z)
+	if horizontal_vel.length() < 0.01:
+		return
+
+	var direction := horizontal_vel.normalized()
+	# 중앙 레이 하나만 쓰면 캐릭터 폭(콜리전 박스)의 모서리가 턱에 걸리는 경우(비스듬한
+	# 접근, 회전 중 이동 등)를 놓친다. 진행 방향의 좌/우로도 함께 프로브해서 박스 폭
+	# 전체에 걸쳐 턱을 감지한다.
+	var perp := Vector3(-direction.z, 0.0, direction.x) * _step_probe_half_width
+	var origin := global_position
+
+	var best_step := 0.0
+	for offset in [Vector3.ZERO, perp, -perp, perp * 0.5, -perp * 0.5]:
+		var step := _probe_step_up(origin + offset, direction)
+		if step > best_step:
+			best_step = step
+
+	if best_step > 0.01:
+		global_position.y += best_step
+
+
+func _probe_step_up(origin: Vector3, direction: Vector3) -> float:
+	var space_state := get_world_3d().direct_space_state
+
+	# 발목 높이에서 진행 방향으로 뭔가 막고 있는지 확인
+	var low_from := origin + Vector3(0, 0.1, 0)
+	var low_query := PhysicsRayQueryParameters3D.create(low_from, low_from + direction * STEP_CHECK_DISTANCE)
+	low_query.exclude = [self]
+	if space_state.intersect_ray(low_query).is_empty():
+		return 0.0
+
+	# 턱 높이에서는 막혀있지 않은지 확인 (막혀있으면 STEP_HEIGHT보다 높은 벽/바위이므로 그냥 막는다)
+	var high_from := origin + Vector3(0, STEP_HEIGHT, 0)
+	var high_query := PhysicsRayQueryParameters3D.create(high_from, high_from + direction * STEP_CHECK_DISTANCE)
+	high_query.exclude = [self]
+	if not space_state.intersect_ray(high_query).is_empty():
+		return 0.0
+
+	# 턱 너머의 실제 바닥 높이를 아래로 레이캐스트해서 얼마나 들어올려야 하는지 확인
+	var probe_top := high_from + direction * STEP_CHECK_DISTANCE
+	var floor_query := PhysicsRayQueryParameters3D.create(probe_top, probe_top + Vector3(0, -STEP_HEIGHT - 0.2, 0))
+	floor_query.exclude = [self]
+	var floor_hit := space_state.intersect_ray(floor_query)
+	if floor_hit.is_empty():
+		return 0.0
+
+	var step_up_amount: float = floor_hit["position"].y - origin.y
+	if step_up_amount > 0.01 and step_up_amount <= STEP_HEIGHT:
+		return step_up_amount
+	return 0.0
+
+
 func _update_water_submersion(delta: float) -> void:
-	if _model_node == null or _water_submerge_depth <= 0.0:
+	if _model_node == null:
 		return
 	var on_water := _is_water_directly_below()
-	var target_y: float = _base_model_pos_y - _water_submerge_depth if on_water else _base_model_pos_y
-	_model_node.position.y = lerp(_model_node.position.y, target_y, clamp(delta * WATER_SUBMERGE_LERP_SPEED, 0.0, 1.0))
+
+	var target_base_y := _base_model_pos_y
+	if _water_submerge_depth > 0.0 and on_water:
+		target_base_y -= _water_submerge_depth
+	_water_base_y = lerp(_water_base_y, target_base_y, clamp(delta * WATER_SUBMERGE_LERP_SPEED, 0.0, 1.0))
+
+	_water_motion_time += delta
+	var bob := 0.0
+	var target_roll := 0.0
+	if on_water:
+		bob = sin(_water_motion_time * WATER_BOB_SPEED) * WATER_BOB_HEIGHT
+		target_roll = sin(_water_motion_time * WATER_ROLL_SPEED + PI * 0.25) * deg_to_rad(WATER_ROLL_DEGREES)
+
+	_model_node.position.y = _water_base_y + bob
+	_model_node.rotation.z = lerp_angle(_model_node.rotation.z, target_roll, clamp(delta * WATER_SUBMERGE_LERP_SPEED, 0.0, 1.0))
+
+	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
+	var is_wake_active := on_water and horizontal_speed > FOAM_MOVE_SPEED_THRESHOLD
+	_foam_particles.emitting = is_wake_active
+
+	if is_wake_active:
+		_wake_spawn_timer -= delta
+		if _wake_spawn_timer <= 0.0:
+			_wake_spawn_timer = WAKE_SPAWN_INTERVAL
+			_spawn_wake()
+	else:
+		_wake_spawn_timer = 0.0
+
+
+func _spawn_wake() -> void:
+	var scene_root := get_tree().current_scene
+	if scene_root == null:
+		return
+	var wake: Node3D = WakeScene.instantiate()
+	wake.set("size_scale", _water_effect_scale)
+	scene_root.add_child(wake)
+	wake.global_position = Vector3(global_position.x, 0.02, global_position.z)
+	var flat_velocity := Vector2(velocity.x, velocity.z)
+	if flat_velocity.length() > 0.01:
+		wake.rotation.y = atan2(-flat_velocity.x, -flat_velocity.y)
 
 
 func _is_water_directly_below() -> bool:
@@ -266,6 +394,7 @@ func _update_dash(delta: float) -> void:
 
 func _move_inside_jail(delta: float) -> void:
 	_apply_free_movement(delta)
+	_apply_step_up()
 	var prev_pos := global_position
 	move_and_slide()
 
