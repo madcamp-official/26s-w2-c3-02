@@ -187,7 +187,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/margin_left = 96
-theme_override_constants/margin_top = 64
+theme_override_constants/margin_top = 30
 theme_override_constants/margin_right = 96
 theme_override_constants/margin_bottom = 64
 
@@ -213,20 +213,21 @@ theme_override_constants/separation = 32
 [node name="SidebarButtons" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow"]
 layout_mode = 2
 custom_minimum_size = Vector2(220, 0)
+size_flags_vertical = 4
 theme_override_constants/separation = 14
 
 [node name="PlayButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 87)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
-alignment = 0
+alignment = 1
 text = "플레이"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
@@ -235,15 +236,15 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="InventoryButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 87)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
-alignment = 0
+alignment = 1
 text = "인벤토리"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
@@ -252,15 +253,15 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="SettingsNavButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 87)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
-alignment = 0
+alignment = 1
 text = "설정"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
@@ -269,15 +270,15 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="LoginButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 64)
+custom_minimum_size = Vector2(0, 87)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
-alignment = 0
+alignment = 1
 text = "로그인"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 27
+theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
 theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
@@ -292,7 +293,7 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 0)
+custom_minimum_size = Vector2(780, 390)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel"]
@@ -420,7 +421,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(460, 0)
+custom_minimum_size = Vector2(780, 390)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel"]
@@ -442,7 +443,7 @@ layout_mode = 2
 
 [node name="PreviewBox" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter"]
 layout_mode = 2
-custom_minimum_size = Vector2(360, 360)
+custom_minimum_size = Vector2(260, 260)
 theme_override_styles/panel = SubResource("StyleBoxFlat_preview_box")
 
 [node name="PreviewViewportContainer" type="SubViewportContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox"]
@@ -452,7 +453,7 @@ stretch = true
 
 [node name="PreviewViewport" type="SubViewport" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer"]
 own_world_3d = true
-size = Vector2i(360, 360)
+size = Vector2i(260, 260)
 
 [node name="InventoryPreview3D" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel/Content/PreviewBoxCenter/PreviewBox/PreviewViewportContainer/PreviewViewport" instance=ExtResource("4")]
 
@@ -460,7 +461,7 @@ size = Vector2i(360, 360)
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(660, 340)
+custom_minimum_size = Vector2(780, 390)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel"]
@@ -540,7 +541,7 @@ theme_override_font_sizes/font_size = 26
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(660, 280)
+custom_minimum_size = Vector2(780, 390)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/LoginPanel"]
@@ -585,7 +586,7 @@ grow_vertical = 2
 [node name="LobbyPanel" type="PanelContainer" parent="LobbyOverlay/CenterContainer"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(880, 0)
+custom_minimum_size = Vector2(590, 0)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="LobbyOverlay/CenterContainer/LobbyPanel"]
@@ -630,7 +631,7 @@ theme_override_constants/separation = 8
 [node name="LobbyStatusLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "필요 조건: 경찰 1명, 오리 2명"
+text = "필요 조건: 경찰 1명, 오리 1~2명"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 24
@@ -638,7 +639,8 @@ theme_override_font_sizes/font_size = 24
 [node name="AddMockPlayerButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 54)
+custom_minimum_size = Vector2(360, 54)
+size_flags_horizontal = 4
 text = "Mock 플레이어 추가"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
@@ -650,12 +652,12 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="LobbyButtons" type="HBoxContainer" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 layout_mode = 2
+size_flags_horizontal = 4
 theme_override_constants/separation = 34
 
 [node name="BackButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 72)
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(220, 72)
 text = "뒤로"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
@@ -668,8 +670,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 [node name="StartGameButton" type="Button" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 72)
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(220, 72)
 text = "게임 시작"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
