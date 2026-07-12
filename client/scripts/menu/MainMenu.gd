@@ -72,6 +72,14 @@ const SKINS_BY_ROLE: Dictionary = {
 			"model_rotation_degrees": Vector3(0, 180, 0),
 			"model_scale": Vector3(2.0, 2.0, 2.0),
 		},
+		{
+			"id": "nupjuk",
+			"name": "넙죽이",
+			"model": preload("res://assets/nupjuk/nupjuk.glb"),
+			"model_position": Vector3(0, 0.622, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(1.0, 1.0, 1.0),
+		},
 	],
 	InventoryRole.TAGGER: [
 		{

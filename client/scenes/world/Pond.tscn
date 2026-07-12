@@ -6,7 +6,6 @@
 [ext_resource type="PackedScene" uid="uid://vm6ec2mxdyd5" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_005.fbx" id="7"]
 [ext_resource type="Texture2D" uid="uid://b20ligmxtix3c" path="res://assets/Bush_temp_climate/Textures/T_Bush_temp_climate.png" id="10"]
 [ext_resource type="Script" uid="uid://dblcw3dk6s5pn" path="res://scripts/world/stealth_asset.gd" id="12"]
-[ext_resource type="Script" path="res://scripts/world/xz_hull_collision.gd" id="RockCollision"]
 [ext_resource type="PackedScene" uid="uid://cxpl1nq13i3ba" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_002.fbx" id="13"]
 [ext_resource type="PackedScene" uid="uid://cad2scixxcyq2" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_008.fbx" id="14"]
 [ext_resource type="PackedScene" uid="uid://bdlc8orek4x0a" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_009.fbx" id="14_d120r"]
@@ -25,6 +24,7 @@
 [ext_resource type="PackedScene" uid="uid://bvvwu0n45ld45" path="res://assets/rock_fbx/Low_Poly_Rock_Small_003.fbx" id="RockAsset9"]
 [ext_resource type="PackedScene" uid="uid://dy3w1f407m641" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_003.fbx" id="RockAsset10"]
 [ext_resource type="PackedScene" uid="uid://ie3osf0kk8hm" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_007.fbx" id="RockAsset11"]
+[ext_resource type="Script" uid="uid://4nsyuhgossgv" path="res://scripts/world/xz_hull_collision.gd" id="RockCollision"]
 
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 1
@@ -179,7 +179,7 @@ transform = Transform3D(2.4469, 0, -6.3574, 0, 6.8121, 0, 6.3574, 0, 2.4469, -15
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock7" unique_id=1746977375 instance=ExtResource("RockAsset10")]
-transform = Transform3D(0.7813, 0, 0, 0, 0.7813, 0, 0, 0, 0.7813, -3.9437976, 0, 0.18262815)
+transform = Transform3D(0.78129995, 0, 0, 0, 0.7813, 0, 0, 0, 0.78129995, -3.9437976, -0.2847822, 0.18262815)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
@@ -212,7 +212,7 @@ transform = Transform3D(-4.0811, 0, -0.5847, 0, 4.1227, 0, 0.5847, 0, -4.0811, -
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock10" unique_id=636752191 instance=ExtResource("RockAsset1")]
-transform = Transform3D(1.9231, 0, 0, 0, 1.9231, 0, 0, 0, 1.9231, 0, 0, 0)
+transform = Transform3D(1.9231, 0, -2.9802322e-08, 0, 1.9230999, 0, 2.9802322e-08, 0, 1.9231, 0, -0.32063067, 0)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
@@ -256,7 +256,7 @@ transform = Transform3D(6.7046, 0, 7.2827, 0, 9.8989, 0, -7.2827, 0, 6.7046, -80
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock14" unique_id=201965359 instance=ExtResource("RockAsset4")]
-transform = Transform3D(0.885, 0, 0, 0, 0.885, 0, 0, 0, 0.885, -0.5729947, -0.1677979, 7.484684)
+transform = Transform3D(0.885, 0, -2.9802322e-08, 0, 0.88500005, 0, 2.9802322e-08, 0, 0.885, -0.5729947, -0.2898119, 7.484684)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
@@ -300,7 +300,7 @@ transform = Transform3D(2.9407, 0, -4.3899, 0, 5.2839, 0, 4.3899, 0, 2.9407, -3.
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock18" unique_id=1066177426 instance=ExtResource("RockAsset2")]
-transform = Transform3D(1.087, 0, 0, 0, 1.087, 0, 0, 0, 1.087, 0, 0, 0)
+transform = Transform3D(1.087, 0, 0, 0, 1.0869999, 0, 0, 0, 1.087, 0, -0.49854946, 0)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
