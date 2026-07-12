@@ -67,6 +67,7 @@ const SKINS_BY_ROLE: Dictionary = {
 		{
 			"id": "duck_default",
 			"name": "기본",
+			"character": "duck",
 			"model": preload("res://assets/duck/duck.glb"),
 			"model_position": Vector3(0, 0.622, 0),
 			"model_rotation_degrees": Vector3(0, 180, 0),
@@ -75,16 +76,27 @@ const SKINS_BY_ROLE: Dictionary = {
 		{
 			"id": "nupjuk",
 			"name": "넙죽이",
+			"character": "nupjuk",
 			"model": preload("res://assets/nupjuk/nupjuk.glb"),
-			"model_position": Vector3(0, 0.622, 0),
+			"model_position": Vector3(0, 0.922, 0),
 			"model_rotation_degrees": Vector3(0, 180, 0),
-			"model_scale": Vector3(1.0, 1.0, 1.0),
+			"model_scale": Vector3(1.2, 1.2, 1.2),
+		},
+		{
+			"id": "greenduck",
+			"name": "청둥오리",
+			"character": "greenduck",
+			"model": preload("res://assets/greenduck/greenduck.glb"),
+			"model_position": Vector3(0, 0, 0),
+			"model_rotation_degrees": Vector3(0, 0, 0),
+			"model_scale": Vector3(4.1, 4.1, 4.1),
 		},
 	],
 	InventoryRole.TAGGER: [
 		{
 			"id": "tagger_default",
 			"name": "기본",
+			"character": "aligator",
 			"model": preload("res://assets/aligator/aligator.glb"),
 			"model_position": Vector3(0, 0.684, 0),
 			"model_rotation_degrees": Vector3(0, 180, 0),
@@ -149,7 +161,8 @@ func _on_create_room_confirm_button_pressed() -> void:
 	if room_code != "" and room_code.length() != 4:
 		_show_alert("방 코드는 네 자리 숫자로 입력해주세요.")
 		return
-	var result: Dictionary = MockServer.create_room("Player", room_code, create_room_name_input.text)
+	var duck_skin := get_selected_duck_skin()
+	var result: Dictionary = MockServer.create_room("Player", room_code, create_room_name_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -165,7 +178,8 @@ func _on_join_room_button_pressed() -> void:
 	if _selected_room.is_empty():
 		_show_alert("참가할 방을 먼저 선택해주세요.")
 		return
-	var result: Dictionary = MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text)
+	var duck_skin := get_selected_duck_skin()
+	var result: Dictionary = MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -304,6 +318,7 @@ func _init_inventory_selection() -> void:
 		var skins: Array = SKINS_BY_ROLE[role]
 		if not skins.is_empty():
 			_selected_skin_by_role[role] = skins[0]["id"]
+			_apply_equipped_character(role, str(skins[0]["character"]))
 
 
 func _on_inventory_duck_tab_button_pressed() -> void:
@@ -341,7 +356,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	box.text = ""
 	box.focus_mode = Control.FOCUS_NONE
 	box.custom_minimum_size = Vector2(110, 134)
-	box.pressed.connect(_on_skin_box_pressed.bind(role, str(skin["id"])))
+	box.pressed.connect(_on_skin_box_pressed.bind(role, str(skin["id"]), str(skin["character"])))
 
 	var content: VBoxContainer = VBoxContainer.new()
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -436,13 +451,21 @@ func _skin_preview_box_style() -> StyleBoxFlat:
 	return style
 
 
-func _on_skin_box_pressed(role: InventoryRole, skin_id: String) -> void:
+func _on_skin_box_pressed(role: InventoryRole, skin_id: String, character: String) -> void:
 	if str(_selected_skin_by_role.get(role, "")) == skin_id:
 		return
 	_selected_skin_by_role[role] = skin_id
+	_apply_equipped_character(role, character)
 	var badges: Dictionary = _skin_check_badges.get(role, {})
 	for id in badges:
 		badges[id].visible = str(id) == skin_id
+
+
+func _apply_equipped_character(role: InventoryRole, character: String) -> void:
+	if role == InventoryRole.DUCK:
+		GameData.local_duck_character = character
+	else:
+		GameData.local_tagger_character = character
 
 
 func _on_settings_nav_button_pressed() -> void:
@@ -670,7 +693,10 @@ func _on_lobby_player_team_selected(index: int, player_id: String) -> void:
 	var team := "duck"
 	if index == 1:
 		team = "tagger"
-	if not MockServer.set_player_team(player_id, team):
+	var character_skin := "duck"
+	if player_id == GameData.local_player_id:
+		character_skin = get_selected_duck_skin()
+	if not MockServer.set_player_team(player_id, team, character_skin):
 		_show_alert("역할 구성이 올바르지 않습니다.")
 		_refresh_lobby()
 
@@ -698,3 +724,9 @@ func _show_alert(message: String) -> void:
 
 func _on_alert_ok_button_pressed() -> void:
 	alert_overlay.visible = false
+
+func get_selected_duck_skin() -> String:
+	var skin_id: String = str(_selected_skin_by_role.get(InventoryRole.DUCK, "duck_default"))
+	if skin_id == "duck_default":
+		return "duck"
+	return skin_id

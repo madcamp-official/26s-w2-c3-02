@@ -45,6 +45,29 @@ const CHARACTER_CONFIG := {
 		"water_submerge_depth": 0.56,
 		"water_effect_scale": 1.0,
 	},
+	"nupjuk": {
+		"model": "res://assets/nupjuk/nupjuk.glb",
+		"model_pos": Vector3(0, 1.383, 0),
+		"model_scale": 1.8,
+		"collision_size": Vector3(1.2, 3.6, 1.5),
+		"collision_pos": Vector3(0, 1.8, 0),
+		"water_submerge_depth": 0.56,
+		"water_effect_scale": 1.0,
+	},
+	"greenduck": {
+		"model": "res://assets/greenduck/greenduck.glb",
+		# greenduck.glb는 duck.glb와 달리 로컬 원점이 이미 발 높이에 있고(model_pos.y=0로
+		# 충분), 기본 정면 방향도 duck.glb와 반대라서 다른 캐릭터들과 같은 180도 회전을
+		# 적용하면 뒤를 보고 서게 된다. 실측(스크린샷 비교) 결과 model_scale=6.2일 때
+		# 일반 오리와 비슷한 체구로 보인다.
+		"model_pos": Vector3(0, 0.0, 0),
+		"model_scale": 6.2,
+		"model_rotation_degrees": Vector3(0, 0, 0),
+		"collision_size": Vector3(1.2, 3.6, 1.5),
+		"collision_pos": Vector3(0, 1.8, 0),
+		"water_submerge_depth": 0.56,
+		"water_effect_scale": 1.0,
+	},
 	"aligator": {
 		"model": "res://assets/aligator/aligator.glb",
 		"model_pos": Vector3(0, 1.684, 0),
@@ -61,10 +84,25 @@ const CHARACTER_CONFIG := {
 	},
 }
 
-@export var character: String = "duck"
+# 오리 팀으로 취급되는 캐릭터(스킨) 키 목록. 인벤토리에 오리 스킨이 추가되면 여기에도 더한다.
+const DUCK_CHARACTERS := ["duck", "nupjuk", "greenduck"]
+
+@export var character: String = "duck":
+	set(value):
+		if character == value and _model_node != null:
+			return
+		character = value
+		if is_inside_tree():
+			_update_character_model()
+
 @export var controllable: bool = false
 @export_enum("wasd", "arrows") var control_scheme: String = "wasd"
-@export var controlled_player_id: String = ""
+
+@export var controlled_player_id: String = "":
+	set(value):
+		controlled_player_id = value
+		if is_inside_tree():
+			_update_character_from_player_id()
 
 var _remote_target_pos: Vector3
 var _remote_target_rot: float
@@ -92,10 +130,54 @@ var _water_effect_scale := 1.0
 
 
 func _ready() -> void:
-	if controlled_player_id == "":
-		controlled_player_id = GameData.local_player_id
+	floor_max_angle = deg_to_rad(40)
+	floor_snap_length = 2.5
+	max_slides = 6
 
-	var config: Dictionary = CHARACTER_CONFIG[character]
+	# Game.tscn에 고정 배치된 로컬 테스트용 오리/악어 노드는 controlled_player_id가 비어
+	# 있는 채로 시작한다(원격 플레이어는 스폰 시점에 항상 pid가 채워져 있음). 그 경우에만
+	# 인벤토리에서 고른 장착 스킨으로 교체해, 로비/메뉴에서 선택한 스킨이 실제 플레이에도
+	# 반영되게 한다.
+	if controlled_player_id == "":
+		if character in DUCK_CHARACTERS:
+			character = GameData.local_duck_character
+		elif character == "aligator":
+			character = GameData.local_tagger_character
+		controlled_player_id = GameData.local_player_id
+	else:
+		_update_character_from_player_id()
+
+	_update_character_model()
+
+	if character in DUCK_CHARACTERS:
+		GameData.register_local_player("duck", character)
+
+	if controllable:
+		add_to_group("controllable_player")
+		if character in DUCK_CHARACTERS:
+			if not GameData.game_event.is_connected(_on_game_event):
+				GameData.game_event.connect(_on_game_event)
+
+
+func _update_character_from_player_id() -> void:
+	var target_id := controlled_player_id
+	if target_id == "":
+		target_id = GameData.local_player_id
+	for p in GameData.players:
+		if p["playerId"] == target_id:
+			character = p["character"]
+			break
+
+
+func _update_character_model() -> void:
+	if not is_inside_tree():
+		return
+
+	if _model_node != null:
+		_model_node.queue_free()
+		_model_node = null
+
+	var config: Dictionary = CHARACTER_CONFIG.get(character, CHARACTER_CONFIG["duck"])
 	var model_scene: PackedScene = load(config["model"])
 	if model_scene == null:
 		push_error("Player failed to load model for '%s': %s" % [character, config["model"]])
@@ -104,34 +186,27 @@ func _ready() -> void:
 	var model: Node3D = model_scene.instantiate()
 	model.position = config["model_pos"]
 	model.scale = Vector3.ONE * float(config["model_scale"])
-	model.rotation_degrees = Vector3(0, 180, 0)
-	$ModelSlot.add_child(model)
+	model.rotation_degrees = config.get("model_rotation_degrees", Vector3(0, 180, 0))
+	var model_slot = get_node_or_null("ModelSlot")
+	if model_slot != null:
+		model_slot.add_child(model)
 	_model_node = model
 	_base_model_pos_y = float(config["model_pos"].y)
 	_water_submerge_depth = float(config.get("water_submerge_depth", 0.0))
 	_water_base_y = _base_model_pos_y
 	_water_effect_scale = float(config.get("water_effect_scale", 1.0))
-	_foam_particles.scale = Vector3.ONE * _water_effect_scale
+	
+	var foam = _foam_particles if _foam_particles != null else get_node_or_null("WaterFoamParticles")
+	if foam != null:
+		foam.scale = Vector3.ONE * _water_effect_scale
 
-	var shape: BoxShape3D = BoxShape3D.new()
-	shape.size = config["collision_size"]
-	$CollisionShape3D.shape = shape
-	# 콜리전 박스 절반 폭의 80% 지점을 좌우 스텝업 프로브 위치로 삼는다(모서리 근처에서
-	# 턱을 밟는 경우도 감지하되, 박스 바깥으로 나가 벽을 뚫고 감지하지 않도록 안쪽으로 여유를 둔다).
-	_step_probe_half_width = float(config["collision_size"].x) * 0.48
-	$CollisionShape3D.position = config["collision_pos"]
-
-	floor_max_angle = deg_to_rad(40)
-	floor_snap_length = 2.5
-	max_slides = 6
-
-	if character == "duck":
-		GameData.register_local_player("duck", "duck")
-
-	if controllable:
-		add_to_group("controllable_player")
-		if character == "duck":
-			GameData.game_event.connect(_on_game_event)
+	var col_shape = get_node_or_null("CollisionShape3D")
+	if col_shape != null:
+		var shape: BoxShape3D = BoxShape3D.new()
+		shape.size = config["collision_size"]
+		col_shape.shape = shape
+		_step_probe_half_width = float(config["collision_size"].x) * 0.48
+		col_shape.position = config["collision_pos"]
 
 
 func set_remote_state(pos: Vector3, rotation_y: float) -> void:

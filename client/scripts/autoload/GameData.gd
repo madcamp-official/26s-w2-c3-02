@@ -20,6 +20,8 @@ var rescue_progress: float = 0.0   # 0.0 ~ 1.0, 구출 진행률
 var active_rescuer_id: String = "" # 현재 탈옥 시도 중인 플레이어 id
 var dash_cooldown_remaining: float = 0.0 # 경찰(악어) 대시 쿨타임 잔여 시간(초)
 var dash_cooldown_duration: float = 5.0  # 경찰(악어) 대시 쿨타임 총 시간(초)
+var local_duck_character: String = "duck"       # 인벤토리에서 고른 오리 팀 장착 스킨(character 키)
+var local_tagger_character: String = "aligator" # 인벤토리에서 고른 경찰 팀 장착 스킨(character 키)
 
 signal room_state_changed
 signal game_state_changed

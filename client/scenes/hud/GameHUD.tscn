@@ -409,7 +409,7 @@ expand_mode = 1
 stretch_mode = 5
 mouse_filter = 2
 
-[node name="RescueDonut" type="Control" parent="Root"]
+[node name="RescueDonut" type="TextureProgressBar" parent="Root"]
 script = ExtResource("2")
 layout_mode = 1
 anchors_preset = 8
@@ -507,7 +507,7 @@ text = "🦆 가짜 오리 추가/제거"
 layout_mode = 2
 text = "🔒 가짜 오리 수감"
 
-[node name="DashCooldownIndicator" type="Control" parent="Root"]
+[node name="DashCooldownIndicator" type="TextureProgressBar" parent="Root"]
 script = ExtResource("7")
 layout_mode = 1
 anchors_preset = 7
