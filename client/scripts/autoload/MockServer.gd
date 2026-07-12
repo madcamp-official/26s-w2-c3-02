@@ -695,6 +695,7 @@ func begin_dash(_player_id: String, start_pos: Vector3, end_pos: Vector3, durati
 	# 그 경로가 유지되는 동안(매 틱) 오리와 겹치는지는 서버(MockServer)가 자체적으로 판정한다.
 	# 경로 자체는 시작 시점에 고정되므로 프레임마다 다시 계산할 필요가 없고, duration 동안
 	# 매 틱 최신 오리 위치와 비교해 어느 프레임에 겹치든 놓치지 않는다.
+	GameData.game_event.emit("dash_started", {"playerId": _player_id})
 	_active_dashes[_player_id] = {
 		"a": Vector2(start_pos.x, start_pos.z),
 		"b": Vector2(end_pos.x, end_pos.z),
