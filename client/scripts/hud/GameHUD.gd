@@ -433,16 +433,16 @@ func _jailed_duck_count() -> int:
 func _event_message(event: String, data: Dictionary) -> String:
 	match event:
 		"player_jailed":
-			return "%s가 감옥에 갇혔습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s님이 감옥에 갇혔습니다!" % _player_name(data, "playerName", "playerId")
 		"player_released":
-			return "%s가 감옥에서 탈출했습니다!" % _player_name(data, "playerName", "playerId")
+			return "%s님이 감옥에서 탈출했습니다!" % _player_name(data, "playerName", "playerId")
 		"player_rescued":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
 			var target := _player_name(data, "targetName", "targetId")
-			return "%s이 %s를 구출했습니다!" % [rescuer, target]
+			return "모든 오리들이 탈옥했습니다!" 
 		"rescue_started":
 			var rescuer := _player_name(data, "rescuerName", "rescuerId")
-			return "%s이 탈옥을 시도하고 있습니다!" % rescuer
+			return "%s님이 수감된 오리를 구출하고 있습니다!" % rescuer
 		"duckling_delivered":
 			var player_name := _player_name(data, "playerName", "playerId")
 			var count := int(data.get("count", 1))
