@@ -17,6 +17,7 @@ func _ready() -> void:
 	_register_pond_obstacles()
 	if GameData.phase == "lobby":
 		MockServer.start_game()
+	AudioManager.play_game_bgm()
 	_configure_controlled_players()
 	GameData.game_state_changed.connect(_sync_remote_players)
 	GameData.game_event.connect(_on_game_event)

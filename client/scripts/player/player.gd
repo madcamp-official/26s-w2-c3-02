@@ -377,6 +377,7 @@ func _update_dash(delta: float) -> void:
 
 	var action_suffix := "_arrow" if control_scheme == "arrows" else ""
 	if not dash_active and dash_cooldown_remaining <= 0.0 and Input.is_action_just_pressed("dash" + action_suffix):
+		AudioManager.play_sfx("dash")
 		dash_active = true
 		_dash_time_left = DASH_DURATION
 		_dash_direction = -global_transform.basis.z
