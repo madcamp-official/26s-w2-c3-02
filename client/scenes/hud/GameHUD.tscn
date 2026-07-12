@@ -1,19 +1,55 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud/GameHUD.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/hud/RescueDonut.gd" id="2"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/jail_thumbnail.png" id="3_jail"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/nest_thumbnail.png" id="4_nest"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/arrow_icon.png" id="5_arrow"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/settings_icon.png" id="6_settings"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0313726, 0.117647, 0.211765, 0.86)
+content_margin_left = 42.0
+content_margin_top = 30.0
+content_margin_right = 42.0
+content_margin_bottom = 34.0
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 shadow_color = Color(0, 0, 0, 0.25)
 shadow_size = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_green"]
+bg_color = Color(0.45098, 0.670588, 0.164706, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(0.188235, 0.345098, 0.0784314, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_green_hover"]
+bg_color = Color(0.537255, 0.760784, 0.223529, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 4
+border_color = Color(0.188235, 0.345098, 0.0784314, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button_pressed"]
+bg_color = Color(0.0862745, 0.223529, 0.360784, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_indicator"]
 bg_color = Color(0.0313726, 0.117647, 0.211765, 0.78)
@@ -483,6 +519,145 @@ text = "🦆 가짜 오리 추가/제거"
 [node name="DebugJailDuckButton" type="Button" parent="Root/DebugPanel/VBox"]
 layout_mode = 2
 text = "🔒 가짜 오리 수감"
+
+[node name="SettingsButton" type="TextureButton" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -84.0
+offset_top = -84.0
+offset_right = -28.0
+offset_bottom = -28.0
+grow_horizontal = 0
+grow_vertical = 0
+texture_normal = ExtResource("6_settings")
+ignore_texture_size = true
+stretch_mode = 5
+mouse_default_cursor_shape = 2
+
+[node name="SettingsOverlay" type="Control" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="Root/SettingsOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.28)
+
+[node name="CenterContainer" type="CenterContainer" parent="Root/SettingsOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/SettingsOverlay/CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(600, 360)
+theme_override_styles/panel = SubResource("StyleBoxFlat_hud_panel")
+
+[node name="Content" type="VBoxContainer" parent="Root/SettingsOverlay/CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="SettingsTitleLabel" type="Label" parent="Root/SettingsOverlay/CenterContainer/Panel/Content"]
+layout_mode = 2
+text = "설정"
+horizontal_alignment = 1
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 44
+
+[node name="BgmVolumeRow" type="HBoxContainer" parent="Root/SettingsOverlay/CenterContainer/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="BgmVolumeLabel" type="Label" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/BgmVolumeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(156, 0)
+text = "배경음악"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="HudBgmVolumeSlider" type="HSlider" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/BgmVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 75.0
+
+[node name="HudBgmVolumeValueLabel" type="Label" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/BgmVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(82, 0)
+text = "75%"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="SfxVolumeRow" type="HBoxContainer" parent="Root/SettingsOverlay/CenterContainer/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 28
+
+[node name="SfxVolumeLabel" type="Label" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/SfxVolumeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(156, 0)
+text = "효과음"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="HudSfxVolumeSlider" type="HSlider" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/SfxVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 100.0
+step = 1.0
+value = 85.0
+
+[node name="HudSfxVolumeValueLabel" type="Label" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/SfxVolumeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(82, 0)
+text = "85%"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 26
+
+[node name="SettingsCloseButton" type="Button" parent="Root/SettingsOverlay/CenterContainer/Panel/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 72)
+size_flags_horizontal = 3
+size_flags_vertical = 10
+text = "닫기"
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 34
+theme_override_styles/normal = SubResource("StyleBoxFlat_green")
+theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [connection signal="pressed" from="Root/EndTestButton" to="." method="_on_end_test_button_pressed"]
 [connection signal="pressed" from="Root/DebugModeButton" to="." method="_on_debug_mode_button_pressed"]
