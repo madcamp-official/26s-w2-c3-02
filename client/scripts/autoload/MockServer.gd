@@ -30,6 +30,7 @@ const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
 const ROOM_CODE_CHARS := "0123456789"
 const ROOM_CODE_LENGTH := 4
 const MOCK_JOIN_ROOM_CODE := "1234"
+const MOCK_PUBLIC_ROOM_ID := "public_mock"
 const MVP_PLAYER_LIMIT := 3
 const MVP_DUCK_COUNT := 2
 const MVP_TAGGER_COUNT := 1
@@ -78,29 +79,55 @@ func _seed_lobby() -> void:
 	GameData.players = [_fake_player("npc1", "Mock Police", "tagger", "aligator")]
 	GameData.room_state_changed.emit()
 
-func create_room(nickname: String, room_id: String = "") -> Dictionary:
+func create_room(nickname: String, room_id: String = "", _room_name: String = "") -> Dictionary:
 	var normalized_room_id := _normalize_room_code(room_id)
-	if normalized_room_id == MOCK_JOIN_ROOM_CODE:
-		return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
-	if normalized_room_id.length() != ROOM_CODE_LENGTH:
-		normalized_room_id = _generate_room_code()
+	if normalized_room_id != "":
+		if normalized_room_id.length() != ROOM_CODE_LENGTH:
+			return {"ok": false, "message": "방 코드는 네 자리 숫자로 입력해주세요."}
+		if normalized_room_id == MOCK_JOIN_ROOM_CODE:
+			return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
 	_prepare_lobby(nickname, normalized_room_id)
 	return {"ok": true}
 
-func join_room(nickname: String, room_id: String) -> Dictionary:
-	var normalized_room_id := _normalize_room_code(room_id)
-	if normalized_room_id == MOCK_JOIN_ROOM_CODE:
-		_prepare_mock_join_lobby(nickname)
-		return {"ok": true}
-	return {"ok": false, "message": "존재하지 않는 방입니다."}
+func join_room(nickname: String, room_id: String, join_code: String = "") -> Dictionary:
+	var room := _find_mock_room(room_id)
+	if room.is_empty():
+		return {"ok": false, "message": "존재하지 않는 방입니다."}
+	if bool(room.get("is_private", false)):
+		var normalized_join_code := _normalize_room_code(join_code)
+		if normalized_join_code != str(room.get("join_code", "")):
+			return {"ok": false, "message": "참가 코드가 올바르지 않습니다."}
+	_prepare_mock_join_lobby(nickname, str(room.get("display_room_id", "")))
+	return {"ok": true}
 
 func list_rooms() -> Array:
 	# 실제 멀티룸 백엔드가 없으므로 정적 mock 데이터를 반환한다.
-	# MOCK_USED_ROOM_CODE는 "항상 꽉 찬 방" 에러 케이스 테스트용이라 목록에서 제외한다.
 	return [
-		{"room_id": MOCK_JOIN_ROOM_CODE, "host_nickname": "Mock Duck", "player_count": 1},
-		{"room_id": "5678", "host_nickname": "테스트방장", "player_count": 2},
+		{
+			"room_id": MOCK_JOIN_ROOM_CODE,
+			"room_name": "Mock Duck",
+			"host_nickname": "Mock Duck",
+			"player_count": 1,
+			"is_private": true,
+			"join_code": MOCK_JOIN_ROOM_CODE,
+			"display_room_id": MOCK_JOIN_ROOM_CODE,
+		},
+		{
+			"room_id": MOCK_PUBLIC_ROOM_ID,
+			"room_name": "테스트방장",
+			"host_nickname": "테스트방장",
+			"player_count": 2,
+			"is_private": false,
+			"join_code": "",
+			"display_room_id": "",
+		},
 	]
+
+func _find_mock_room(room_id: String) -> Dictionary:
+	for room in list_rooms():
+		if str(room.get("room_id", "")) == room_id:
+			return room
+	return {}
 
 func _generate_room_code() -> String:
 	var code := MOCK_JOIN_ROOM_CODE
@@ -142,12 +169,12 @@ func _prepare_lobby(nickname: String, room_id: String) -> void:
 	]
 	GameData.room_state_changed.emit()
 
-func _prepare_mock_join_lobby(nickname: String) -> void:
+func _prepare_mock_join_lobby(nickname: String, display_room_id: String = MOCK_JOIN_ROOM_CODE) -> void:
 	var normalized_nickname := nickname.strip_edges()
 	if normalized_nickname == "":
 		normalized_nickname = "Player"
 
-	GameData.room_id = MOCK_JOIN_ROOM_CODE
+	GameData.room_id = display_room_id
 	GameData.local_nickname = normalized_nickname
 	GameData.phase = "lobby"
 	GameData.countdown_seconds = 0
