@@ -35,18 +35,28 @@ const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 @onready var debug_mode_button: Button = %DebugModeButton
 @onready var debug_panel: PanelContainer = %DebugPanel
 @onready var debug_summary_label: Label = %DebugSummaryLabel
+@onready var settings_button: TextureButton = %SettingsButton
+@onready var settings_overlay: Control = %SettingsOverlay
+@onready var settings_close_button: Button = %SettingsCloseButton
+@onready var hud_bgm_volume_slider: HSlider = %HudBgmVolumeSlider
+@onready var hud_sfx_volume_slider: HSlider = %HudSfxVolumeSlider
+@onready var hud_bgm_volume_value_label: Label = %HudBgmVolumeValueLabel
+@onready var hud_sfx_volume_value_label: Label = %HudSfxVolumeValueLabel
 
 var _toast_remaining := 0.0
 var _objective_remaining := 0.0
 var _jail_node: Node3D = null
 var _icon_mask_shader: Shader = null
 var _circle_photo_mask_shader: Shader = null
+var _settings_button_rest_position := Vector2.ZERO
+var _settings_button_tween: Tween = null
 
 
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
 	GameData.debug_mode_changed.connect(_on_debug_mode_changed)
+	_init_settings_overlay()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
@@ -76,6 +86,64 @@ func _exit_tree() -> void:
 		GameData.game_event.disconnect(_on_game_event)
 	if GameData.debug_mode_changed.is_connected(_on_debug_mode_changed):
 		GameData.debug_mode_changed.disconnect(_on_debug_mode_changed)
+
+
+func _init_settings_overlay() -> void:
+	settings_overlay.visible = false
+	_apply_settings_button_style()
+	_settings_button_rest_position = settings_button.position
+	settings_button.pressed.connect(_on_settings_button_pressed)
+	settings_button.mouse_entered.connect(_on_settings_button_mouse_entered)
+	settings_button.mouse_exited.connect(_on_settings_button_mouse_exited)
+	settings_close_button.pressed.connect(_on_settings_close_button_pressed)
+	hud_bgm_volume_slider.value_changed.connect(_on_hud_bgm_volume_slider_value_changed)
+	hud_sfx_volume_slider.value_changed.connect(_on_hud_sfx_volume_slider_value_changed)
+	hud_bgm_volume_slider.set_value_no_signal(AudioManager.get_bgm_volume() * 100.0)
+	hud_sfx_volume_slider.set_value_no_signal(AudioManager.get_sfx_volume() * 100.0)
+	_refresh_hud_audio_volume_labels()
+
+
+func _refresh_hud_audio_volume_labels() -> void:
+	hud_bgm_volume_value_label.text = "%d%%" % int(round(hud_bgm_volume_slider.value))
+	hud_sfx_volume_value_label.text = "%d%%" % int(round(hud_sfx_volume_slider.value))
+
+
+func _on_settings_button_pressed() -> void:
+	settings_overlay.visible = true
+	hud_bgm_volume_slider.set_value_no_signal(AudioManager.get_bgm_volume() * 100.0)
+	hud_sfx_volume_slider.set_value_no_signal(AudioManager.get_sfx_volume() * 100.0)
+	_refresh_hud_audio_volume_labels()
+
+
+func _on_settings_button_mouse_entered() -> void:
+	_tween_settings_button_to(_settings_button_rest_position + Vector2(0, -6))
+
+
+func _on_settings_button_mouse_exited() -> void:
+	_tween_settings_button_to(_settings_button_rest_position)
+
+
+func _tween_settings_button_to(target_position: Vector2) -> void:
+	if _settings_button_tween != null:
+		_settings_button_tween.kill()
+	_settings_button_tween = create_tween()
+	_settings_button_tween.set_trans(Tween.TRANS_QUAD)
+	_settings_button_tween.set_ease(Tween.EASE_OUT)
+	_settings_button_tween.tween_property(settings_button, "position", target_position, 0.12)
+
+
+func _on_settings_close_button_pressed() -> void:
+	settings_overlay.visible = false
+
+
+func _on_hud_bgm_volume_slider_value_changed(value: float) -> void:
+	AudioManager.set_bgm_volume(value / 100.0)
+	_refresh_hud_audio_volume_labels()
+
+
+func _on_hud_sfx_volume_slider_value_changed(value: float) -> void:
+	AudioManager.set_sfx_volume(value / 100.0)
+	_refresh_hud_audio_volume_labels()
 
 
 func _refresh() -> void:
@@ -230,6 +298,20 @@ func _make_role_status_icon(role_path: String, is_jailed: bool) -> Control:
 	var jail_offset := Vector2(-1, -6)
 	_add_raw_icon_layer(holder, jail_texture, jail_offset, jail_size)
 	return holder
+
+
+func _apply_settings_button_style() -> void:
+	var texture := settings_button.texture_normal
+	if texture == null:
+		return
+
+	var icon_size := Vector2(48, 48)
+	settings_button.texture_normal = null
+	_add_icon_layer(settings_button, texture, Vector2(4, 7), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(settings_button, texture, Vector2(1, 4), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(settings_button, texture, Vector2(7, 4), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(settings_button, texture, Vector2(4, 1), icon_size, Color(0.04, 0.05, 0.06, 1.0))
+	_add_icon_layer(settings_button, texture, Vector2(4, 4), icon_size, Color.WHITE)
 
 
 func _add_raw_icon_layer(parent: Control, texture: Texture2D, offset: Vector2, icon_size: Vector2) -> void:
