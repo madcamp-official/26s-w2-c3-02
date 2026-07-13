@@ -18,7 +18,7 @@ var _texture_cooldown: ImageTexture
 
 func _ready() -> void:
 	fill_mode = TextureProgressBar.FILL_CLOCKWISE
-	radial_initial_angle = -90.0
+	radial_initial_angle = 0.0 # 12시 방향에서 시작 (환경에 따라 -90이 아니라 0이 12시로 렌더링됨)
 	radial_fill_degrees = 360.0
 	min_value = 0.0
 	max_value = 1.0
