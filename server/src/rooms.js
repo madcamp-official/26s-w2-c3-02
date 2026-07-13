@@ -72,13 +72,12 @@ function serializeDuckling(d) {
   return out;
 }
 
-function createRoomObject({ roomId, roomName, isPrivate, joinCode }) {
+function createRoomObject({ roomId, roomName, isPrivate }) {
   return {
     roomId,
     roomName: roomName || `${roomId} 방`,
     hostPlayerId: '',
     isPrivate,
-    joinCode,
 
     phase: 'lobby',
     countdownSeconds: 0,
@@ -112,11 +111,11 @@ function createRoomObject({ roomId, roomName, isPrivate, joinCode }) {
   };
 }
 
-function createRoom({ nickname, roomName, joinCode, characterSkin, ws }) {
-  const roomId = generateRoomCode(); // 서버 내부 방 식별자는 항상 비어있는 번호를 랜덤 배정한다.
+function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
+  // 방의 참가코드는 별도로 관리하지 않고, 서버가 항상 무작위로 배정하는 4자리 roomId를
+  // 그대로 참가코드로 사용한다(공개/비공개 모두 코드 자체는 존재).
+  const roomId = generateRoomCode();
   const normalizedRoomName = (roomName || '').trim();
-  const rawJoinCode = joinCode == null ? '' : String(joinCode).trim();
-  const normalizedJoinCode = rawJoinCode === '' ? null : rawJoinCode;
 
   if (normalizedRoomName !== '') {
     for (const room of rooms.values()) {
@@ -125,16 +124,11 @@ function createRoom({ nickname, roomName, joinCode, characterSkin, ws }) {
       }
     }
   }
-  if (normalizedJoinCode !== null && !/^\d{4}$/.test(normalizedJoinCode)) {
-    return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가코드는 4자리 숫자여야 합니다.' };
-  }
 
-  const isPrivate = normalizedJoinCode !== null;
   const room = createRoomObject({
     roomId,
     roomName: normalizedRoomName,
-    isPrivate,
-    joinCode: normalizedJoinCode,
+    isPrivate: !!isPrivate,
   });
 
   const playerId = crypto.randomUUID();
@@ -175,7 +169,7 @@ function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
   if (room.players.size >= C.MAX_PLAYERS) {
     return { ok: false, code: 'ROOM_FULL', message: '방 인원이 가득 찼습니다.' };
   }
-  if (room.isPrivate && (joinCode || '') !== room.joinCode) {
+  if (room.isPrivate && (joinCode || '') !== room.roomId) {
     return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가코드가 올바르지 않습니다.' };
   }
 
@@ -265,7 +259,7 @@ function broadcastToRoom(room, message) {
 function serializeRoomState(room) {
   const players = [];
   for (const p of room.players.values()) players.push(serializePlayer(p));
-  return { players, hostPlayerId: room.hostPlayerId, joinCode: room.joinCode };
+  return { players, hostPlayerId: room.hostPlayerId, joinCode: room.roomId };
 }
 
 function serializeGameState(room) {

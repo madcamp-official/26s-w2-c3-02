@@ -174,12 +174,11 @@ func _flush_pending_input(delta: float) -> void:
 # 방/로비
 # ──────────────────────────────────────────────────────────────────────────────
 
-func create_room(nickname: String, room_id: String = "", room_name: String = "", character_skin: String = "duck", join_code: String = "") -> Dictionary:
+func create_room(nickname: String, room_name: String = "", character_skin: String = "duck", is_private: bool = false) -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:create", {
 		"nickname": nickname,
-		"roomId": room_id,
 		"roomName": room_name,
-		"joinCode": join_code if join_code != "" else null,
+		"isPrivate": is_private,
 		"characterSkin": character_skin,
 	})
 	if not result.get("ok", false):

@@ -4,6 +4,13 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 
 const ICON_SYMBOL_FONT := preload("res://themes/IconSymbolFont.tres")
 
+# 한글 등 IME 조합 중 마지막 글자가 완성되기 전에 버튼을 누르면, 브라우저의 composition
+# 종료(커밋) 이벤트가 LineEdit.text에 반영되기도 전에 텍스트를 읽어가 마지막 글자가 잘리는
+# 문제가 Web export에서 발생한다. 텍스트를 읽기 직전에 아주 짧게 대기해 커밋이 끝날 시간을
+# 벌어준다(사용자 체감 지연은 없음).
+func _wait_for_ime_commit() -> void:
+	await get_tree().create_timer(0.05).timeout
+
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
 @onready var inventory_duck_tab_button: Button = %InventoryDuckTabButton
@@ -24,9 +31,10 @@ const ICON_SYMBOL_FONT := preload("res://themes/IconSymbolFont.tres")
 @onready var room_code_input: LineEdit = %RoomCodeInput
 @onready var join_room_button: Button = %JoinRoomButton
 @onready var create_room_overlay: Control = %CreateRoomOverlay
+@onready var create_room_nickname_input: LineEdit = %CreateRoomNicknameInput
 @onready var create_room_name_input: LineEdit = %CreateRoomNameInput
-@onready var create_room_code_input: LineEdit = %CreateRoomCodeInput
-@onready var create_room_confirm_button: Button = %CreateRoomConfirmButton
+@onready var create_room_public_button: Button = %CreateRoomPublicButton
+@onready var create_room_private_button: Button = %CreateRoomPrivateButton
 @onready var refresh_room_list_button: Button = %RefreshRoomListButton
 @onready var lobby_overlay: Control = %LobbyOverlay
 @onready var room_code_label: Label = %RoomCodeLabel
@@ -115,13 +123,15 @@ const SKINS_BY_ROLE: Dictionary = {
 }
 
 var _normalizing_room_code := false
-var _normalizing_create_room_code := false
+var _normalizing_create_room_nickname := false
 var _normalizing_nickname := false
 var _normalizing_room_name := false
 var _current_view: ContentView = ContentView.NONE
 var _rooms_by_id: Dictionary = {}
 var _selected_room: Dictionary = {}
 var _rules_card_index := 0
+var _default_nickname_value := ""
+var _default_create_room_nickname_value := ""
 var _inventory_role: InventoryRole = InventoryRole.DUCK
 var _selected_skin_by_role: Dictionary = {} # InventoryRole -> skin id
 var _skin_check_badges: Dictionary = {} # InventoryRole -> {skin id -> Control}
@@ -136,12 +146,12 @@ func _ready() -> void:
 	room_code_input.text_changed.connect(_on_room_code_input_text_changed)
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
+	nickname_input.focus_entered.connect(_on_nickname_input_focus_entered)
+	_default_nickname_value = _random_default_nickname()
+	nickname_input.text = _default_nickname_value
 	_on_nickname_input_text_changed(nickname_input.text)
 	create_room_name_input.text_changed.connect(_on_create_room_name_input_text_changed)
 	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
-	create_room_confirm_button.button_down.connect(_on_create_room_confirm_button_down)
-	join_room_button.button_down.connect(_on_join_room_button_down)
-	start_game_button.button_down.connect(_on_start_game_button_down)
 	refresh_room_list_button.pressed.connect(_on_refresh_room_list_button_pressed)
 	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
 	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
@@ -189,8 +199,12 @@ func _on_game_state_changed_for_lobby() -> void:
 
 
 func _on_create_room_button_pressed() -> void:
+	create_room_nickname_input.text = nickname_input.text
+	# 바깥 닉네임 필드가 아직 기본값(미편집) 상태일 때만 이 필드도 "기본값" 취급해서
+	# 처음 클릭했을 때 지워지게 한다. 이미 사용자가 직접 입력한 닉네임이면 그대로 둔다.
+	_default_create_room_nickname_value = nickname_input.text if nickname_input.text == _default_nickname_value else ""
 	create_room_name_input.text = ""
-	create_room_code_input.text = ""
+	create_room_public_button.button_pressed = true
 	create_room_overlay.visible = true
 	alert_overlay.visible = false
 	create_room_name_input.grab_focus()
@@ -202,21 +216,12 @@ func _on_create_room_confirm_button_down() -> void:
 
 
 func _on_create_room_confirm_button_pressed() -> void:
-	_commit_text_input(create_room_name_input)
-	_commit_text_input(create_room_code_input)
-	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
-
-	var room_name := create_room_name_input.text.strip_edges()
-	if room_name.length() > ROOM_NAME_MAX_LENGTH:
-		_show_alert("방 이름은 한/영 10자 이내로 입력해주세요.")
-		create_room_name_input.grab_focus()
-		return
 	var join_code := create_room_code_input.text.strip_edges()
 	if join_code != "" and join_code.length() != 4:
 		_show_alert("참가코드는 4자리 숫자여야 합니다.")
 		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.create_room("Player", "", room_name, duck_skin, join_code)
+	var result: Dictionary = await MockServer.create_room("Player", "", create_room_name_input.text, duck_skin, join_code)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -236,15 +241,6 @@ func _on_join_room_button_down() -> void:
 func _on_join_room_button_pressed() -> void:
 	if _selected_room.is_empty():
 		_show_alert("참가할 방을 먼저 선택해주세요.")
-		return
-	_commit_text_input(nickname_input)
-	_commit_text_input(room_code_input)
-	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
-
-	var nickname := nickname_input.text.strip_edges()
-	if nickname.length() > NICKNAME_MAX_LENGTH:
-		_show_alert("닉네임은 한/영 10자 이내로 입력해주세요.")
-		nickname_input.grab_focus()
 		return
 	var duck_skin := get_selected_duck_skin()
 	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
@@ -280,23 +276,38 @@ func _on_create_room_name_input_text_changed(new_text: String) -> void:
 		return
 
 
-func _on_create_room_code_input_text_changed(new_text: String) -> void:
-	if _normalizing_create_room_code:
+func _on_create_room_nickname_input_text_changed(new_text: String) -> void:
+	if _normalizing_create_room_nickname:
 		return
-
-	var normalized := _room_code_digits(new_text)
-	if normalized == new_text:
+	if new_text.length() <= NICKNAME_MAX_LENGTH:
 		return
-	_normalizing_create_room_code = true
-	create_room_code_input.text = normalized
-	create_room_code_input.caret_column = normalized.length()
-	_normalizing_create_room_code = false
+	var caret := create_room_nickname_input.caret_column
+	var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
+	_normalizing_create_room_nickname = true
+	create_room_nickname_input.text = truncated
+	create_room_nickname_input.caret_column = min(caret, truncated.length())
+	_normalizing_create_room_nickname = false
 
 
 func _on_nickname_input_text_changed(new_text: String) -> void:
 	if _normalizing_nickname:
 		return
 	_refresh_join_room_button_state()
+
+
+func _random_default_nickname() -> String:
+	return "Player%03d" % randi_range(0, 999)
+
+
+func _on_nickname_input_focus_entered() -> void:
+	if nickname_input.text == _default_nickname_value:
+		nickname_input.text = ""
+		_refresh_join_room_button_state()
+
+
+func _on_create_room_nickname_input_focus_entered() -> void:
+	if _default_create_room_nickname_value != "" and create_room_nickname_input.text == _default_create_room_nickname_value:
+		create_room_nickname_input.text = ""
 
 
 func _room_code_digits(value: String) -> String:
@@ -677,10 +688,15 @@ func _on_room_row_pressed(room_id: String) -> void:
 	selected_room_label.text = "%s 선택됨" % room_name
 	join_details.visible = true
 	_set_join_form_visible(true)
-	nickname_input.text = ""
-	room_code_input.text = ""
 	room_code_input.editable = is_private
-	room_code_input.placeholder_text = "4자리 숫자" if is_private else "공개 방"
+	if is_private:
+		room_code_input.text = ""
+		room_code_input.placeholder_text = "4자리 숫자"
+	else:
+		# 공개 방은 참가코드가 곧 방 목록의 room_id이므로 사용자가 따로 입력할 필요 없이
+		# 자동으로 채워서 보여준다(요구되지는 않지만 코드가 존재한다는 걸 알 수 있게).
+		room_code_input.text = room_id
+		room_code_input.placeholder_text = ""
 	_refresh_join_room_button_state()
 
 
@@ -691,7 +707,6 @@ func _clear_selected_room() -> void:
 	join_details.visible = true
 	selected_room_label.text = "방을 선택하세요"
 	_set_join_form_visible(false)
-	nickname_input.text = ""
 	room_code_input.text = ""
 	room_code_input.editable = false
 	room_code_input.placeholder_text = "4자리 숫자"
@@ -815,6 +830,9 @@ func _on_start_game_button_pressed() -> void:
 	if not MockServer.can_start_game():
 		_show_alert("1~3명이면 테스트 게임을 시작할 수 있습니다.")
 		return
+	# 로비 닉네임 입력창에서 IME 조합 중 마지막 글자가 커밋되기 전에 눌렸을 수 있으니,
+	# text_changed → set_player_nickname 전송이 끝날 시간을 잠깐 벌어준다.
+	await _wait_for_ime_commit()
 	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
 	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).
 	MockServer.start_game()
