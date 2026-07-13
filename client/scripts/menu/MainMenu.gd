@@ -36,24 +36,25 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var bgm_volume_value_label: Label = %BgmVolumeValueLabel
 @onready var sfx_volume_value_label: Label = %SfxVolumeValueLabel
 
-const NICKNAME_MAX_LENGTH := 8
+const NICKNAME_MAX_LENGTH := 10
+const ROOM_NAME_MAX_LENGTH := 10
 const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 const RULES_CARDS: Array[Dictionary] = [
 	{
 		"title": "게임 개요",
 		"color": Color(0.466667, 0.713726, 0.956863, 1),
-		"body": "\n[b]오리 팀: [/b]  시간 안에 목표한 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n[b]경찰 팀: [/b]  시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
+		"body": "\n오리 팀: 시간 안에 목표 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n\n경찰 팀: 시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
 	},
 	{
 		"title": "오리 팀",
 		"color": Color(1, 0.85, 0.35, 1),
-		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n\n[b]목표[/b]\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n[b]감옥 탈출[/b]\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 한꺼번에 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
+		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n\n<목표>\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n<감옥 탈출>\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 모두 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
 	},
 	{
 		"title": "경찰 팀",
 		"color": Color(1, 0.55, 0.5, 1),
-		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n대시: Space 키로 바라보는 방향으로 돌진한다\n\n[b]목표[/b]\n돌진으로 오리를 잡아 감옥으로 보낸다\n\n[b]승리 조건[/b]\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
+		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n<대시>: Space 키로 바라보는 방향으로 돌진한다\n\n목표\n대시로 오리를 잡아 감옥으로 보낸다\n\n승리 조건\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
 	},
 ]
 
@@ -115,6 +116,7 @@ const SKINS_BY_ROLE: Dictionary = {
 
 var _normalizing_room_code := false
 var _normalizing_nickname := false
+var _normalizing_room_name := false
 var _current_view: ContentView = ContentView.NONE
 var _rooms_by_id: Dictionary = {}
 var _selected_room: Dictionary = {}
@@ -233,6 +235,19 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 
 func _on_refresh_room_list_button_pressed() -> void:
 	_refresh_room_list()
+
+
+func _on_create_room_name_input_text_changed(new_text: String) -> void:
+	if _normalizing_room_name:
+		return
+	if new_text.length() <= ROOM_NAME_MAX_LENGTH:
+		return
+	var caret := create_room_name_input.caret_column
+	var truncated := new_text.substr(0, ROOM_NAME_MAX_LENGTH)
+	_normalizing_room_name = true
+	create_room_name_input.text = truncated
+	create_room_name_input.caret_column = min(caret, truncated.length())
+	_normalizing_room_name = false
 
 
 func _on_nickname_input_text_changed(new_text: String) -> void:
@@ -578,7 +593,7 @@ func _make_room_row(room: Dictionary) -> Control:
 
 	if is_private:
 		var lock_icon := TextureRect.new()
-		lock_icon.custom_minimum_size = Vector2(22, 22)
+		lock_icon.custom_minimum_size = Vector2(18, 18)
 		lock_icon.texture = load(LOCK_ICON_PATH)
 		lock_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		lock_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
