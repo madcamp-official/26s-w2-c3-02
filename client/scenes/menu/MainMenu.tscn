@@ -194,17 +194,7 @@ theme_override_constants/margin_bottom = 64
 
 [node name="RootLayout" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 28
-
-[node name="TitleBar" type="CenterContainer" parent="MarginContainer/RootLayout"]
-layout_mode = 2
-
-[node name="TitleLogo" type="TextureRect" parent="MarginContainer/RootLayout/TitleBar"]
-layout_mode = 2
-custom_minimum_size = Vector2(700, 200)
-texture = ExtResource("5_logo")
-expand_mode = 1
-stretch_mode = 5
+theme_override_constants/separation = 0
 
 [node name="BodyRow" type="HBoxContainer" parent="MarginContainer/RootLayout"]
 layout_mode = 2
@@ -216,6 +206,13 @@ layout_mode = 2
 custom_minimum_size = Vector2(220, 0)
 size_flags_vertical = 4
 theme_override_constants/separation = 14
+
+[node name="TitleLogo" type="TextureRect" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 100)
+texture = ExtResource("5_logo")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="PlayButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/SidebarButtons"]
 unique_name_in_owner = true
@@ -315,7 +312,7 @@ size_flags_horizontal = 3
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 390)
+custom_minimum_size = Vector2(780, 500)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/PlayPanel"]
@@ -464,7 +461,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 390)
+custom_minimum_size = Vector2(780, 500)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/InventoryPanel"]
@@ -536,7 +533,7 @@ theme_override_constants/v_separation = 12
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 390)
+custom_minimum_size = Vector2(780, 500)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/RulesPanel"]
@@ -623,7 +620,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 390)
+custom_minimum_size = Vector2(780, 500)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/SettingsPanel"]
@@ -703,7 +700,7 @@ theme_override_font_sizes/font_size = 26
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-custom_minimum_size = Vector2(780, 390)
+custom_minimum_size = Vector2(780, 500)
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/ContentArea/LoginPanel"]
