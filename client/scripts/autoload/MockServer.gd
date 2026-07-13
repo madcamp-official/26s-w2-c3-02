@@ -5,7 +5,8 @@ extends Node
 ## 함수 시그니처는 최대한 유지해 메뉴/HUD/월드/플레이어 쪽 호출부를 거의 건드리지
 ## 않고 교체할 수 있게 했다. 메시지 계약은 Docs/api-spec.md를 기준으로 한다.
 
-const SERVER_URL := "ws://127.0.0.1:8080/ws" # 배포 시 이 상수만 바꾸면 된다.
+## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 배포 시 이 상수만 바꾸면 된다.
+const SERVER_URL := "ws://10.249.104.17:8080/ws"
 
 const MVP_PLAYER_LIMIT := 3
 const MVP_TAGGER_COUNT := 1
@@ -284,4 +285,3 @@ func report_local_transform(pos: Vector3, rotation_y: float) -> void:
 	_pending_position = pos
 	_pending_rotation_y = rotation_y
 	_has_pending_input = true
-

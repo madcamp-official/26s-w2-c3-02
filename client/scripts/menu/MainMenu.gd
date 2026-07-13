@@ -15,7 +15,7 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var rules_card_text_label: RichTextLabel = %RulesCardTextLabel
 @onready var settings_panel: PanelContainer = %SettingsPanel
 @onready var login_panel: PanelContainer = %LoginPanel
-@onready var room_list: VBoxContainer = %RoomList
+@onready var room_list: GridContainer = %RoomList
 @onready var join_details: VBoxContainer = %JoinDetails
 @onready var selected_room_label: Label = %SelectedRoomLabel
 @onready var nickname_input: LineEdit = %NicknameInput
@@ -36,24 +36,25 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var bgm_volume_value_label: Label = %BgmVolumeValueLabel
 @onready var sfx_volume_value_label: Label = %SfxVolumeValueLabel
 
-const NICKNAME_MAX_LENGTH := 8
+const NICKNAME_MAX_LENGTH := 10
+const ROOM_NAME_MAX_LENGTH := 10
 const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 const RULES_CARDS: Array[Dictionary] = [
 	{
 		"title": "게임 개요",
 		"color": Color(0.466667, 0.713726, 0.956863, 1),
-		"body": "\n[b]오리 팀: [/b]  시간 안에 목표한 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n[b]경찰 팀: [/b]  시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
+		"body": "\n오리 팀: 시간 안에 목표 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n\n경찰 팀: 시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
 	},
 	{
 		"title": "오리 팀",
 		"color": Color(1, 0.85, 0.35, 1),
-		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n\n[b]목표[/b]\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n[b]감옥 탈출[/b]\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 한꺼번에 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
+		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n\n<목표>\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n<감옥 탈출>\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 모두 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
 	},
 	{
 		"title": "경찰 팀",
 		"color": Color(1, 0.55, 0.5, 1),
-		"body": "[b]조작[/b]\n이동: WASD 또는 조이스틱을 사용한다\n대시: Space 키로 바라보는 방향으로 돌진한다\n\n[b]목표[/b]\n돌진으로 오리를 잡아 감옥으로 보낸다\n\n[b]승리 조건[/b]\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
+		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n<대시>: Space 키로 바라보는 방향으로 돌진한다\n\n목표\n대시로 오리를 잡아 감옥으로 보낸다\n\n승리 조건\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
 	},
 ]
 
@@ -115,6 +116,7 @@ const SKINS_BY_ROLE: Dictionary = {
 
 var _normalizing_room_code := false
 var _normalizing_nickname := false
+var _normalizing_room_name := false
 var _current_view: ContentView = ContentView.NONE
 var _rooms_by_id: Dictionary = {}
 var _selected_room: Dictionary = {}
@@ -233,6 +235,19 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 
 func _on_refresh_room_list_button_pressed() -> void:
 	_refresh_room_list()
+
+
+func _on_create_room_name_input_text_changed(new_text: String) -> void:
+	if _normalizing_room_name:
+		return
+	if new_text.length() <= ROOM_NAME_MAX_LENGTH:
+		return
+	var caret := create_room_name_input.caret_column
+	var truncated := new_text.substr(0, ROOM_NAME_MAX_LENGTH)
+	_normalizing_room_name = true
+	create_room_name_input.text = truncated
+	create_room_name_input.caret_column = min(caret, truncated.length())
+	_normalizing_room_name = false
 
 
 func _on_nickname_input_text_changed(new_text: String) -> void:
@@ -533,7 +548,8 @@ func _make_room_row(room: Dictionary) -> Control:
 	var is_private := bool(room.get("is_private", false))
 
 	var row: Button = Button.new()
-	row.custom_minimum_size = Vector2(0, 54)
+	row.custom_minimum_size = Vector2(320, 54)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.text = ""
 	row.add_theme_stylebox_override("normal", _room_card_style(Color(0.0117647, 0.054902, 0.101961, 0.75), Color(0.172549, 0.313726, 0.478431, 1)))
 	row.add_theme_stylebox_override("hover", _room_card_style(Color(0.0862745, 0.223529, 0.360784, 0.9), Color(0.466667, 0.713726, 0.956863, 1)))
@@ -578,7 +594,7 @@ func _make_room_row(room: Dictionary) -> Control:
 
 	if is_private:
 		var lock_icon := TextureRect.new()
-		lock_icon.custom_minimum_size = Vector2(22, 22)
+		lock_icon.custom_minimum_size = Vector2(18, 18)
 		lock_icon.texture = load(LOCK_ICON_PATH)
 		lock_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		lock_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -606,6 +622,7 @@ func _on_room_row_pressed(room_id: String) -> void:
 	var is_private := bool(_selected_room.get("is_private", false))
 	selected_room_label.text = "%s 선택됨" % room_name
 	join_details.visible = true
+	_set_join_form_visible(true)
 	nickname_input.text = ""
 	room_code_input.text = ""
 	room_code_input.editable = is_private
@@ -617,12 +634,27 @@ func _clear_selected_room() -> void:
 	_selected_room.clear()
 	if not is_instance_valid(join_details):
 		return
-	join_details.visible = false
+	join_details.visible = true
 	selected_room_label.text = "방을 선택하세요"
+	_set_join_form_visible(false)
 	nickname_input.text = ""
 	room_code_input.text = ""
-	room_code_input.editable = true
+	room_code_input.editable = false
+	room_code_input.placeholder_text = "4자리 숫자"
 	join_room_button.disabled = true
+
+
+func _set_join_form_visible(is_visible: bool) -> void:
+	if is_instance_valid(nickname_input):
+		var nickname_row := nickname_input.get_parent()
+		if is_instance_valid(nickname_row):
+			nickname_row.visible = is_visible
+	if is_instance_valid(room_code_input):
+		var room_code_row := room_code_input.get_parent()
+		if is_instance_valid(room_code_row):
+			room_code_row.visible = is_visible
+	if is_instance_valid(join_room_button):
+		join_room_button.visible = is_visible
 
 
 func _show_lobby() -> void:

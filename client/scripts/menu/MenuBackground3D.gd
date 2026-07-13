@@ -1,9 +1,9 @@
 extends Node3D
 
-const DUCK_ROUTE_CENTER := Vector2(30.0, 4.0)
-const DUCK_ROUTE_RADIUS := Vector2(12.0, 7.0)
-const ALIGATOR_ROUTE_CENTER := Vector2(-20.0, 15.0)
-const ALIGATOR_ROUTE_RADIUS := Vector2(38.0, 25.0)
+const CHASE_ROUTE_CENTER := Vector2(30.0, 4.0)
+const CHASE_ROUTE_SIZE := Vector2(18.0, 10.0)
+const CHASE_FOLLOW_DELAY := 0.9
+const CHASE_SPEED := 0.30
 const DUCK_WATER_BASE_Y := 0.622
 const ALIGATOR_WATER_BASE_Y := -0.016
 const WATER_BOB_SPEED := 1.6
@@ -24,23 +24,15 @@ var _time: float = 0.0
 func _process(delta: float) -> void:
 	_time += delta
 
-	var duck_angle: float = _time * 0.45
-	var aligator_angle: float = _time * 0.28 + PI
+	var duck_angle: float = _time * CHASE_SPEED
+	var aligator_angle: float = duck_angle - CHASE_FOLLOW_DELAY
 
-	duck.position = Vector3(
-		DUCK_ROUTE_CENTER.x + cos(duck_angle) * DUCK_ROUTE_RADIUS.x,
-		0.0,
-		DUCK_ROUTE_CENTER.y + sin(duck_angle) * DUCK_ROUTE_RADIUS.y
-	)
-	_face_path_direction(duck, duck_angle, DUCK_ROUTE_RADIUS)
+	duck.position = _nest_orbit_position(duck_angle)
+	_face_path_direction_from_velocity(duck, duck_angle)
 	_apply_water_motion(duck_model, DUCK_WATER_BASE_Y, DUCK_BOB_HEIGHT, DUCK_ROLL_DEGREES, 0.0)
 
-	aligator.position = Vector3(
-		ALIGATOR_ROUTE_CENTER.x + cos(aligator_angle) * ALIGATOR_ROUTE_RADIUS.x,
-		0.0,
-		ALIGATOR_ROUTE_CENTER.y + sin(aligator_angle) * ALIGATOR_ROUTE_RADIUS.y
-	)
-	_face_path_direction(aligator, aligator_angle, ALIGATOR_ROUTE_RADIUS)
+	aligator.position = _nest_orbit_position(aligator_angle)
+	_face_path_direction_from_velocity(aligator, aligator_angle)
 	_apply_water_motion(aligator_model, ALIGATOR_WATER_BASE_Y, ALIGATOR_BOB_HEIGHT, ALIGATOR_ROLL_DEGREES, PI * 0.35)
 
 	camera.position = Vector3(
@@ -50,8 +42,20 @@ func _process(delta: float) -> void:
 	)
 
 
-func _face_path_direction(node: Node3D, angle: float, radius: Vector2) -> void:
-	var direction: Vector3 = Vector3(-sin(angle) * radius.x, 0.0, cos(angle) * radius.y).normalized()
+func _nest_orbit_position(angle: float) -> Vector3:
+	return Vector3(
+		CHASE_ROUTE_CENTER.x + cos(angle) * CHASE_ROUTE_SIZE.x,
+		0.0,
+		CHASE_ROUTE_CENTER.y + sin(angle) * CHASE_ROUTE_SIZE.y
+	)
+
+
+func _face_path_direction_from_velocity(node: Node3D, angle: float) -> void:
+	var direction := Vector3(
+		-sin(angle) * CHASE_ROUTE_SIZE.x,
+		0.0,
+		cos(angle) * CHASE_ROUTE_SIZE.y
+	).normalized()
 	node.rotation.y = atan2(-direction.x, -direction.z)
 
 
