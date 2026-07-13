@@ -18,6 +18,9 @@ Thumbs.db
 # Oversized assets pending compression (GitHub 100MB limit) — see Docs/Plan.md
 client/assets/Nest/Nest.glb
 
+# Web export build output (pol_duck.pck alone exceeds GitHub's 100MB file limit)
+web/
+
 # Loose source textures bundled with 3D asset packs (Sketchfab/Poly Pizza downloads).
 # The .glb already embeds these textures (gltf/embedded_image_handling=1), so these
 # files are unused by Godot's import and just add repo weight. assets/ui/ is exempt

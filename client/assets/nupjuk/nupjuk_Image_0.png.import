@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://i7f518a7hhww"
 path.s3tc="res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.s3tc.ctex"
+path.etc2="res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/nupjuk/nupjuk_Image_0.png"
-dest_files=["res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.s3tc.ctex"]
+dest_files=["res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.s3tc.ctex", "res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.etc2.ctex"]
 
 [params]
 

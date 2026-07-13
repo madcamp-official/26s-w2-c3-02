@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://di50qetiq3mxv"
 path.s3tc="res://.godot/imported/lilypad_flower_0.png-cf1cf6f0168c9ad85a47395b9f2bd9dc.s3tc.ctex"
+path.etc2="res://.godot/imported/lilypad_flower_0.png-cf1cf6f0168c9ad85a47395b9f2bd9dc.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/lilypad/lilypad_flower_0.png"
-dest_files=["res://.godot/imported/lilypad_flower_0.png-cf1cf6f0168c9ad85a47395b9f2bd9dc.s3tc.ctex"]
+dest_files=["res://.godot/imported/lilypad_flower_0.png-cf1cf6f0168c9ad85a47395b9f2bd9dc.s3tc.ctex", "res://.godot/imported/lilypad_flower_0.png-cf1cf6f0168c9ad85a47395b9f2bd9dc.etc2.ctex"]
 
 [params]
 

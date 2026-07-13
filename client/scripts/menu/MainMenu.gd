@@ -2,6 +2,8 @@ extends Control
 
 enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 
+const ICON_SYMBOL_FONT := preload("res://themes/IconSymbolFont.tres")
+
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
 @onready var inventory_duck_tab_button: Button = %InventoryDuckTabButton
@@ -472,6 +474,7 @@ func _make_check_badge(is_selected: bool) -> Control:
 
 	var check_label: Label = Label.new()
 	check_label.text = "✓"
+	check_label.add_theme_font_override("font", ICON_SYMBOL_FONT)
 	check_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	check_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	check_label.add_theme_font_size_override("font_size", 11)
