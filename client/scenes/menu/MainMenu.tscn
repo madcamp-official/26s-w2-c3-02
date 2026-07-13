@@ -194,11 +194,13 @@ theme_override_constants/margin_bottom = 64
 
 [node name="RootLayout" type="VBoxContainer" parent="MarginContainer"]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 0
+alignment = 1
 
 [node name="BodyRow" type="HBoxContainer" parent="MarginContainer/RootLayout"]
 layout_mode = 2
-size_flags_vertical = 3
+size_flags_vertical = 1
 theme_override_constants/separation = 28
 
 [node name="LeftColumn" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow"]
@@ -312,23 +314,31 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 
 [node name="RightColumn" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow"]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 custom_minimum_size = Vector2(780, 0)
 theme_override_constants/separation = 0
 
 [node name="RightTopSpacer" type="Control" parent="MarginContainer/RootLayout/BodyRow/RightColumn"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 24)
+custom_minimum_size = Vector2(0, 14)
 
-[node name="ContentArea" type="CenterContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn"]
+[node name="ContentArea" type="Control" parent="MarginContainer/RootLayout/BodyRow/RightColumn"]
 unique_name_in_owner = true
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 custom_minimum_size = Vector2(780, 500)
 
 [node name="PlayPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(780, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel"]
@@ -496,8 +506,12 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 [node name="InventoryPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(780, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/InventoryPanel"]
@@ -568,8 +582,12 @@ theme_override_constants/v_separation = 12
 [node name="RulesPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(780, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/RulesPanel"]
@@ -655,8 +673,12 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 [node name="SettingsPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(780, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/SettingsPanel"]
@@ -735,8 +757,12 @@ theme_override_font_sizes/font_size = 26
 [node name="LoginPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
 unique_name_in_owner = true
 visible = false
-layout_mode = 2
-custom_minimum_size = Vector2(780, 500)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/LoginPanel"]
