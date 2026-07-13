@@ -4,6 +4,7 @@ extends Node
 
 var local_player_id: String = "local"
 var room_id: String = ""
+var join_code: String = ""
 var local_nickname: String = "Player"
 var phase: String = "lobby" # lobby | countdown | playing | ended
 var countdown_seconds: int = 0

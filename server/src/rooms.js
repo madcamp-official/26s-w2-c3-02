@@ -112,15 +112,29 @@ function createRoomObject({ roomId, roomName, isPrivate, joinCode }) {
   };
 }
 
-function createRoom({ nickname, roomName, characterSkin, ws }) {
-  const roomId = generateRoomCode(); // 방 코드는 항상 비어있는 번호를 랜덤 배정한다.
+function createRoom({ nickname, roomName, joinCode, characterSkin, ws }) {
+  const roomId = generateRoomCode(); // 서버 내부 방 식별자는 항상 비어있는 번호를 랜덤 배정한다.
+  const normalizedRoomName = (roomName || '').trim();
+  const rawJoinCode = joinCode == null ? '' : String(joinCode).trim();
+  const normalizedJoinCode = rawJoinCode === '' ? null : rawJoinCode;
 
-  const isPrivate = true; // 방 코드를 직접 아는 사람만 들어올 수 있는 것이 기본값
+  if (normalizedRoomName !== '') {
+    for (const room of rooms.values()) {
+      if (room.roomName === normalizedRoomName) {
+        return { ok: false, code: 'ROOM_NAME_IN_USE', message: '이미 사용 중인 방 이름입니다.' };
+      }
+    }
+  }
+  if (normalizedJoinCode !== null && !/^\d{4}$/.test(normalizedJoinCode)) {
+    return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가코드는 4자리 숫자여야 합니다.' };
+  }
+
+  const isPrivate = normalizedJoinCode !== null;
   const room = createRoomObject({
     roomId,
-    roomName,
+    roomName: normalizedRoomName,
     isPrivate,
-    joinCode: roomId,
+    joinCode: normalizedJoinCode,
   });
 
   const playerId = crypto.randomUUID();
@@ -162,7 +176,7 @@ function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
     return { ok: false, code: 'ROOM_FULL', message: '방 인원이 가득 찼습니다.' };
   }
   if (room.isPrivate && (joinCode || '') !== room.joinCode) {
-    return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가 코드가 올바르지 않습니다.' };
+    return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가코드가 올바르지 않습니다.' };
   }
 
   const playerId = crypto.randomUUID();
@@ -251,7 +265,7 @@ function broadcastToRoom(room, message) {
 function serializeRoomState(room) {
   const players = [];
   for (const p of room.players.values()) players.push(serializePlayer(p));
-  return { players, hostPlayerId: room.hostPlayerId };
+  return { players, hostPlayerId: room.hostPlayerId, joinCode: room.joinCode };
 }
 
 function serializeGameState(room) {

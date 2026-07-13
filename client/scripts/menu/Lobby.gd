@@ -12,7 +12,7 @@ func _exit_tree() -> void:
 		GameData.room_state_changed.disconnect(_refresh)
 
 func _refresh() -> void:
-	room_code_label.text = "방 코드: %s" % GameData.room_id
+	room_code_label.text = "참가코드: %s" % ("-" if GameData.join_code.strip_edges() == "" else GameData.join_code)
 
 	for child in players_list.get_children():
 		child.queue_free()

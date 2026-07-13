@@ -413,7 +413,7 @@ custom_minimum_size = Vector2(0, 160)
 size_flags_horizontal = 3
 size_flags_vertical = 3
 theme_override_constants/separation = 10
-alignment = 1
+alignment = 2
 
 [node name="JoinDetails" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
 unique_name_in_owner = true
@@ -435,16 +435,16 @@ theme_override_font_sizes/font_size = 25
 [node name="JoinFormRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 24
+theme_override_constants/separation = 12
 
 [node name="NicknameRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 4
 
 [node name="NicknameLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/NicknameRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(100, 0)
+custom_minimum_size = Vector2(88, 0)
 text = "닉네임:"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
@@ -466,11 +466,11 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 [node name="RoomCodeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+theme_override_constants/separation = 4
 
 [node name="RoomCodeFieldLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/RoomCodeRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(118, 0)
+custom_minimum_size = Vector2(108, 0)
 text = "참가코드:"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
@@ -826,7 +826,7 @@ theme_override_font_sizes/font_size = 56
 [node name="RoomCodeLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "방 코드: -"
+text = "참가코드: -"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 32
@@ -951,6 +951,31 @@ custom_minimum_size = Vector2(0, 58)
 size_flags_horizontal = 3
 placeholder_text = "한/영 10자 이내"
 max_length = 10
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_input")
+theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
+
+[node name="CreateRoomCodeRow" type="HBoxContainer" parent="CreateRoomOverlay/CenterContainer/Panel/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CreateRoomCodeLabel" type="Label" parent="CreateRoomOverlay/CenterContainer/Panel/Content/CreateRoomCodeRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(190, 0)
+text = "참가코드(선택):"
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
+theme_override_font_sizes/font_size = 28
+
+[node name="CreateRoomCodeInput" type="LineEdit" parent="CreateRoomOverlay/CenterContainer/Panel/Content/CreateRoomCodeRow"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 58)
+size_flags_horizontal = 3
+placeholder_text = "4자리 숫자"
+max_length = 4
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
 theme_override_font_sizes/font_size = 26

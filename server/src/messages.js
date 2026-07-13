@@ -19,6 +19,7 @@ function handleRoomCreate(ws, msg) {
   const result = rooms.createRoom({
     nickname: payload.nickname,
     roomName: payload.roomName,
+    joinCode: payload.joinCode,
     characterSkin: payload.characterSkin,
     ws,
   });

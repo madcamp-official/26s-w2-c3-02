@@ -135,6 +135,9 @@ func _resolve_request(msg: Dictionary, result: Dictionary) -> void:
 		_response_received.emit(request_id, result)
 
 func _apply_room_state(state: Dictionary) -> void:
+	if state.has("joinCode"):
+		var join_code_value = state.get("joinCode")
+		GameData.join_code = "" if join_code_value == null else str(join_code_value)
 	if state.has("players"):
 		GameData.players = state["players"]
 	if state.has("hostPlayerId"):
@@ -171,11 +174,12 @@ func _flush_pending_input(delta: float) -> void:
 # 방/로비
 # ──────────────────────────────────────────────────────────────────────────────
 
-func create_room(nickname: String, room_id: String = "", room_name: String = "", character_skin: String = "duck") -> Dictionary:
+func create_room(nickname: String, room_id: String = "", room_name: String = "", character_skin: String = "duck", join_code: String = "") -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:create", {
 		"nickname": nickname,
 		"roomId": room_id,
 		"roomName": room_name,
+		"joinCode": join_code if join_code != "" else null,
 		"characterSkin": character_skin,
 	})
 	if not result.get("ok", false):
@@ -260,6 +264,7 @@ func return_to_lobby() -> void:
 func leave_room() -> void:
 	_send("room:leave", {}, GameData.room_id)
 	GameData.room_id = ""
+	GameData.join_code = ""
 	GameData.is_host = false
 	GameData.players = []
 

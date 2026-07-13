@@ -23,6 +23,7 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var join_room_button: Button = %JoinRoomButton
 @onready var create_room_overlay: Control = %CreateRoomOverlay
 @onready var create_room_name_input: LineEdit = %CreateRoomNameInput
+@onready var create_room_code_input: LineEdit = %CreateRoomCodeInput
 @onready var refresh_room_list_button: Button = %RefreshRoomListButton
 @onready var lobby_overlay: Control = %LobbyOverlay
 @onready var room_code_label: Label = %RoomCodeLabel
@@ -47,12 +48,12 @@ const RULES_CARDS: Array[Dictionary] = [
 		"body": "\n오리 팀: 시간 안에 목표 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n\n경찰 팀: 시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
 	},
 	{
-		"title": "오리 팀",
+		"title": "오리 팀\n",
 		"color": Color(1, 0.85, 0.35, 1),
 		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n\n<목표>\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n<감옥 탈출>\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 모두 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
 	},
 	{
-		"title": "경찰 팀",
+		"title": "경찰 팀\n",
 		"color": Color(1, 0.55, 0.5, 1),
 		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n<대시>: Space 키로 바라보는 방향으로 돌진한다\n\n목표\n대시로 오리를 잡아 감옥으로 보낸다\n\n승리 조건\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
 	},
@@ -115,6 +116,7 @@ const SKINS_BY_ROLE: Dictionary = {
 }
 
 var _normalizing_room_code := false
+var _normalizing_create_room_code := false
 var _normalizing_nickname := false
 var _normalizing_room_name := false
 var _current_view: ContentView = ContentView.NONE
@@ -134,6 +136,8 @@ func _ready() -> void:
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
 	_on_nickname_input_text_changed(nickname_input.text)
+	create_room_name_input.text_changed.connect(_on_create_room_name_input_text_changed)
+	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
 	refresh_room_list_button.pressed.connect(_on_refresh_room_list_button_pressed)
 	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
 	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
@@ -182,14 +186,19 @@ func _on_game_state_changed_for_lobby() -> void:
 
 func _on_create_room_button_pressed() -> void:
 	create_room_name_input.text = ""
+	create_room_code_input.text = ""
 	create_room_overlay.visible = true
 	alert_overlay.visible = false
 	create_room_name_input.grab_focus()
 
 
 func _on_create_room_confirm_button_pressed() -> void:
+	var join_code := create_room_code_input.text.strip_edges()
+	if join_code != "" and join_code.length() != 4:
+		_show_alert("참가코드는 4자리 숫자여야 합니다.")
+		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.create_room("Player", "", create_room_name_input.text, duck_skin)
+	var result: Dictionary = await MockServer.create_room("Player", "", create_room_name_input.text, duck_skin, join_code)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -248,6 +257,19 @@ func _on_create_room_name_input_text_changed(new_text: String) -> void:
 	create_room_name_input.text = truncated
 	create_room_name_input.caret_column = min(caret, truncated.length())
 	_normalizing_room_name = false
+
+
+func _on_create_room_code_input_text_changed(new_text: String) -> void:
+	if _normalizing_create_room_code:
+		return
+
+	var normalized := _room_code_digits(new_text)
+	if normalized == new_text:
+		return
+	_normalizing_create_room_code = true
+	create_room_code_input.text = normalized
+	create_room_code_input.caret_column = normalized.length()
+	_normalizing_create_room_code = false
 
 
 func _on_nickname_input_text_changed(new_text: String) -> void:
@@ -549,7 +571,7 @@ func _make_room_row(room: Dictionary) -> Control:
 
 	var row: Button = Button.new()
 	row.custom_minimum_size = Vector2(320, 54)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	row.text = ""
 	row.add_theme_stylebox_override("normal", _room_card_style(Color(0.0117647, 0.054902, 0.101961, 0.75), Color(0.172549, 0.313726, 0.478431, 1)))
 	row.add_theme_stylebox_override("hover", _room_card_style(Color(0.0862745, 0.223529, 0.360784, 0.9), Color(0.466667, 0.713726, 0.956863, 1)))
@@ -667,8 +689,8 @@ func _refresh_lobby() -> void:
 	if not is_instance_valid(room_code_label) or not is_instance_valid(players_list):
 		return
 
-	var display_room_id := GameData.room_id.strip_edges()
-	room_code_label.text = "방 코드: %s" % ("-" if display_room_id == "" else display_room_id)
+	var display_join_code := GameData.join_code.strip_edges()
+	room_code_label.text = "참가코드: %s" % ("-" if display_join_code == "" else display_join_code)
 	# 시작 버튼은 호스트에게만 보여준다 — 참가자가 눌러도 서버가 NOT_HOST로 거부할 뿐이라,
 	# 애초에 호스트가 아니면 버튼 자체를 숨겨서 왜 안 되는지 헷갈리지 않게 한다.
 	start_game_button.visible = GameData.is_host

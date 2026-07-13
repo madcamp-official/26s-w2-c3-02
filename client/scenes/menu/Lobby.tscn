@@ -41,7 +41,7 @@ horizontal_alignment = 1
 [node name="RoomCodeLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "방 코드: -"
+text = "참가코드: -"
 horizontal_alignment = 1
 
 [node name="PlayersTitleLabel" type="Label" parent="MarginContainer/CenterContainer/Panel/Content"]
