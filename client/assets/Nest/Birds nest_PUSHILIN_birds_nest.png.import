@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cnvx5nbkbt1ss"
 path.s3tc="res://.godot/imported/Birds nest_PUSHILIN_birds_nest.png-684fadcb9aa877f9d586b5aa6ddbdbc7.s3tc.ctex"
+path.etc2="res://.godot/imported/Birds nest_PUSHILIN_birds_nest.png-684fadcb9aa877f9d586b5aa6ddbdbc7.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/Nest/Birds nest_PUSHILIN_birds_nest.png"
-dest_files=["res://.godot/imported/Birds nest_PUSHILIN_birds_nest.png-684fadcb9aa877f9d586b5aa6ddbdbc7.s3tc.ctex"]
+dest_files=["res://.godot/imported/Birds nest_PUSHILIN_birds_nest.png-684fadcb9aa877f9d586b5aa6ddbdbc7.s3tc.ctex", "res://.godot/imported/Birds nest_PUSHILIN_birds_nest.png-684fadcb9aa877f9d586b5aa6ddbdbc7.etc2.ctex"]
 
 [params]
 

@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://bu2q4x7b2ywdh"
 path.s3tc="res://.godot/imported/mecha_duck_1.png-f23c10b7417765009125636020b8d893.s3tc.ctex"
+path.etc2="res://.godot/imported/mecha_duck_1.png-f23c10b7417765009125636020b8d893.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/mecha_duck/mecha_duck_1.png"
-dest_files=["res://.godot/imported/mecha_duck_1.png-f23c10b7417765009125636020b8d893.s3tc.ctex"]
+dest_files=["res://.godot/imported/mecha_duck_1.png-f23c10b7417765009125636020b8d893.s3tc.ctex", "res://.godot/imported/mecha_duck_1.png-f23c10b7417765009125636020b8d893.etc2.ctex"]
 
 [params]
 

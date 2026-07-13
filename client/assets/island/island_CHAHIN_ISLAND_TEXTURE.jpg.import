@@ -4,8 +4,9 @@ importer="texture"
 type="CompressedTexture2D"
 uid="uid://cw21be5l3ng1k"
 path.s3tc="res://.godot/imported/island_CHAHIN_ISLAND_TEXTURE.jpg-f282f3758837928a5471e2e22bb125fc.s3tc.ctex"
+path.etc2="res://.godot/imported/island_CHAHIN_ISLAND_TEXTURE.jpg-f282f3758837928a5471e2e22bb125fc.etc2.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
 }
 generator_parameters={
@@ -15,7 +16,7 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/island/island_CHAHIN_ISLAND_TEXTURE.jpg"
-dest_files=["res://.godot/imported/island_CHAHIN_ISLAND_TEXTURE.jpg-f282f3758837928a5471e2e22bb125fc.s3tc.ctex"]
+dest_files=["res://.godot/imported/island_CHAHIN_ISLAND_TEXTURE.jpg-f282f3758837928a5471e2e22bb125fc.s3tc.ctex", "res://.godot/imported/island_CHAHIN_ISLAND_TEXTURE.jpg-f282f3758837928a5471e2e22bb125fc.etc2.ctex"]
 
 [params]
 
