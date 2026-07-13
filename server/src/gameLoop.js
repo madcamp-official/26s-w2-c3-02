@@ -137,7 +137,7 @@ function startGame(room) {
   if (!rooms.canStartGame(room)) return false;
 
   rooms.assignRandomRoles(room);
-  room.targetScore = rooms.countTeam(room, 'duck') * 10;
+  room.targetScore = rooms.countTeam(room, 'duck') * 7;
 
   room.broadcastTimer = 0;
   room.secondTimer = 0;
