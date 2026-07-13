@@ -1,0 +1,16 @@
+{
+  "name": "police-and-duck-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node.js + ws WebSocket server for 경찰과 오리 (Police and Duck)",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "smoke-test": "node scripts/smoke-test.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

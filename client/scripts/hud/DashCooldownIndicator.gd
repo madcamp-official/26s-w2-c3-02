@@ -22,6 +22,7 @@ func _ready() -> void:
 	radial_fill_degrees = 360.0
 	min_value = 0.0
 	max_value = 1.0
+	step = 0.0 # Range 기본 step=1.0이면 0/1로 반올림되어 중간값이 다 사라짐
 	value = 0.0
 	texture_under = RingTexture.generate(DONUT_SIZE, DONUT_RADIUS_OUTER, DONUT_RADIUS_INNER, TRACK_COLOR)
 	_texture_ready = RingTexture.generate(DONUT_SIZE, DONUT_RADIUS_OUTER, DONUT_RADIUS_INNER, FILL_COLOR_READY)

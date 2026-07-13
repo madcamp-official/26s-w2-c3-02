@@ -1,14 +1,18 @@
 extends Node3D
 
 const CAMERA_OFFSET := Vector3(0, 16, 14)
-const WARNING_BGM_RADIUS := 30.0
+const WARNING_BGM_RADIUS := 40.0
 const PlayerScene := preload("res://scenes/player/Player.tscn")
 
 var _target: Node3D = null
 var _remote_players: Dictionary = {}
 var _duck: Node3D = null
 var _aligator: Node3D = null
-var _arrow_control_player_id := ""
+# 로컬이 맡지 않은 나머지 한 자리(오리 또는 악어)를 표시하는 데 쓰는, 씬에 미리 놓인
+# 두 번째 내장 노드. 실제 서버가 붙은 뒤로는 이 자리에 들어오는 값이 항상 진짜 다른
+# 클라이언트의 위치이므로, 로컬 입력으로 조작하지 않고 서버 상태만 반영(동기화)한다.
+var _builtin_counterpart_id := ""
+var _synced_counterpart_node: Node3D = null
 var _warning_bgm_active := false
 
 func _ready() -> void:
@@ -17,8 +21,6 @@ func _ready() -> void:
 	# Obstacles must be registered before MockServer spawns ducklings, otherwise
 	# the very first spawn positions are computed against an empty obstacle list.
 	_register_pond_obstacles()
-	if GameData.phase == "lobby":
-		MockServer.start_game()
 	AudioManager.play_game_bgm()
 	_configure_controlled_players()
 	GameData.game_state_changed.connect(_sync_remote_players)
@@ -95,16 +97,18 @@ func _on_game_event(event: String, _data: Dictionary) -> void:
 		_apply_phase_positions()
 
 func _configure_controlled_players() -> void:
-	_arrow_control_player_id = MockServer.arrow_control_player_id()
+	_builtin_counterpart_id = MockServer.arrow_control_player_id()
 	var local_team := MockServer.local_player_team()
 
 	if local_team == "tagger":
 		_configure_controlled_node(_aligator, GameData.local_player_id, "wasd", true)
-		_configure_controlled_node(_duck, _arrow_control_player_id, "arrows", _arrow_control_player_id != "")
+		_configure_synced_node(_duck, _builtin_counterpart_id)
+		_synced_counterpart_node = _duck
 		_target = _aligator
 	else:
 		_configure_controlled_node(_duck, GameData.local_player_id, "wasd", true)
-		_configure_controlled_node(_aligator, _arrow_control_player_id, "arrows", _arrow_control_player_id != "")
+		_configure_synced_node(_aligator, _builtin_counterpart_id)
+		_synced_counterpart_node = _aligator
 		_target = _duck
 
 func _configure_controlled_node(node: Node3D, player_id: String, scheme: String, enabled: bool) -> void:
@@ -112,6 +116,16 @@ func _configure_controlled_node(node: Node3D, player_id: String, scheme: String,
 		return
 	node.set("controllable", enabled)
 	node.set("control_scheme", scheme)
+	node.set("controlled_player_id", player_id)
+	if player_id != "":
+		var player := _player_by_id(player_id)
+		if not player.is_empty():
+			node.call("set_display_name", str(player.get("nickname", player_id)))
+
+func _configure_synced_node(node: Node3D, player_id: String) -> void:
+	if node == null:
+		return
+	node.set("controllable", false)
 	node.set("controlled_player_id", player_id)
 	if player_id != "":
 		var player := _player_by_id(player_id)
@@ -147,12 +161,14 @@ func _player_by_id(player_id: String) -> Dictionary:
 	return {}
 
 func _sync_remote_players() -> void:
+	_sync_builtin_counterpart()
+
 	var seen_ids := {}
 	for p in GameData.players:
 		var pid: String = p["playerId"]
 		if pid == GameData.local_player_id:
 			continue
-		if pid == _arrow_control_player_id:
+		if pid == _builtin_counterpart_id:
 			continue
 		seen_ids[pid] = true
 		var was_created := false
@@ -177,6 +193,25 @@ func _sync_remote_players() -> void:
 		if not seen_ids.has(pid):
 			_remote_players[pid].queue_free()
 			_remote_players.erase(pid)
+
+func _sync_builtin_counterpart() -> void:
+	if _synced_counterpart_node == null or _builtin_counterpart_id == "":
+		return
+	var player := _player_by_id(_builtin_counterpart_id)
+	if player.is_empty():
+		# 상대방이 접속을 끊어 더 이상 이 플레이어 id가 존재하지 않음 —
+		# 마지막 위치에 얼어붙지 않도록 숨긴다.
+		_synced_counterpart_node.visible = false
+		return
+	var was_hidden := not _synced_counterpart_node.visible
+	if was_hidden:
+		_synced_counterpart_node.visible = true
+	var target_pos: Vector3 = _dict_to_vec3(player["position"])
+	var target_rot: float = float(player.get("rotationY", 0.0))
+	if was_hidden or GameData.phase == "countdown":
+		_synced_counterpart_node.snap_to_state(target_pos, target_rot)
+	else:
+		_synced_counterpart_node.set_remote_state(target_pos, target_rot)
 
 func _dict_to_vec3(pos: Dictionary) -> Vector3:
 	return Vector3(float(pos["x"]), float(pos["y"]), float(pos["z"]))
