@@ -195,7 +195,13 @@ func _sync_remote_players() -> void:
 			_remote_players.erase(pid)
 
 func _sync_builtin_counterpart() -> void:
-	if _synced_counterpart_node == null or _builtin_counterpart_id == "":
+	if _synced_counterpart_node == null:
+		return
+	if _builtin_counterpart_id == "":
+		# 혼자 플레이 중이라 핫싯으로 조작할 상대가 없으면, 씬에 미리 놓인 반대쪽
+		# 내장 노드(Duck/Aligator)가 기본값인 visible=true 상태로 원래 자리에 그대로
+		# 남아 "가짜" 캐릭터처럼 보이는 문제가 있었다. 명시적으로 숨긴다.
+		_synced_counterpart_node.visible = false
 		return
 	var player := _player_by_id(_builtin_counterpart_id)
 	if player.is_empty():
