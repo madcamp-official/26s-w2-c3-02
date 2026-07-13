@@ -43,11 +43,6 @@ const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 const RULES_CARDS: Array[Dictionary] = [
 	{
-		"title": "게임 개요",
-		"color": Color(0.466667, 0.713726, 0.956863, 1),
-		"body": "\n오리 팀: 시간 안에 목표 수만큼 새끼오리를 둥지에 배달하면 승리한다\n\n\n경찰 팀: 시간 종료까지 오리들의 배달을 저지하거나, 오리를 전원 감옥에 가두면 승리한다\n\n",
-	},
-	{
 		"title": "오리 팀\n",
 		"color": Color(1, 0.85, 0.35, 1),
 		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n\n<목표>\n흩어진 새끼오리를 주워 둥지로 데려간다\n\n<감옥 탈출>\n경찰의 돌진에 맞으면 감옥에 갇힌다. 동료가 감옥 근처에 일정 시간 머무르면 갇힌 오리들이 모두 풀려난다. 오리가 혼자인 경우 시간이 지나면 자동으로 탈출한다.",
@@ -234,12 +229,9 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 		_normalizing_room_code = false
 
 	if _selected_room.is_empty():
-		join_room_button.disabled = true
+		_refresh_join_room_button_state()
 		return
-	if bool(_selected_room.get("is_private", false)):
-		join_room_button.disabled = normalized.length() != 4
-	else:
-		join_room_button.disabled = false
+	_refresh_join_room_button_state()
 
 
 func _on_refresh_room_list_button_pressed() -> void:
@@ -276,6 +268,7 @@ func _on_nickname_input_text_changed(new_text: String) -> void:
 	if _normalizing_nickname:
 		return
 	if new_text.length() <= NICKNAME_MAX_LENGTH:
+		_refresh_join_room_button_state()
 		return
 	var caret := nickname_input.caret_column
 	var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
@@ -283,6 +276,7 @@ func _on_nickname_input_text_changed(new_text: String) -> void:
 	nickname_input.text = truncated
 	nickname_input.caret_column = min(caret, truncated.length())
 	_normalizing_nickname = false
+	_refresh_join_room_button_state()
 
 
 func _room_code_digits(value: String) -> String:
@@ -538,9 +532,21 @@ func _refresh_room_list() -> void:
 		room_list.remove_child(child)
 		child.queue_free()
 
+	var room_count := 0
 	for room in await MockServer.list_rooms():
 		_rooms_by_id[str(room.get("room_id", ""))] = room
 		room_list.add_child(_make_room_row(room))
+		room_count += 1
+	if room_count % 2 == 1:
+		room_list.add_child(_make_room_grid_spacer())
+
+
+func _make_room_grid_spacer() -> Control:
+	var spacer := Control.new()
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	spacer.custom_minimum_size = Vector2(0, 54)
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return spacer
 
 
 func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
@@ -570,8 +576,8 @@ func _make_room_row(room: Dictionary) -> Control:
 	var is_private := bool(room.get("is_private", false))
 
 	var row: Button = Button.new()
-	row.custom_minimum_size = Vector2(320, 54)
-	row.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row.custom_minimum_size = Vector2(0, 54)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.text = ""
 	row.add_theme_stylebox_override("normal", _room_card_style(Color(0.0117647, 0.054902, 0.101961, 0.75), Color(0.172549, 0.313726, 0.478431, 1)))
 	row.add_theme_stylebox_override("hover", _room_card_style(Color(0.0862745, 0.223529, 0.360784, 0.9), Color(0.466667, 0.713726, 0.956863, 1)))
@@ -649,7 +655,7 @@ func _on_room_row_pressed(room_id: String) -> void:
 	room_code_input.text = ""
 	room_code_input.editable = is_private
 	room_code_input.placeholder_text = "4자리 숫자" if is_private else "공개 방"
-	_on_room_code_input_text_changed(room_code_input.text)
+	_refresh_join_room_button_state()
 
 
 func _clear_selected_room() -> void:
@@ -663,7 +669,7 @@ func _clear_selected_room() -> void:
 	room_code_input.text = ""
 	room_code_input.editable = false
 	room_code_input.placeholder_text = "4자리 숫자"
-	join_room_button.disabled = true
+	_refresh_join_room_button_state()
 
 
 func _set_join_form_visible(is_visible: bool) -> void:
@@ -677,6 +683,22 @@ func _set_join_form_visible(is_visible: bool) -> void:
 			room_code_row.visible = is_visible
 	if is_instance_valid(join_room_button):
 		join_room_button.visible = is_visible
+
+
+func _refresh_join_room_button_state() -> void:
+	if not is_instance_valid(join_room_button):
+		return
+	var has_selected_room := not _selected_room.is_empty()
+	var has_nickname := false
+	if is_instance_valid(nickname_input):
+		has_nickname = nickname_input.text.strip_edges() != ""
+	var has_join_code := false
+	if is_instance_valid(room_code_input):
+		has_join_code = room_code_input.text.strip_edges().length() == 4
+	var needs_join_code := false
+	if has_selected_room:
+		needs_join_code = bool(_selected_room.get("is_private", false))
+	join_room_button.disabled = not has_selected_room or not has_nickname or (needs_join_code and not has_join_code)
 
 
 func _show_lobby() -> void:

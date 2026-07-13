@@ -639,7 +639,7 @@ theme_override_constants/separation = 10
 [node name="RulesCardTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/RulesPanel/Content/RulesCardRow/RulesCardBody"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "게임 개요"
+text = "오리 팀"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.466667, 0.713726, 0.956863, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
@@ -938,8 +938,8 @@ theme_override_constants/separation = 12
 
 [node name="CreateRoomNameLabel" type="Label" parent="CreateRoomOverlay/CenterContainer/Panel/Content/CreateRoomNameRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(150, 0)
-text = "방 이름"
+custom_minimum_size = Vector2(190, 0)
+text = "방 이름:"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 28
