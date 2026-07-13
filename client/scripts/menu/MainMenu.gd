@@ -15,7 +15,7 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var rules_card_text_label: RichTextLabel = %RulesCardTextLabel
 @onready var settings_panel: PanelContainer = %SettingsPanel
 @onready var login_panel: PanelContainer = %LoginPanel
-@onready var room_list: VBoxContainer = %RoomList
+@onready var room_list: GridContainer = %RoomList
 @onready var join_details: VBoxContainer = %JoinDetails
 @onready var selected_room_label: Label = %SelectedRoomLabel
 @onready var nickname_input: LineEdit = %NicknameInput
@@ -548,7 +548,8 @@ func _make_room_row(room: Dictionary) -> Control:
 	var is_private := bool(room.get("is_private", false))
 
 	var row: Button = Button.new()
-	row.custom_minimum_size = Vector2(0, 54)
+	row.custom_minimum_size = Vector2(320, 54)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.text = ""
 	row.add_theme_stylebox_override("normal", _room_card_style(Color(0.0117647, 0.054902, 0.101961, 0.75), Color(0.172549, 0.313726, 0.478431, 1)))
 	row.add_theme_stylebox_override("hover", _room_card_style(Color(0.0862745, 0.223529, 0.360784, 0.9), Color(0.466667, 0.713726, 0.956863, 1)))
@@ -621,6 +622,7 @@ func _on_room_row_pressed(room_id: String) -> void:
 	var is_private := bool(_selected_room.get("is_private", false))
 	selected_room_label.text = "%s 선택됨" % room_name
 	join_details.visible = true
+	_set_join_form_visible(true)
 	nickname_input.text = ""
 	room_code_input.text = ""
 	room_code_input.editable = is_private
@@ -632,12 +634,27 @@ func _clear_selected_room() -> void:
 	_selected_room.clear()
 	if not is_instance_valid(join_details):
 		return
-	join_details.visible = false
+	join_details.visible = true
 	selected_room_label.text = "방을 선택하세요"
+	_set_join_form_visible(false)
 	nickname_input.text = ""
 	room_code_input.text = ""
-	room_code_input.editable = true
+	room_code_input.editable = false
+	room_code_input.placeholder_text = "4자리 숫자"
 	join_room_button.disabled = true
+
+
+func _set_join_form_visible(is_visible: bool) -> void:
+	if is_instance_valid(nickname_input):
+		var nickname_row := nickname_input.get_parent()
+		if is_instance_valid(nickname_row):
+			nickname_row.visible = is_visible
+	if is_instance_valid(room_code_input):
+		var room_code_row := room_code_input.get_parent()
+		if is_instance_valid(room_code_row):
+			room_code_row.visible = is_visible
+	if is_instance_valid(join_room_button):
+		join_room_button.visible = is_visible
 
 
 func _show_lobby() -> void:
