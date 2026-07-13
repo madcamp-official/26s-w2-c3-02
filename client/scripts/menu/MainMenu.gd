@@ -50,6 +50,7 @@ func _wait_for_ime_commit() -> void:
 
 const NICKNAME_MAX_LENGTH := 10
 const ROOM_NAME_MAX_LENGTH := 10
+const TEXT_COMMIT_DELAY := 0.08
 const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 const RULES_CARDS: Array[Dictionary] = [
@@ -140,6 +141,8 @@ func _ready() -> void:
 	GameData.room_state_changed.connect(_refresh_lobby)
 	GameData.game_state_changed.connect(_on_game_state_changed_for_lobby)
 	GameData.action_error.connect(_on_action_error)
+	nickname_input.max_length = NICKNAME_MAX_LENGTH
+	create_room_name_input.max_length = ROOM_NAME_MAX_LENGTH
 	room_code_input.text_changed.connect(_on_room_code_input_text_changed)
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
@@ -148,8 +151,7 @@ func _ready() -> void:
 	nickname_input.text = _default_nickname_value
 	_on_nickname_input_text_changed(nickname_input.text)
 	create_room_name_input.text_changed.connect(_on_create_room_name_input_text_changed)
-	create_room_nickname_input.text_changed.connect(_on_create_room_nickname_input_text_changed)
-	create_room_nickname_input.focus_entered.connect(_on_create_room_nickname_input_focus_entered)
+	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
 	refresh_room_list_button.pressed.connect(_on_refresh_room_list_button_pressed)
 	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
 	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
@@ -208,15 +210,18 @@ func _on_create_room_button_pressed() -> void:
 	create_room_name_input.grab_focus()
 
 
+func _on_create_room_confirm_button_down() -> void:
+	_commit_text_input(create_room_name_input)
+	_commit_text_input(create_room_code_input)
+
+
 func _on_create_room_confirm_button_pressed() -> void:
-	await _wait_for_ime_commit()
-	var nickname := create_room_nickname_input.text.strip_edges()
-	if nickname == "":
-		_show_alert("닉네임을 입력해주세요.")
+	var join_code := create_room_code_input.text.strip_edges()
+	if join_code != "" and join_code.length() != 4:
+		_show_alert("참가코드는 4자리 숫자여야 합니다.")
 		return
 	var duck_skin := get_selected_duck_skin()
-	var is_private := create_room_private_button.button_pressed
-	var result: Dictionary = await MockServer.create_room(nickname, create_room_name_input.text, duck_skin, is_private)
+	var result: Dictionary = await MockServer.create_room("Player", "", create_room_name_input.text, duck_skin, join_code)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -228,13 +233,17 @@ func _on_create_room_close_button_pressed() -> void:
 	create_room_overlay.visible = false
 
 
+func _on_join_room_button_down() -> void:
+	_commit_text_input(nickname_input)
+	_commit_text_input(room_code_input)
+
+
 func _on_join_room_button_pressed() -> void:
 	if _selected_room.is_empty():
 		_show_alert("참가할 방을 먼저 선택해주세요.")
 		return
-	await _wait_for_ime_commit()
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
+	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -265,14 +274,6 @@ func _on_refresh_room_list_button_pressed() -> void:
 func _on_create_room_name_input_text_changed(new_text: String) -> void:
 	if _normalizing_room_name:
 		return
-	if new_text.length() <= ROOM_NAME_MAX_LENGTH:
-		return
-	var caret := create_room_name_input.caret_column
-	var truncated := new_text.substr(0, ROOM_NAME_MAX_LENGTH)
-	_normalizing_room_name = true
-	create_room_name_input.text = truncated
-	create_room_name_input.caret_column = min(caret, truncated.length())
-	_normalizing_room_name = false
 
 
 func _on_create_room_nickname_input_text_changed(new_text: String) -> void:
@@ -291,15 +292,6 @@ func _on_create_room_nickname_input_text_changed(new_text: String) -> void:
 func _on_nickname_input_text_changed(new_text: String) -> void:
 	if _normalizing_nickname:
 		return
-	if new_text.length() <= NICKNAME_MAX_LENGTH:
-		_refresh_join_room_button_state()
-		return
-	var caret := nickname_input.caret_column
-	var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
-	_normalizing_nickname = true
-	nickname_input.text = truncated
-	nickname_input.caret_column = min(caret, truncated.length())
-	_normalizing_nickname = false
 	_refresh_join_room_button_state()
 
 
@@ -327,6 +319,11 @@ func _room_code_digits(value: String) -> String:
 		if code.length() >= 4:
 			break
 	return code
+
+
+func _commit_text_input(input: LineEdit) -> void:
+	if is_instance_valid(input):
+		input.release_focus()
 
 
 func _set_content_view(view: ContentView) -> void:
@@ -803,18 +800,33 @@ func _make_player_row(player: Dictionary) -> Control:
 func _on_lobby_name_input_text_changed(new_text: String, input: LineEdit, player_id: String) -> void:
 	if input.get_meta("normalizing", false):
 		return
-	if new_text.length() > NICKNAME_MAX_LENGTH:
-		var caret := input.caret_column
-		var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
-		input.set_meta("normalizing", true)
-		input.text = truncated
-		input.caret_column = min(caret, truncated.length())
-		input.set_meta("normalizing", false)
-		new_text = truncated
 	MockServer.set_player_nickname(player_id, new_text)
 
 
+func _commit_lobby_name_inputs() -> void:
+	if not is_instance_valid(players_list):
+		return
+	for input in _find_line_edits(players_list):
+		_commit_text_input(input)
+
+
+func _find_line_edits(node: Node) -> Array[LineEdit]:
+	var inputs: Array[LineEdit] = []
+	if node is LineEdit:
+		inputs.append(node as LineEdit)
+	for child in node.get_children():
+		inputs.append_array(_find_line_edits(child))
+	return inputs
+
+
+func _on_start_game_button_down() -> void:
+	_commit_lobby_name_inputs()
+
+
 func _on_start_game_button_pressed() -> void:
+	_commit_lobby_name_inputs()
+	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
+
 	if not MockServer.can_start_game():
 		_show_alert("1~3명이면 테스트 게임을 시작할 수 있습니다.")
 		return
