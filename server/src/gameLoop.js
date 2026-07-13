@@ -123,12 +123,21 @@ function spawnDuckling(id, existingPositions) {
   };
 }
 
+function countLiveDucklings(room) {
+  let count = 0;
+  for (const d of room.ducklings.values()) {
+    if (d.state !== 'delivered') count++;
+  }
+  return count;
+}
+
 // ── 게임 시작/카운트다운/종료 ─────────────────────────────────────────────────
 
 function startGame(room) {
   if (!rooms.canStartGame(room)) return false;
 
   rooms.assignRandomRoles(room);
+  room.targetScore = rooms.countTeam(room, 'duck') * 10;
 
   room.broadcastTimer = 0;
   room.secondTimer = 0;
@@ -150,11 +159,12 @@ function startGame(room) {
 
   room.ducklings.clear();
   const placedPositions = [];
-  for (let i = 0; i < C.INITIAL_DUCKLING_COUNT; i++) {
+  for (let i = 0; i < C.MAX_DUCKLINGS_ON_MAP; i++) {
     const d = spawnDuckling(`d${i + 1}`, placedPositions);
     room.ducklings.set(d.ducklingId, d);
     placedPositions.push({ x: d.position.x, z: d.position.z });
   }
+  room.nextDucklingId = C.MAX_DUCKLINGS_ON_MAP + 1;
 
   placePlayersInCountdown(room);
   broadcastGameState(room);
@@ -422,6 +432,13 @@ function deliverDuckling(room, d) {
 
   const batchId = d.deliveryBatchId;
   d.deliveryBatchId = null;
+
+  room.ducklings.delete(d.ducklingId);
+  if (countLiveDucklings(room) < C.MAX_DUCKLINGS_ON_MAP) {
+    const existingPositions = Array.from(room.ducklings.values()).map((o) => ({ x: o.position.x, z: o.position.z }));
+    const newDuckling = spawnDuckling(`d${room.nextDucklingId++}`, existingPositions);
+    room.ducklings.set(newDuckling.ducklingId, newDuckling);
+  }
 
   if (!batchId || !room.deliveryBatches.has(batchId)) {
     broadcastEvent(room, 'duckling_delivered', { ducklingId: d.ducklingId, count: 1 });

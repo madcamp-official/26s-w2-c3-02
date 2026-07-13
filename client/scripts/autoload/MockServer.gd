@@ -8,7 +8,7 @@ extends Node
 const SERVER_URL := "wss://cops-and-ducks.madcamp-kaist.org/ws" # 배포 시 이 상수만 바꾸면 된다.
 ## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 로컬 테스트용
 
-const MVP_PLAYER_LIMIT := 3
+const MVP_PLAYER_LIMIT := 5
 const MVP_TAGGER_COUNT := 1
 const JAIL_POSITION := Vector3(0, 6.7, 0) # 감옥 텔레포트 목표 좌표 (서버 상수와 동일해야 함)
 

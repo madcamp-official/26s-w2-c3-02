@@ -99,6 +99,7 @@ function createRoomObject({ roomId, roomName, isPrivate }) {
     deliveringSettle: new Map(),
     deliveryBatches: new Map(),
     nextDeliveryBatchId: 1,
+    nextDucklingId: 1,
     activeDashes: new Map(),
 
     isRescuing: false,

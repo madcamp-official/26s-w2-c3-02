@@ -3,15 +3,15 @@
 // Docs/api-spec.md "초기 게임 상수" 표를 그대로 옮긴다. 클라이언트 연출(쿨타임 게이지,
 // 판정 반경 등)과 어긋나면 안 되므로 값을 임의로 바꾸지 않는다.
 
-const MAX_PLAYERS = 3;
+const MAX_PLAYERS = 5;
 const TAGGER_COUNT = 1;
 const DUCK_COUNT_MIN = 1;
-const DUCK_COUNT_MAX = 2;
+const DUCK_COUNT_MAX = 4;
 
 const GAME_DURATION_SECONDS = 180;
-const TARGET_SCORE = 5;
-const COUNTDOWN_SECONDS = 3;
-const INITIAL_DUCKLING_COUNT = TARGET_SCORE + 2;
+const TARGET_SCORE = 5; // 로비(게임 시작 전) 표시용 기본값. 실제 목표점수는 게임 시작 시 (오리 인원 * 10)으로 덮어써진다.
+const COUNTDOWN_SECONDS = 5;
+const MAX_DUCKLINGS_ON_MAP = 10; // 게임 시작 시 스폰 개수이자, 배달로 줄어들 때마다 다시 채우는 상한
 
 const JAIL_SECONDS = 8.0; // 오리가 1명뿐일 때만 적용되는 자동 탈출 시간(초)
 const RESCUE_RADIUS = 11.0;
@@ -122,7 +122,7 @@ module.exports = {
   GAME_DURATION_SECONDS,
   TARGET_SCORE,
   COUNTDOWN_SECONDS,
-  INITIAL_DUCKLING_COUNT,
+  MAX_DUCKLINGS_ON_MAP,
   JAIL_SECONDS,
   RESCUE_RADIUS,
   RESCUE_DURATION,

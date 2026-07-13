@@ -858,7 +858,7 @@ theme_override_constants/separation = 8
 [node name="LobbyStatusLabel" type="Label" parent="LobbyOverlay/CenterContainer/LobbyPanel/Content"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "대기 중: 2~3명이 모이면 시작할 수 있습니다"
+text = "대기 중: 1~5명이 모이면 시작할 수 있습니다"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 24

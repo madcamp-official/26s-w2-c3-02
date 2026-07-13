@@ -62,6 +62,9 @@ func _role_label(team: String) -> String:
 
 
 func _on_main_menu_button_pressed() -> void:
+	# "대기실로"와 달리 방 자체를 나가는 것이므로, 서버에도 알려야 다른 참가자 화면과
+	# 방 목록에서 이 플레이어가 계속 남아있는 것처럼 보이지 않는다.
+	MockServer.leave_room()
 	GameData.menu_entry_view = "menu"
 	SceneRouter.go_to("main_menu")
 

@@ -833,7 +833,7 @@ func _on_start_game_button_pressed() -> void:
 	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
 
 	if not MockServer.can_start_game():
-		_show_alert("1~3명이면 테스트 게임을 시작할 수 있습니다.")
+		_show_alert("1~%d명이면 테스트 게임을 시작할 수 있습니다." % MockServer.MVP_PLAYER_LIMIT)
 		return
 	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
 	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).
