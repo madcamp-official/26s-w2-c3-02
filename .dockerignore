@@ -1,0 +1,6 @@
+client/
+.git/
+.godot/
+server/node_modules/
+server/README.md
+*.md
