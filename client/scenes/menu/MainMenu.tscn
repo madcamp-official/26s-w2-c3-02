@@ -3,7 +3,6 @@
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
 [ext_resource type="Texture2D" path="res://assets/ui/logo/main_logo.png" id="main_logo"]
-[ext_resource type="SystemFont" path="res://themes/IconSymbolFont.tres" id="icon_symbol_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 46.0
@@ -373,13 +372,12 @@ theme_override_font_sizes/font_size = 24
 [node name="RefreshRoomListButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/RoomListSection/RoomListHeader"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(42, 42)
-text = "↻"
-theme_override_fonts/font = ExtResource("icon_symbol_font")
+custom_minimum_size = Vector2(96, 42)
+text = "새로고침"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
@@ -627,8 +625,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 custom_minimum_size = Vector2(56, 56)
-text = "‹"
-theme_override_fonts/font = ExtResource("icon_symbol_font")
+text = "<"
 theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
@@ -669,8 +666,7 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 4
 custom_minimum_size = Vector2(56, 56)
-text = "›"
-theme_override_fonts/font = ExtResource("icon_symbol_font")
+text = ">"
 theme_override_font_sizes/font_size = 32
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
