@@ -1,0 +1,295 @@
+'use strict';
+
+const crypto = require('crypto');
+const C = require('./constants');
+
+// roomId -> Room
+const rooms = new Map();
+
+function generateRoomCode() {
+  let code;
+  do {
+    code = '';
+    for (let i = 0; i < C.ROOM_CODE_LENGTH; i++) {
+      code += C.ROOM_CODE_CHARS[Math.floor(Math.random() * C.ROOM_CODE_CHARS.length)];
+    }
+  } while (rooms.has(code));
+  return code;
+}
+
+function spawnPositionForCharacter(character) {
+  if (character === 'aligator') {
+    return { x: 40.0, y: 0.0, z: -40.0 };
+  }
+  return { x: -40.0, y: 0.0, z: 40.0 };
+}
+
+function makePlayer({ playerId, nickname, team, character, ws }) {
+  const spawn = spawnPositionForCharacter(character);
+  return {
+    playerId,
+    nickname,
+    team,
+    duckSkin: team === 'tagger' ? 'duck' : character || 'duck',
+    character,
+    position: spawn,
+    rotationY: 0.0,
+    state: 'idle',
+    jailRemaining: null,
+    ws,
+  };
+}
+
+function serializePlayer(player) {
+  const out = {
+    playerId: player.playerId,
+    nickname: player.nickname,
+    team: player.team,
+    character: player.character,
+    isMock: false,
+    position: player.position,
+    rotationY: player.rotationY,
+    state: player.state,
+    carryingDucklingId: null,
+    jailedUntil: null,
+  };
+  if (player.jailRemaining !== null && player.jailRemaining !== undefined) {
+    out.jailRemaining = player.jailRemaining;
+  }
+  return out;
+}
+
+function serializeDuckling(d) {
+  const out = {
+    ducklingId: d.ducklingId,
+    position: d.position,
+    state: d.state,
+    carrierPlayerId: d.carrierPlayerId,
+  };
+  if (d.deliveryBatchId) {
+    out.deliveryBatchId = d.deliveryBatchId;
+  }
+  return out;
+}
+
+function createRoomObject({ roomId, roomName, isPrivate, joinCode }) {
+  return {
+    roomId,
+    roomName: roomName || `${roomId} 방`,
+    hostPlayerId: '',
+    isPrivate,
+    joinCode,
+
+    phase: 'lobby',
+    countdownSeconds: 0,
+    remainingSeconds: 0,
+    score: 0,
+    targetScore: C.TARGET_SCORE,
+    winner: null,
+    endReason: null,
+    rescueProgress: 0.0,
+    activeRescuerId: '',
+
+    players: new Map(),
+    ducklings: new Map(),
+
+    // 내부 시뮬레이션 상태 (game:state로 나가지 않음) — gameLoop.js가 사용
+    wanderState: new Map(),
+    carryQueues: new Map(),
+    playerMotion: new Map(),
+    deliveringSettle: new Map(),
+    deliveryBatches: new Map(),
+    nextDeliveryBatchId: 1,
+    activeDashes: new Map(),
+
+    isRescuing: false,
+    rescueTimer: 0,
+    allJailedTimer: -1,
+
+    secondTimer: 0,
+    broadcastTimer: 0,
+    countdownTimer: 0,
+  };
+}
+
+function createRoom({ nickname, roomName, characterSkin, ws }) {
+  const roomId = generateRoomCode(); // 방 코드는 항상 비어있는 번호를 랜덤 배정한다.
+
+  const isPrivate = true; // 방 코드를 직접 아는 사람만 들어올 수 있는 것이 기본값
+  const room = createRoomObject({
+    roomId,
+    roomName,
+    isPrivate,
+    joinCode: roomId,
+  });
+
+  const playerId = crypto.randomUUID();
+  const nick = (nickname || '').trim() || 'Player';
+  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  room.players.set(playerId, player);
+  room.hostPlayerId = playerId;
+
+  rooms.set(roomId, room);
+
+  return { ok: true, room, player };
+}
+
+function listRooms() {
+  const out = [];
+  for (const room of rooms.values()) {
+    if (room.phase !== 'lobby') continue;
+    const host = room.players.get(room.hostPlayerId);
+    out.push({
+      roomId: room.roomId,
+      roomName: room.roomName,
+      hostNickname: host ? host.nickname : '',
+      playerCount: room.players.size,
+      isPrivate: room.isPrivate,
+    });
+  }
+  return out;
+}
+
+function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
+  const room = rooms.get(roomId);
+  if (!room) {
+    return { ok: false, code: 'ROOM_NOT_FOUND', message: '존재하지 않는 방입니다.' };
+  }
+  if (room.phase !== 'lobby') {
+    return { ok: false, code: 'GAME_ALREADY_STARTED', message: '이미 게임이 시작된 방입니다.' };
+  }
+  if (room.players.size >= C.MAX_PLAYERS) {
+    return { ok: false, code: 'ROOM_FULL', message: '방 인원이 가득 찼습니다.' };
+  }
+  if (room.isPrivate && (joinCode || '') !== room.joinCode) {
+    return { ok: false, code: 'INVALID_JOIN_CODE', message: '참가 코드가 올바르지 않습니다.' };
+  }
+
+  const playerId = crypto.randomUUID();
+  const nick = (nickname || '').trim() || 'Player';
+  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  room.players.set(playerId, player);
+
+  return { ok: true, room, player };
+}
+
+function countTeam(room, team) {
+  let count = 0;
+  for (const p of room.players.values()) {
+    if (p.team === team) count++;
+  }
+  return count;
+}
+
+// 대기실에서 팀을 직접 고르지 않고, 게임 시작 시 서버가 무작위로 역할을 배정한다.
+function assignRandomRoles(room) {
+  const players = Array.from(room.players.values());
+  for (let i = players.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [players[i], players[j]] = [players[j], players[i]];
+  }
+  const taggerIds = new Set(players.slice(0, C.TAGGER_COUNT).map((p) => p.playerId));
+  for (const p of players) {
+    if (taggerIds.has(p.playerId)) {
+      p.team = 'tagger';
+      p.character = 'aligator';
+    } else {
+      p.team = 'duck';
+      p.character = p.duckSkin || 'duck';
+    }
+  }
+}
+
+function setNickname(room, playerId, nickname) {
+  const player = room.players.get(playerId);
+  if (!player) return;
+  player.nickname = (nickname || '').trim() || 'Player';
+}
+
+// 역할은 게임 시작 시 무작위로 배정되므로, 시작 조건은 팀 구성이 아니라 인원수로만 판단한다.
+function canStartGame(room) {
+  const count = room.players.size;
+  return count >= C.TAGGER_COUNT + C.DUCK_COUNT_MIN && count <= C.MAX_PLAYERS;
+}
+
+function removePlayer(room, playerId) {
+  room.players.delete(playerId);
+  room.carryQueues.delete(playerId);
+  room.playerMotion.delete(playerId);
+  room.activeDashes.delete(playerId);
+
+  if (room.players.size === 0) {
+    rooms.delete(room.roomId);
+    return;
+  }
+
+  if (room.hostPlayerId === playerId) {
+    room.hostPlayerId = room.players.keys().next().value;
+  }
+}
+
+function findRoomAndPlayerBySocket(ws) {
+  if (!ws.roomId || !ws.playerId) return { room: null, player: null };
+  const room = rooms.get(ws.roomId);
+  if (!room) return { room: null, player: null };
+  return { room, player: room.players.get(ws.playerId) || null };
+}
+
+function sendTo(ws, message) {
+  if (ws && ws.readyState === ws.OPEN) {
+    ws.send(JSON.stringify(message));
+  }
+}
+
+function broadcastToRoom(room, message) {
+  for (const player of room.players.values()) {
+    sendTo(player.ws, message);
+  }
+}
+
+function serializeRoomState(room) {
+  const players = [];
+  for (const p of room.players.values()) players.push(serializePlayer(p));
+  return { players, hostPlayerId: room.hostPlayerId };
+}
+
+function serializeGameState(room) {
+  const players = [];
+  for (const p of room.players.values()) players.push(serializePlayer(p));
+  const ducklings = [];
+  for (const d of room.ducklings.values()) ducklings.push(serializeDuckling(d));
+  return {
+    roomId: room.roomId,
+    phase: room.phase,
+    countdownSeconds: room.countdownSeconds,
+    remainingSeconds: room.remainingSeconds,
+    score: room.score,
+    targetScore: room.targetScore,
+    players,
+    ducklings,
+    winner: room.winner,
+    endReason: room.endReason,
+    rescueProgress: room.rescueProgress,
+    activeRescuerId: room.activeRescuerId,
+  };
+}
+
+module.exports = {
+  rooms,
+  createRoom,
+  listRooms,
+  joinRoom,
+  assignRandomRoles,
+  setNickname,
+  canStartGame,
+  removePlayer,
+  findRoomAndPlayerBySocket,
+  sendTo,
+  broadcastToRoom,
+  serializePlayer,
+  serializeDuckling,
+  serializeRoomState,
+  serializeGameState,
+  spawnPositionForCharacter,
+  countTeam,
+};
