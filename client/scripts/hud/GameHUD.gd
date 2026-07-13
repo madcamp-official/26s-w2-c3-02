@@ -201,13 +201,6 @@ func _local_team() -> String:
 	return "duck"
 
 
-func _on_end_test_button_pressed() -> void:
-	var winner := "tagger"
-	if GameData.score >= GameData.target_score:
-		winner = "duck"
-	MockServer.finish_game_for_test(winner)
-
-
 func _on_debug_mode_button_pressed() -> void:
 	GameData.set_debug_mode(not GameData.debug_mode_enabled)
 
@@ -536,15 +529,3 @@ func _is_world_position_visible(screen_pos: Vector2, viewport_size: Vector2, is_
 		and screen_pos.y >= INDICATOR_MARGIN
 		and screen_pos.y <= viewport_size.y - INDICATOR_MARGIN
 	)
-
-
-func _on_debug_jail_me_pressed() -> void:
-	MockServer.debug_jail_local_player()
-
-
-func _on_debug_toggle_duck_pressed() -> void:
-	MockServer.debug_toggle_fake_duck()
-
-
-func _on_debug_jail_duck_pressed() -> void:
-	MockServer.debug_jail_fake_duck()

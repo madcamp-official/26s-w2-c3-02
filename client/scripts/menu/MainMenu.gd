@@ -23,12 +23,11 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var join_room_button: Button = %JoinRoomButton
 @onready var create_room_overlay: Control = %CreateRoomOverlay
 @onready var create_room_name_input: LineEdit = %CreateRoomNameInput
-@onready var create_room_code_input: LineEdit = %CreateRoomCodeInput
+@onready var refresh_room_list_button: Button = %RefreshRoomListButton
 @onready var lobby_overlay: Control = %LobbyOverlay
 @onready var room_code_label: Label = %RoomCodeLabel
 @onready var players_list: VBoxContainer = %PlayersList
 @onready var lobby_status_label: Label = %LobbyStatusLabel
-@onready var add_mock_player_button: Button = %AddMockPlayerButton
 @onready var start_game_button: Button = %StartGameButton
 @onready var alert_overlay: Control = %AlertOverlay
 @onready var alert_message_label: Label = %AlertMessageLabel
@@ -90,7 +89,16 @@ const SKINS_BY_ROLE: Dictionary = {
 			"model": preload("res://assets/greenduck/greenduck.glb"),
 			"model_position": Vector3(0, 0, 0),
 			"model_rotation_degrees": Vector3(0, 0, 0),
-			"model_scale": Vector3(4.1, 4.1, 4.1),
+			"model_scale": Vector3(3.1, 3.1, 3.1),
+		},
+		{
+			"id": "mecha_duck",
+			"name": "메카오리",
+			"character": "mecha_duck",
+			"model": preload("res://assets/mecha_duck/mecha_duck.glb"),
+			"model_position": Vector3(0, 0, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(1.5, 1.5, 1.5),
 		},
 	],
 	InventoryRole.TAGGER: [
@@ -107,7 +115,6 @@ const SKINS_BY_ROLE: Dictionary = {
 }
 
 var _normalizing_room_code := false
-var _normalizing_create_room_code := false
 var _normalizing_nickname := false
 var _normalizing_room_name := false
 var _current_view: ContentView = ContentView.NONE
@@ -121,13 +128,13 @@ var _skin_check_badges: Dictionary = {} # InventoryRole -> {skin id -> Control}
 
 func _ready() -> void:
 	GameData.room_state_changed.connect(_refresh_lobby)
+	GameData.game_state_changed.connect(_on_game_state_changed_for_lobby)
+	GameData.action_error.connect(_on_action_error)
 	room_code_input.text_changed.connect(_on_room_code_input_text_changed)
 	_on_room_code_input_text_changed(room_code_input.text)
 	nickname_input.text_changed.connect(_on_nickname_input_text_changed)
 	_on_nickname_input_text_changed(nickname_input.text)
-	create_room_code_input.text_changed.connect(_on_create_room_code_input_text_changed)
-	create_room_name_input.text_changed.connect(_on_create_room_name_input_text_changed)
-	_on_create_room_name_input_text_changed(create_room_name_input.text)
+	refresh_room_list_button.pressed.connect(_on_refresh_room_list_button_pressed)
 	rules_prev_button.pressed.connect(_on_rules_prev_button_pressed)
 	rules_next_button.pressed.connect(_on_rules_next_button_pressed)
 	_refresh_rules_card()
@@ -150,23 +157,39 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if GameData.room_state_changed.is_connected(_refresh_lobby):
 		GameData.room_state_changed.disconnect(_refresh_lobby)
+	if GameData.game_state_changed.is_connected(_on_game_state_changed_for_lobby):
+		GameData.game_state_changed.disconnect(_on_game_state_changed_for_lobby)
+	if GameData.action_error.is_connected(_on_action_error):
+		GameData.action_error.disconnect(_on_action_error)
+
+
+func _on_action_error(_code: String, message: String) -> void:
+	# game:start처럼 응답을 기다리지 않고 보내는(fire-and-forget)
+	# 요청이 서버에서 거부됐을 때 여기로 도착한다. 버튼을 눌러도 조용히 아무 일도
+	# 일어나지 않는 대신, 거부 사유를 알림으로 보여준다.
+	if message != "":
+		_show_alert(message)
+
+
+func _on_game_state_changed_for_lobby() -> void:
+	# 서버가 game:start를 승인해 phase가 countdown으로 바뀌면(호스트/참가자 모두 동일하게
+	# 브로드캐스트로 통보받음), 로비에 있는 모든 클라이언트가 이 시점에 인게임으로 이동한다.
+	# 호스트가 버튼을 누른 즉시 이동하지 않는 이유: 서버 승인 전에 미리 이동하면 시작 조건이
+	# 거부됐을 때 되돌아와야 하고, 참가자는 애초에 스스로 트리거할 방법이 없기 때문이다.
+	if lobby_overlay.visible and GameData.phase == "countdown":
+		SceneRouter.go_to("game")
 
 
 func _on_create_room_button_pressed() -> void:
 	create_room_name_input.text = ""
-	create_room_code_input.text = ""
 	create_room_overlay.visible = true
 	alert_overlay.visible = false
 	create_room_name_input.grab_focus()
 
 
 func _on_create_room_confirm_button_pressed() -> void:
-	var room_code := create_room_code_input.text.strip_edges()
-	if room_code != "" and room_code.length() != 4:
-		_show_alert("방 코드는 네 자리 숫자로 입력해주세요.")
-		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = MockServer.create_room("Player", room_code, create_room_name_input.text, duck_skin)
+	var result: Dictionary = await MockServer.create_room("Player", "", create_room_name_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -183,7 +206,7 @@ func _on_join_room_button_pressed() -> void:
 		_show_alert("참가할 방을 먼저 선택해주세요.")
 		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
+	var result: Dictionary = await MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -210,17 +233,8 @@ func _on_room_code_input_text_changed(new_text: String) -> void:
 		join_room_button.disabled = false
 
 
-func _on_create_room_code_input_text_changed(new_text: String) -> void:
-	if _normalizing_create_room_code:
-		return
-
-	var normalized := _room_code_digits(new_text)
-	if normalized == new_text:
-		return
-	_normalizing_create_room_code = true
-	create_room_code_input.text = normalized
-	create_room_code_input.caret_column = normalized.length()
-	_normalizing_create_room_code = false
+func _on_refresh_room_list_button_pressed() -> void:
+	_refresh_room_list()
 
 
 func _on_create_room_name_input_text_changed(new_text: String) -> void:
@@ -502,7 +516,7 @@ func _refresh_room_list() -> void:
 		room_list.remove_child(child)
 		child.queue_free()
 
-	for room in MockServer.list_rooms():
+	for room in await MockServer.list_rooms():
 		_rooms_by_id[str(room.get("room_id", ""))] = room
 		room_list.add_child(_make_room_row(room))
 
@@ -638,9 +652,14 @@ func _refresh_lobby() -> void:
 
 	var display_room_id := GameData.room_id.strip_edges()
 	room_code_label.text = "방 코드: %s" % ("-" if display_room_id == "" else display_room_id)
-	lobby_status_label.text = MockServer.lobby_status_text()
-	start_game_button.disabled = not MockServer.can_start_game()
-	add_mock_player_button.visible = MockServer.can_add_mock_player()
+	# 시작 버튼은 호스트에게만 보여준다 — 참가자가 눌러도 서버가 NOT_HOST로 거부할 뿐이라,
+	# 애초에 호스트가 아니면 버튼 자체를 숨겨서 왜 안 되는지 헷갈리지 않게 한다.
+	start_game_button.visible = GameData.is_host
+	if GameData.is_host:
+		lobby_status_label.text = MockServer.lobby_status_text()
+		start_game_button.disabled = not MockServer.can_start_game()
+	else:
+		lobby_status_label.text = "호스트가 게임을 시작하기를 기다리는 중... (역할은 시작 시 무작위 배정)"
 
 	for child in players_list.get_children():
 		players_list.remove_child(child)
@@ -656,12 +675,10 @@ func _make_player_row(player: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 12)
 
 	var player_id: String = str(player.get("playerId", ""))
+	var is_local := player_id == GameData.local_player_id
 	var role_label: Label = Label.new()
 	role_label.custom_minimum_size = Vector2(68, 0)
-	if player_id == GameData.local_player_id:
-		role_label.text = "본인"
-	else:
-		role_label.text = "Mock"
+	role_label.text = "본인" if is_local else "상대"
 	role_label.add_theme_font_size_override("font_size", 24)
 	role_label.add_theme_color_override("font_color", Color.WHITE)
 	row.add_child(role_label)
@@ -670,24 +687,10 @@ func _make_player_row(player: Dictionary) -> Control:
 	name_input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_input.max_length = NICKNAME_MAX_LENGTH
 	name_input.text = str(player.get("nickname", "Player"))
+	name_input.editable = is_local # 자기 자신의 닉네임만 바꿀 수 있다.
 	name_input.add_theme_font_size_override("font_size", 24)
 	name_input.text_changed.connect(_on_lobby_name_input_text_changed.bind(name_input, player_id))
 	row.add_child(name_input)
-
-	var team_select: OptionButton = OptionButton.new()
-	team_select.custom_minimum_size = Vector2(132, 0)
-	team_select.add_item("오리", 0)
-	team_select.add_item("경찰", 1)
-	var team: String = str(player.get("team", "duck"))
-	var selected_team_index := 0
-	if team == "tagger":
-		selected_team_index = 1
-	team_select.select(selected_team_index)
-	team_select.set_item_disabled(0, not MockServer.can_set_player_team(player_id, "duck"))
-	team_select.set_item_disabled(1, not MockServer.can_set_player_team(player_id, "tagger"))
-	team_select.add_theme_font_size_override("font_size", 24)
-	team_select.item_selected.connect(_on_lobby_player_team_selected.bind(player_id))
-	row.add_child(team_select)
 
 	return row
 
@@ -706,31 +709,17 @@ func _on_lobby_name_input_text_changed(new_text: String, input: LineEdit, player
 	MockServer.set_player_nickname(player_id, new_text)
 
 
-func _on_lobby_player_team_selected(index: int, player_id: String) -> void:
-	var team := "duck"
-	if index == 1:
-		team = "tagger"
-	var character_skin := "duck"
-	if player_id == GameData.local_player_id:
-		character_skin = get_selected_duck_skin()
-	if not MockServer.set_player_team(player_id, team, character_skin):
-		_show_alert("역할 구성이 올바르지 않습니다.")
-		_refresh_lobby()
-
-
-func _on_add_mock_player_button_pressed() -> void:
-	if not MockServer.add_mock_player():
-		_show_alert("더 이상 Mock 플레이어를 추가할 수 없습니다.")
-
-
 func _on_start_game_button_pressed() -> void:
 	if not MockServer.can_start_game():
-		_show_alert("경찰 1명, 오리 1~2명이 필요합니다.")
+		_show_alert("2~3명이 모여야 게임을 시작할 수 있습니다.")
 		return
-	SceneRouter.go_to("game")
+	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
+	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).
+	MockServer.start_game()
 
 
-func _on_back_button_pressed() -> void:
+func _on_leave_button_pressed() -> void:
+	MockServer.leave_room()
 	lobby_overlay.visible = false
 
 

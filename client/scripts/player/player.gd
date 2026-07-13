@@ -68,6 +68,19 @@ const CHARACTER_CONFIG := {
 		"water_submerge_depth": 0.56,
 		"water_effect_scale": 1.0,
 	},
+	"mecha_duck": {
+		"model": "res://assets/mecha_duck/mecha_duck.glb",
+		# 로컬 원점은 이미 발 높이에 있어 model_pos.y=0로 충분하다. 정지 상태 스크린샷
+		# 비교로는 회전 0도가 맞아 보였지만, 실제 이동 중엔 반대 방향을 보고 걷는 문제가
+		# 있어 duck.glb와 같은 180도로 되돌렸다.
+		"model_pos": Vector3(0, 0.0, 0),
+		"model_scale": 3.0,
+		"model_rotation_degrees": Vector3(0, 180, 0),
+		"collision_size": Vector3(1.2, 3.6, 1.5),
+		"collision_pos": Vector3(0, 1.8, 0),
+		"water_submerge_depth": 0.56,
+		"water_effect_scale": 1.0,
+	},
 	"aligator": {
 		"model": "res://assets/aligator/aligator.glb",
 		"model_pos": Vector3(0, 1.684, 0),
@@ -85,7 +98,7 @@ const CHARACTER_CONFIG := {
 }
 
 # 오리 팀으로 취급되는 캐릭터(스킨) 키 목록. 인벤토리에 오리 스킨이 추가되면 여기에도 더한다.
-const DUCK_CHARACTERS := ["duck", "nupjuk", "greenduck"]
+const DUCK_CHARACTERS := ["duck", "nupjuk", "greenduck", "mecha_duck"]
 
 @export var character: String = "duck":
 	set(value):
@@ -508,5 +521,10 @@ func _face_input_direction(input_dir: Vector3, delta: float) -> void:
 
 
 func _update_local_transform_if_needed() -> void:
-	if controlled_player_id != "":
-		GameData.update_player_transform(controlled_player_id, global_position, rotation.y)
+	if controlled_player_id == "":
+		return
+	GameData.update_player_transform(controlled_player_id, global_position, rotation.y)
+	if controlled_player_id == GameData.local_player_id:
+		# 서버에는 자기 자신(local_player_id)의 위치만 보고한다("player:input" 격).
+		# 다른 캐릭터(로컬 2인 핫싯 등)는 이 클라이언트가 곧 서버가 아니므로 보고하지 않는다.
+		MockServer.report_local_transform(global_position, rotation.y)

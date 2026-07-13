@@ -1,321 +1,228 @@
 extends Node
 
-const TICK_HZ := 10.0 # api-spec.md STATE_TICK_RATE
-const GAME_DURATION := 180 # api-spec.md GAME_DURATION_SECONDS
-const TARGET_SCORE := 5
-const PICKUP_DISTANCE := 2.4 # 수집 반경 확대 (기존 1.2 -> 2.4)
-const DELIVER_DISTANCE := 6.0 # covers the scale-4 Nest footprint (~4.6u radius) so
-# standing anywhere on/next to the visible nest triggers delivery
-const NEST_POSITION := Vector3(-58.5, 1.68, 58.5) # matches Pond.tscn Southwest Nest node
-const NEST_POSITIONS := [
-	Vector3(-58.5, 1.68, 58.5),   # 남서쪽 둥지 (1.3배 멀어짐)
-	Vector3(58.5, 1.68, -58.5)    # 북동쪽 둥지 (1.3배 멀어짐)
-]
-const DELIVER_MOVE_SPEED := 5.0 # units/sec each duckling swims into the nest once dropped off
-const NEST_ARRIVE_DISTANCE := 0.35 # how close counts as "reached the nest center"
-const NEST_SETTLE_TIME := 0.35 # linger inside the nest so the visual node catches up before vanishing
-const INITIAL_DUCKLING_COUNT := TARGET_SCORE + 2
-const WANDER_SPEED := 1.2
-const WANDER_TURN_INTERVAL := 2.0
-const POND_BOUND := 91.0
-const FOLLOW_SPACING := 1.5
-const FOLLOW_LEASH := FOLLOW_SPACING * 1.6 # hard cap on gap so it can't balloon at high speed
-const FOLLOW_LERP_SPEED := 4.0
-const FOLLOW_LERP_FALLOFF := 0.5 # each link back in the chain lags a bit more
-const FOLLOW_LERP_MIN := 1.5
-const MOVING_SPEED_THRESHOLD := 1.0 # player speed (units/sec) above which it's considered "moving"
-const CIRCLE_RADIUS := 2.2
-const CIRCLE_LERP_SPEED := 4.0
-const CIRCLE_SPIN_SPEED := 0.4 # rad/sec, gentle idle rotation around the player
-const ROOM_CODE_CHARS := "0123456789"
-const ROOM_CODE_LENGTH := 4
-const MOCK_JOIN_ROOM_CODE := "1234"
-const MOCK_PUBLIC_ROOM_ID := "public_mock"
+## 실제 Node.js + ws 서버(server/)에 접속하는 네트워크 클라이언트 구현.
+## 예전 MockServer(로컬 시뮬레이션)를 대체한다. 오토로드 이름(MockServer)과 공개
+## 함수 시그니처는 최대한 유지해 메뉴/HUD/월드/플레이어 쪽 호출부를 거의 건드리지
+## 않고 교체할 수 있게 했다. 메시지 계약은 Docs/api-spec.md를 기준으로 한다.
+
+const SERVER_URL := "ws://127.0.0.1:8080/ws" # 배포 시 이 상수만 바꾸면 된다.
+
 const MVP_PLAYER_LIMIT := 3
-const MVP_DUCK_COUNT := 2
 const MVP_TAGGER_COUNT := 1
-const COUNTDOWN_SECONDS := 3
- 
-# 감옥 관련 상수
-const JAIL_POSITION := Vector3(0, 6.7, 0)          # 감옥 텔레포트 목표 좌표 (정중앙 0,0,0 상단)
-const JAIL_RELEASE_RADIUS := 16.0                  # 석방 시 스폰 원의 반지름 (섬 외곽)
-const RESCUE_RADIUS := 11.0                        # 탈옥 시도 가능 거리 (감옥 물리 경계 8.5보다 넓음)
-const RESCUE_DURATION := 3.0                       # 탈옥에 필요한 시간(초)
-const JAIL_SECONDS := 8.0                          # 1인 플레이 시 자동 탈출 시간(초)
-const ALL_JAILED_END_DELAY := 0.2                  # 모든 오리가 갇힌 뒤 종료 메세지가 뜨기까지의 유예 시간(초)
+const JAIL_POSITION := Vector3(0, 6.7, 0) # 감옥 텔레포트 목표 좌표 (서버 상수와 동일해야 함)
 
-# 경찰(악어) 대시 판정: player.gd는 대시 시작 순간 시작/도착 지점만 계산해 begin_dash()로
-# 알려주고("player:dash" 격), 그 경로 위에 오리가 겹치는지 판정하는 건 서버 몫이므로 여기서
-# 한다(이전엔 game.gd가 Player 씬 노드를 직접 들여다보며 판정하고 있었음). DASH_CATCH_HALF_WIDTH는
-# player.gd의 aligator collision_size.x(4.0)의 2배, 즉 대시 경로 양옆으로 악어 몸통 폭만큼 여유를 둔다.
-const DASH_CATCH_HALF_WIDTH := 4.0
+const INPUT_SEND_INTERVAL := 1.0 / 30.0 # player:input 전송 주기(초)
+const RECONNECT_INTERVAL := 2.0
+const REQUEST_TIMEOUT_SECONDS := 8.0 # 연결이 끊긴 채로 요청이 걸려 있을 때 무한 대기하지 않도록
 
-var _broadcast_timer := 0.0
-var _second_timer := 0.0
-var _countdown_timer := 0.0
-var _npc_angle := 0.0
+signal _response_received(request_id: String, result: Dictionary)
 
-const DUCKLING_OBSTACLE_PADDING := 0.4 # 새끼오리 몸체 여유 반경
+var _peer := WebSocketPeer.new()
+var _reconnect_timer := 0.0
+var _awaited_request_ids: Dictionary = {} # request_id -> true, _send_and_await로 응답을 기다리는 중인 요청들
 
-# Internal mock-simulation-only bookkeeping (not part of the api-spec.md Duckling schema).
-var _obstacles: Array = [] # [{"pos": Vector2, "radius": float}, ...] — game.gd가 Pond 소품에서 계산해 등록
-var _wander_state: Dictionary = {} # ducklingId -> {"dir": Vector2, "timer": float}
-var _carry_queues: Dictionary = {} # playerId -> Array[ducklingId]
-var _player_motion: Dictionary = {} # playerId -> {"prev_pos": Vector3, "is_moving": bool, "idle_spin": float}
-var _delivering_settle: Dictionary = {} # ducklingId -> seconds spent settled at the nest center
-var _delivery_batches: Dictionary = {} # batchId -> {playerId, playerName, total, delivered}
-var _next_delivery_batch_id := 1
-
-# 감옥/구출 내부 상태
-var _jail_timer: float = 0.0        # 1인 자동탈출 카운트다운
-var _rescue_timer: float = 0.0      # 현재 구출 진행 시간
-var _is_rescuing: bool = false      # 구출 진행 중 여부
-var _active_rescuer_id: String = "" # 구출 중인 플레이어 id
-var _has_fake_duck: bool = false     # 디버그: 가짜 오리(npc2) 존재 여부
-var _all_jailed_timer: float = -1.0  # 0 이상이면 "모든 오리 수감" 종료 대기 중 (음수면 비활성)
-var _active_dashes: Dictionary = {}  # playerId -> {"a": Vector2, "b": Vector2, "time_left": float} — 판정 중인 대시 경로
+var _pending_position := Vector3.ZERO
+var _pending_rotation_y := 0.0
+var _has_pending_input := false
+var _input_send_timer := 0.0
 
 func _ready() -> void:
-	GameData.target_score = TARGET_SCORE
-	_seed_lobby()
+	_peer.connect_to_url(SERVER_URL)
 
-func _seed_lobby() -> void:
-	GameData.room_id = _generate_room_code()
-	GameData.phase = "lobby"
-	GameData.countdown_seconds = 0
-	GameData.players = [_fake_player("npc1", "Mock Police", "tagger", "aligator")]
-	GameData.room_state_changed.emit()
+func _process(delta: float) -> void:
+	_peer.poll()
+	var state := _peer.get_ready_state()
+	if state == WebSocketPeer.STATE_OPEN:
+		while _peer.get_available_packet_count() > 0:
+			_handle_packet(_peer.get_packet())
+		_flush_pending_input(delta)
+	elif state == WebSocketPeer.STATE_CLOSED:
+		_reconnect_timer += delta
+		if _reconnect_timer >= RECONNECT_INTERVAL:
+			_reconnect_timer = 0.0
+			_peer = WebSocketPeer.new()
+			_peer.connect_to_url(SERVER_URL)
 
-func create_room(nickname: String, room_id: String = "", _room_name: String = "", character_skin: String = "duck") -> Dictionary:
-	var normalized_room_id := _normalize_room_code(room_id)
-	if normalized_room_id != "":
-		if normalized_room_id.length() != ROOM_CODE_LENGTH:
-			return {"ok": false, "message": "방 코드는 네 자리 숫자로 입력해주세요."}
-		if normalized_room_id == MOCK_JOIN_ROOM_CODE:
-			return {"ok": false, "message": "이미 사용 중인 방 코드입니다."}
-	_prepare_lobby(nickname, normalized_room_id, character_skin)
+# ──────────────────────────────────────────────────────────────────────────────
+# 저수준 송수신
+# ──────────────────────────────────────────────────────────────────────────────
+
+func _next_request_id() -> String:
+	return "%d_%d" % [Time.get_ticks_usec(), randi()]
+
+# 항상 requestId를 붙여서 보낸다. create_room처럼 응답을 기다리는 요청뿐 아니라,
+# set_player_team/start_game처럼 "보내고 잊어버리는(fire-and-forget)" 요청도
+# 서버가 error로 거부했을 때 그 requestId를 그대로 돌려주므로, 어느 쪽이든
+# _handle_packet에서 거부 사유를 놓치지 않고 처리할 수 있다.
+func _send(type: String, payload: Dictionary, room_id: String = "") -> String:
+	var request_id := _next_request_id()
+	var msg := {"type": type, "requestId": request_id, "payload": payload}
+	if room_id != "":
+		msg["roomId"] = room_id
+	_peer.send_text(JSON.stringify(msg))
+	return request_id
+
+func _send_and_await(type: String, payload: Dictionary, room_id: String = "") -> Dictionary:
+	if _peer.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return {"ok": false, "message": "서버에 연결할 수 없습니다."}
+	var request_id := _send(type, payload, room_id)
+	_awaited_request_ids[request_id] = true
+	_start_request_timeout(request_id)
+
+	var result: Dictionary = {}
+	var resolved := false
+	while not resolved:
+		var args = await _response_received
+		if args[0] == request_id:
+			result = args[1]
+			resolved = true
+	_awaited_request_ids.erase(request_id)
+	return result
+
+# 응답을 기다리는 도중 연결이 끊기면(_peer가 새 객체로 교체되며 예전 요청은 영영
+# 응답받을 수 없게 된다) 호출자가 영원히 멈추지 않도록, 타임아웃 시 같은 신호로
+# 실패 응답을 대신 흘려보내 _send_and_await의 대기 루프를 풀어준다.
+func _start_request_timeout(request_id: String) -> void:
+	await get_tree().create_timer(REQUEST_TIMEOUT_SECONDS).timeout
+	if _awaited_request_ids.has(request_id):
+		_awaited_request_ids.erase(request_id)
+		_response_received.emit(request_id, {"ok": false, "message": "서버 응답이 없습니다. 다시 시도해주세요."})
+
+func _handle_packet(packet: PackedByteArray) -> void:
+	var parsed = JSON.parse_string(packet.get_string_from_utf8())
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var msg: Dictionary = parsed
+	var type := str(msg.get("type", ""))
+	var payload: Dictionary = msg.get("payload", {})
+
+	match type:
+		"room:joined":
+			GameData.local_player_id = str(payload.get("playerId", GameData.local_player_id))
+			GameData.room_id = str(msg.get("roomId", GameData.room_id))
+			GameData.is_host = bool(payload.get("isHost", false))
+			_apply_room_state(payload.get("state", {}))
+			_resolve_request(msg, {"ok": true, "isHost": GameData.is_host})
+		"room:list":
+			_resolve_request(msg, {"ok": true, "rooms": payload.get("rooms", [])})
+		"room:state":
+			_apply_room_state(payload)
+			GameData.room_state_changed.emit()
+		"game:state":
+			_apply_game_state(payload)
+			GameData.game_state_changed.emit()
+		"game:event":
+			GameData.game_event.emit(str(payload.get("event", "")), payload)
+		"error":
+			_handle_error_message(msg, payload)
+
+# _send_and_await로 응답을 기다리는 중인 요청의 오류면 그 호출자에게 상관관계로
+# 돌려주고, 그렇지 않으면(set_player_team/start_game 같은 fire-and-forget 요청)
+# GameData.action_error로 브로드캐스트해 UI가 알림을 띄울 수 있게 한다.
+func _handle_error_message(msg: Dictionary, payload: Dictionary) -> void:
+	var request_id := str(msg.get("requestId", ""))
+	var code := str(payload.get("code", ""))
+	var message := str(payload.get("message", ""))
+	if request_id != "" and _awaited_request_ids.has(request_id):
+		_resolve_request(msg, {"ok": false, "code": code, "message": message})
+	else:
+		GameData.action_error.emit(code, message)
+
+func _resolve_request(msg: Dictionary, result: Dictionary) -> void:
+	var request_id := str(msg.get("requestId", ""))
+	if request_id != "":
+		_response_received.emit(request_id, result)
+
+func _apply_room_state(state: Dictionary) -> void:
+	if state.has("players"):
+		GameData.players = state["players"]
+	if state.has("hostPlayerId"):
+		GameData.is_host = str(state["hostPlayerId"]) == GameData.local_player_id
+
+func _apply_game_state(payload: Dictionary) -> void:
+	GameData.phase = str(payload.get("phase", GameData.phase))
+	GameData.countdown_seconds = int(payload.get("countdownSeconds", GameData.countdown_seconds))
+	GameData.remaining_seconds = int(payload.get("remainingSeconds", GameData.remaining_seconds))
+	GameData.score = int(payload.get("score", GameData.score))
+	GameData.target_score = int(payload.get("targetScore", GameData.target_score))
+	if payload.has("players"):
+		GameData.players = payload["players"]
+	if payload.has("ducklings"):
+		GameData.ducklings = payload["ducklings"]
+	GameData.winner = payload.get("winner", GameData.winner)
+	var end_reason_value = payload.get("endReason")
+	GameData.end_reason = str(end_reason_value) if end_reason_value != null else ""
+	GameData.rescue_progress = float(payload.get("rescueProgress", GameData.rescue_progress))
+	GameData.active_rescuer_id = str(payload.get("activeRescuerId", GameData.active_rescuer_id))
+
+func _flush_pending_input(delta: float) -> void:
+	_input_send_timer += delta
+	if not _has_pending_input or _input_send_timer < INPUT_SEND_INTERVAL:
+		return
+	_input_send_timer = 0.0
+	_has_pending_input = false
+	_send("player:input", {
+		"position": {"x": _pending_position.x, "y": _pending_position.y, "z": _pending_position.z},
+		"rotationY": _pending_rotation_y,
+	}, GameData.room_id)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 방/로비
+# ──────────────────────────────────────────────────────────────────────────────
+
+func create_room(nickname: String, room_id: String = "", room_name: String = "", character_skin: String = "duck") -> Dictionary:
+	var result: Dictionary = await _send_and_await("room:create", {
+		"nickname": nickname,
+		"roomId": room_id,
+		"roomName": room_name,
+		"characterSkin": character_skin,
+	})
+	if not result.get("ok", false):
+		return {"ok": false, "message": result.get("message", "방을 만들 수 없습니다.")}
+	GameData.menu_entry_view = "lobby"
 	return {"ok": true}
 
 func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck") -> Dictionary:
-	var room := _find_mock_room(room_id)
-	if room.is_empty():
-		return {"ok": false, "message": "존재하지 않는 방입니다."}
-	if bool(room.get("is_private", false)):
-		var normalized_join_code := _normalize_room_code(join_code)
-		if normalized_join_code != str(room.get("join_code", "")):
-			return {"ok": false, "message": "참가 코드가 올바르지 않습니다."}
-	_prepare_mock_join_lobby(nickname, str(room.get("display_room_id", "")), character_skin)
+	var result: Dictionary = await _send_and_await("room:join", {
+		"nickname": nickname,
+		"joinCode": join_code,
+		"characterSkin": character_skin,
+	}, room_id)
+	if not result.get("ok", false):
+		return {"ok": false, "message": result.get("message", "방에 입장할 수 없습니다.")}
+	GameData.menu_entry_view = "lobby"
 	return {"ok": true}
 
 func list_rooms() -> Array:
-	# 실제 멀티룸 백엔드가 없으므로 정적 mock 데이터를 반환한다.
-	return [
-		{
-			"room_id": MOCK_JOIN_ROOM_CODE,
-			"room_name": "Mock Duck",
-			"host_nickname": "Mock Duck",
-			"player_count": 1,
-			"is_private": true,
-			"join_code": MOCK_JOIN_ROOM_CODE,
-			"display_room_id": MOCK_JOIN_ROOM_CODE,
-		},
-		{
-			"room_id": MOCK_PUBLIC_ROOM_ID,
-			"room_name": "테스트방장",
-			"host_nickname": "테스트방장",
-			"player_count": 2,
-			"is_private": false,
-			"join_code": "",
-			"display_room_id": "",
-		},
-	]
-
-func _find_mock_room(room_id: String) -> Dictionary:
-	for room in list_rooms():
-		if str(room.get("room_id", "")) == room_id:
-			return room
-	return {}
-
-func _generate_room_code() -> String:
-	var code := MOCK_JOIN_ROOM_CODE
-	while code == MOCK_JOIN_ROOM_CODE:
-		code = ""
-		for i in range(ROOM_CODE_LENGTH):
-			var index := randi() % ROOM_CODE_CHARS.length()
-			code += ROOM_CODE_CHARS.substr(index, 1)
-	return code
-
-func _normalize_room_code(room_id: String) -> String:
-	var code := ""
-	for i in range(room_id.length()):
-		var c := room_id.substr(i, 1)
-		if c >= "0" and c <= "9":
-			code += c
-		if code.length() >= ROOM_CODE_LENGTH:
-			break
-	return code
-
-func _prepare_lobby(nickname: String, room_id: String, character_skin: String = "duck") -> void:
-	var normalized_nickname := nickname.strip_edges()
-	if normalized_nickname == "":
-		normalized_nickname = "Player"
-
-	GameData.room_id = room_id
-	GameData.local_nickname = normalized_nickname
-	GameData.phase = "lobby"
-	GameData.countdown_seconds = 0
-	GameData.remaining_seconds = 0
-	GameData.score = 0
-	GameData.winner = null
-	GameData.end_reason = ""
-	GameData.ducklings = []
-	GameData.menu_entry_view = "lobby"
-	_delivery_batches.clear()
-	GameData.players = [
-		_fake_player(GameData.local_player_id, normalized_nickname, "duck", character_skin, false),
-	]
-	GameData.room_state_changed.emit()
-
-func _prepare_mock_join_lobby(nickname: String, display_room_id: String = MOCK_JOIN_ROOM_CODE, character_skin: String = "duck") -> void:
-	var normalized_nickname := nickname.strip_edges()
-	if normalized_nickname == "":
-		normalized_nickname = "Player"
-
-	GameData.room_id = display_room_id
-	GameData.local_nickname = normalized_nickname
-	GameData.phase = "lobby"
-	GameData.countdown_seconds = 0
-	GameData.remaining_seconds = 0
-	GameData.score = 0
-	GameData.winner = null
-	GameData.end_reason = ""
-	GameData.ducklings = []
-	GameData.menu_entry_view = "lobby"
-	_delivery_batches.clear()
-	GameData.players = [
-		_fake_player(GameData.local_player_id, normalized_nickname, "duck", character_skin, false),
-		_fake_player("mock1", "Mock Police", "tagger", "aligator", true),
-		_fake_player("mock2", "Mock Duck", "duck", "duck", true),
-	]
-	GameData.room_state_changed.emit()
-
-func start_game() -> bool:
-	if not can_start_game():
-		return false
-	_broadcast_timer = 0.0
-	_second_timer = 0.0
-	_countdown_timer = float(COUNTDOWN_SECONDS)
-	GameData.phase = "countdown"
-	GameData.countdown_seconds = COUNTDOWN_SECONDS
-	GameData.remaining_seconds = GAME_DURATION
-	GameData.score = 0
-	GameData.winner = null
-	GameData.end_reason = ""
-	_wander_state.clear()
-	_carry_queues.clear()
-	_player_motion.clear()
-	_delivering_settle.clear()
-	_delivery_batches.clear()
-	_active_dashes.clear()
-	_next_delivery_batch_id = 1
-	var ducklings: Array = []
-	var placed_positions: Array[Vector2] = []
-	for i in range(INITIAL_DUCKLING_COUNT):
-		var d := _fake_duckling("d%d" % (i + 1), placed_positions)
-		ducklings.append(d)
-		placed_positions.append(Vector2(d["position"]["x"], d["position"]["z"]))
-	GameData.ducklings = ducklings
-	_place_players_in_countdown()
-	GameData.game_state_changed.emit()
-	return true
-
-func can_start_game() -> bool:
-	var duck_count := _count_duck_players()
-	var tagger_count := _count_tagger_players()
-	var player_count := GameData.players.size()
-	return tagger_count == MVP_TAGGER_COUNT and duck_count >= 1 and duck_count <= MVP_DUCK_COUNT and player_count == tagger_count + duck_count
-
-func can_add_mock_player() -> bool:
-	return GameData.phase == "lobby" and GameData.players.size() < MVP_PLAYER_LIMIT
-
-func add_mock_player() -> bool:
-	if not can_add_mock_player():
-		return false
-
-	var mock_index: int = 1
-	var player_id: String = "mock%d" % mock_index
-	while _player_exists(player_id):
-		mock_index += 1
-		player_id = "mock%d" % mock_index
-
-	var team: String = "duck"
-	var character: String = "duck"
-	var nickname: String = "Mock Duck"
-	if _count_tagger_players() < MVP_TAGGER_COUNT:
-		team = "tagger"
-		character = "aligator"
-		nickname = "Mock Police"
-
-	GameData.players.append(_fake_player(player_id, nickname, team, character, true))
-	GameData.room_state_changed.emit()
-	return true
+	var result: Dictionary = await _send_and_await("room:list", {})
+	if not result.get("ok", false):
+		return []
+	var out: Array = []
+	for r in result.get("rooms", []):
+		out.append({
+			"room_id": str(r.get("roomId", "")),
+			"room_name": str(r.get("roomName", "")),
+			"host_nickname": str(r.get("hostNickname", "")),
+			"player_count": int(r.get("playerCount", 0)),
+			"is_private": bool(r.get("isPrivate", false)),
+		})
+	return out
 
 func set_player_nickname(player_id: String, nickname: String) -> void:
-	var normalized := nickname.strip_edges()
-	if normalized == "":
-		normalized = "Player"
-	for player in GameData.players:
-		if str(player.get("playerId", "")) == player_id:
-			player["nickname"] = normalized
-			if player_id == GameData.local_player_id:
-				GameData.local_nickname = normalized
-			return
+	if player_id != GameData.local_player_id:
+		return # 실제 서버에서는 자기 자신의 닉네임만 바꿀 수 있다.
+	_send("player:setNickname", {"nickname": nickname}, GameData.room_id)
 
-func can_set_player_team(player_id: String, team: String) -> bool:
-	if team != "duck" and team != "tagger":
-		return false
-
-	var current_team := ""
-	for player in GameData.players:
-		if str(player.get("playerId", "")) == player_id:
-			current_team = str(player.get("team", ""))
-			break
-
-	if current_team == team:
-		return true
-
-	var taggers := 0
-	for player in GameData.players:
-		if str(player.get("playerId", "")) == player_id:
-			continue
-		if str(player.get("team", "")) == "tagger":
-			taggers += 1
-
-	if team == "duck":
-		return true
-	return taggers < MVP_TAGGER_COUNT
-
-func set_player_team(player_id: String, team: String, character_skin: String = "duck") -> bool:
-	if not can_set_player_team(player_id, team):
-		return false
-
-	for player in GameData.players:
-		if str(player.get("playerId", "")) != player_id:
-			continue
-		player["team"] = team
-		if team == "tagger":
-			player["character"] = "aligator"
-		else:
-			player["character"] = character_skin
-		GameData.room_state_changed.emit()
-		return true
-	return false
+func can_start_game() -> bool:
+	# 역할은 게임 시작 시 서버가 무작위로 배정하므로, 시작 조건은 인원수로만 판단한다.
+	var player_count := GameData.players.size()
+	return player_count >= (MVP_TAGGER_COUNT + 1) and player_count <= MVP_PLAYER_LIMIT
 
 func lobby_status_text() -> String:
-	var duck_count := _count_duck_players()
+	var player_count := GameData.players.size()
 	if can_start_game():
-		return "시작 가능: 경찰 1명, 오리 %d명" % duck_count
-	return "필요 조건: 경찰 1명, 오리 1~2명"
+		return "시작 가능 (현재 %d명, 역할은 시작 시 무작위 배정)" % player_count
+	return "대기 중: 2~%d명이 모이면 시작할 수 있습니다 (현재 %d명)" % [MVP_PLAYER_LIMIT, player_count]
 
 func local_player_team() -> String:
 	for player in GameData.players:
@@ -324,15 +231,13 @@ func local_player_team() -> String:
 	return "duck"
 
 func arrow_control_player_id() -> String:
+	# 한 기기에서 방향키로 두 번째 캐릭터를 조작하는 로컬 시연(핫싯) 기능. 순수 로컬
+	# 읽기라 네트워크 여부와 무관하게 동작한다. 다만 실제 서버에는 자기 자신
+	# (local_player_id)의 위치/대시만 보고되므로, 이렇게 조작하는 두 번째 캐릭터의
+	# 움직임은 다른 클라이언트 화면에는 반영되지 않는다(같은 화면을 보는 로컬 시연용).
 	var target_team := "duck"
 	if local_player_team() == "duck":
 		target_team = "tagger"
-
-	for player in GameData.players:
-		if str(player.get("playerId", "")) == GameData.local_player_id:
-			continue
-		if bool(player.get("isMock", false)) and str(player.get("team", "")) == target_team:
-			return str(player.get("playerId", ""))
 
 	for player in GameData.players:
 		if str(player.get("playerId", "")) == GameData.local_player_id:
@@ -341,764 +246,42 @@ func arrow_control_player_id() -> String:
 			return str(player.get("playerId", ""))
 	return ""
 
+func start_game() -> bool:
+	if not can_start_game():
+		return false
+	_send("game:start", {}, GameData.room_id)
+	return true
+
 func return_to_lobby() -> void:
-	GameData.phase = "lobby"
-	GameData.countdown_seconds = 0
-	GameData.remaining_seconds = 0
-	GameData.winner = null
-	GameData.end_reason = ""
-	GameData.ducklings = []
 	GameData.menu_entry_view = "lobby"
-	_delivery_batches.clear()
-	_wander_state.clear()
-	_carry_queues.clear()
-	_player_motion.clear()
-	_delivering_settle.clear()
-	_active_dashes.clear()
-	_reset_rescue()
-	for i in range(GameData.players.size()):
-		var player: Dictionary = GameData.players[i]
-		player["state"] = "idle"
-		player["carryingDucklingId"] = null
-		player["jailedUntil"] = null
-		player.erase("jailRemaining")
-		var spawn: Vector3 = _spawn_position_for_character(str(player.get("character", "")))
-		player["position"] = {"x": spawn.x, "y": spawn.y, "z": spawn.z}
-		GameData.players[i] = player
-	GameData.room_state_changed.emit()
-	GameData.game_state_changed.emit()
+	_send("game:returnToLobby", {}, GameData.room_id)
 
-func finish_game_for_test(winner: String = "duck") -> void:
-	if winner != "duck" and winner != "tagger":
-		winner = "duck"
-	var reason := "time_up"
-	if winner == "duck":
-		reason = "duck_goal"
-	_end_game(winner, reason)
-
-func _process(delta: float) -> void:
-	if GameData.phase == "countdown":
-		_update_countdown(delta)
-		return
-
-	if GameData.phase != "playing":
-		return
-
-	_second_timer += delta
-	if _second_timer >= 1.0:
-		_second_timer -= 1.0
-		GameData.remaining_seconds = max(0, GameData.remaining_seconds - 1)
-		if GameData.remaining_seconds <= 0:
-			_end_game("tagger", "time_up")
-			return
-
-	_update_duckling_wander(delta)
-	_check_pickup()
-	_update_player_motion(delta)
-	_update_duckling_follow(delta)
-	_check_deliver()
-	_update_delivering(delta)
-	_update_dash_catches(delta)
-	_update_jail_and_rescue(delta)
-	_update_all_jailed_end(delta)
-
-	_broadcast_timer += delta
-	if _broadcast_timer >= 1.0 / TICK_HZ:
-		_broadcast_timer = 0.0
-		GameData.game_state_changed.emit()
-
-func register_obstacles(list: Array) -> void:
-	_obstacles = list
-
-# 새끼오리가 바위/덤불/나무(등록된 장애물) 안으로 들어가지 않도록 원 밖으로 밀어낸다.
-func _push_out_of_props(pos: Vector2) -> Vector2:
-	var result := pos
-	for obs in _obstacles:
-		var min_dist: float = obs["radius"] + DUCKLING_OBSTACLE_PADDING
-		var offset: Vector2 = result - obs["pos"]
-		var dist: float = offset.length()
-		if dist < min_dist:
-			if dist < 0.001:
-				offset = Vector2(1, 0)
-				dist = 0.001
-			result = obs["pos"] + offset.normalized() * min_dist
-	return result
-
-func _update_duckling_wander(delta: float) -> void:
-	for d in GameData.ducklings:
-		if d["state"] != "spawned":
-			continue
-		var id: String = d["ducklingId"]
-		var w: Dictionary = _wander_state.get(id, {"dir": Vector2.ZERO, "timer": 0.0})
-		w["timer"] -= delta
-		if w["timer"] <= 0.0 or w["dir"] == Vector2.ZERO:
-			var angle := randf_range(0.0, TAU)
-			w["dir"] = Vector2(cos(angle), sin(angle))
-			w["timer"] = randf_range(WANDER_TURN_INTERVAL * 0.5, WANDER_TURN_INTERVAL * 1.5)
-		_wander_state[id] = w
-
-		var pos: Dictionary = d["position"]
-		var next_x: float = clamp(pos["x"] + w["dir"].x * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
-		var next_z: float = clamp(pos["z"] + w["dir"].y * WANDER_SPEED * delta, -POND_BOUND, POND_BOUND)
-
-		var pushed_pos := _push_out_of_props(Vector2(next_x, next_z))
-		if pushed_pos != Vector2(next_x, next_z):
-			w["dir"] = -w["dir"] # 장애물에서 튕겨 나가도록 방향 반전
-			_wander_state[id] = w
-		d["position"] = {"x": pushed_pos.x, "y": pos["y"], "z": pushed_pos.y}
-
-func _check_pickup() -> void:
-	for player in GameData.players:
-		if player["team"] != "duck":
-			continue
-		var player_id: String = player["playerId"]
-		var player_pos := _dict_to_vec3(player["position"])
-		for d in GameData.ducklings:
-			if d["state"] != "spawned":
-				continue
-			var duckling_pos := _dict_to_vec3(d["position"])
-			if player_pos.distance_to(duckling_pos) <= PICKUP_DISTANCE:
-				d["state"] = "carried"
-				d["carrierPlayerId"] = player_id
-				_wander_state.erase(d["ducklingId"])
-				var queue: Array = _carry_queues.get(player_id, [])
-				queue.append(d["ducklingId"])
-				_carry_queues[player_id] = queue
-
-func release_ducklings(player_id: String, at_position: Vector3) -> void:
-	# Called when the duck is caught: drop everything it was carrying back into the
-	# pond at the catch spot (state -> spawned so they wander and can be re-collected).
-	var queue: Array = _carry_queues.get(player_id, [])
-	if queue.is_empty():
-		return
-	var ducklings_by_id := {}
-	for d in GameData.ducklings:
-		ducklings_by_id[d["ducklingId"]] = d
-	for duckling_id in queue:
-		var d = ducklings_by_id.get(duckling_id)
-		if d == null:
-			continue
-		var angle := randf_range(0.0, TAU)
-		var radius := randf_range(1.0, 3.0)
-		var drop_x := at_position.x + cos(angle) * radius
-		var drop_z := at_position.z + sin(angle) * radius
-		var flat_drop := _push_out_of_props(Vector2(drop_x, drop_z))
-
-		d["position"] = {"x": flat_drop.x, "y": 0.0, "z": flat_drop.y}
-		d["state"] = "spawned"
-		d["carrierPlayerId"] = null
-		_wander_state.erase(duckling_id)
-	_carry_queues[player_id] = []
-	GameData.game_state_changed.emit()
-
-func _update_player_motion(delta: float) -> void:
-	for player in GameData.players:
-		if player["team"] != "duck":
-			continue
-		var player_id: String = player["playerId"]
-		var pos := _dict_to_vec3(player["position"])
-		var m: Dictionary = _player_motion.get(player_id, {"prev_pos": pos, "is_moving": false, "idle_spin": 0.0})
-		var speed := 0.0
-		if delta > 0.0:
-			speed = pos.distance_to(m["prev_pos"]) / delta
-		m["is_moving"] = speed > MOVING_SPEED_THRESHOLD
-		m["prev_pos"] = pos
-		if not m["is_moving"]:
-			m["idle_spin"] += delta * CIRCLE_SPIN_SPEED
-		_player_motion[player_id] = m
-
-func _update_duckling_follow(delta: float) -> void:
-	var players_by_id := {}
-	for player in GameData.players:
-		players_by_id[player["playerId"]] = player
-
-	var ducklings_by_id := {}
-	for d in GameData.ducklings:
-		ducklings_by_id[d["ducklingId"]] = d
-
-	for player_id in _carry_queues.keys():
-		var player = players_by_id.get(player_id)
-		if player == null:
-			continue
-		var queue: Array = _carry_queues[player_id]
-		if queue.is_empty():
-			continue
-		var player_pos := _dict_to_vec3(player["position"])
-		var motion: Dictionary = _player_motion.get(player_id, {"is_moving": false, "idle_spin": 0.0})
-
-		if motion["is_moving"]:
-			# Leader-follows-leader chain: each duckling keeps roughly FOLLOW_SPACING
-			# distance from the node in front of it, but lags behind with its own
-			# lerp speed so the line goes loose/slack through turns instead of
-			# rotating as a rigid rod.
-			var leader_pos := player_pos
-			for i in range(queue.size()):
-				var d = ducklings_by_id.get(queue[i])
-				if d == null:
-					continue
-				var current := _dict_to_vec3(d["position"])
-				var to_leader := current - leader_pos
-				var dist := to_leader.length()
-				var dir := Vector3.BACK
-				if dist > 0.01:
-					dir = to_leader.normalized()
-				var next_pos: Vector3
-				if dist > FOLLOW_LEASH:
-					# Rope pulled taut: hard-clamp the gap so it can never keep growing
-					# while the leader is moving faster than the lerp can catch up.
-					next_pos = leader_pos + dir * FOLLOW_LEASH
-				else:
-					var target := leader_pos + dir * FOLLOW_SPACING
-					var lerp_speed: float = max(FOLLOW_LERP_MIN, FOLLOW_LERP_SPEED - i * FOLLOW_LERP_FALLOFF)
-					next_pos = current.lerp(target, clamp(delta * lerp_speed, 0.0, 1.0))
-
-				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
-				leader_pos = next_pos
-		else:
-			# Idle: gather loosely in a slowly-rotating circle beside the player.
-			var count := queue.size()
-			for i in range(count):
-				var d = ducklings_by_id.get(queue[i])
-				if d == null:
-					continue
-				var angle: float = motion["idle_spin"] + (TAU / count) * i
-				var target := player_pos + Vector3(cos(angle), 0, sin(angle)) * CIRCLE_RADIUS
-				var current := _dict_to_vec3(d["position"])
-				var next_pos := current.lerp(target, clamp(delta * CIRCLE_LERP_SPEED, 0.0, 1.0))
-
-				d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
-
-func _check_deliver() -> void:
-	for player in GameData.players:
-		if player["team"] != "duck":
-			continue
-		var player_id: String = player["playerId"]
-		var queue: Array = _carry_queues.get(player_id, [])
-		if queue.is_empty():
-			continue
-		var player_pos := _dict_to_vec3(player["position"])
-
-		# 가장 가까운 둥지를 찾는다.
-		var nearest_nest := NEST_POSITIONS[0]
-		var min_dist := player_pos.distance_to(nearest_nest)
-		for nest_pos in NEST_POSITIONS:
-			var d := player_pos.distance_to(nest_pos)
-			if d < min_dist:
-				min_dist = d
-				nearest_nest = nest_pos
-
-		if min_dist > DELIVER_DISTANCE:
-			continue
-
-		var ducklings_by_id := {}
-		for d in GameData.ducklings:
-			ducklings_by_id[d["ducklingId"]] = d
-
-		var delivering_ducklings: Array = []
-		for duckling_id in queue:
-			var d = ducklings_by_id.get(duckling_id)
-			if d == null:
-				continue
-			delivering_ducklings.append(d)
-
-		if delivering_ducklings.is_empty():
-			_carry_queues[player_id] = []
-			continue
-
-		var batch_id: String = "delivery_%d" % _next_delivery_batch_id
-		_next_delivery_batch_id += 1
-		_delivery_batches[batch_id] = {
-			"playerId": player_id,
-			"playerName": str(player.get("nickname", player_id)),
-			"total": delivering_ducklings.size(),
-			"delivered": 0,
-			"target_nest_pos": nearest_nest,  # 이 배치에 속한 새끼오리들의 목적지 설정
-		}
-
-		# Hand the carried ducklings off to the "delivering" state instead of
-		# scoring them instantly. They then swim into the nest on their own
-		# (see _update_delivering), then emit one notification when the whole
-		# batch has arrived.
-		for d in delivering_ducklings:
-			d["state"] = "delivering"
-			d["carrierPlayerId"] = null
-			d["deliveryBatchId"] = batch_id
-
-		_carry_queues[player_id] = []
-
-func _update_delivering(delta: float) -> void:
-	for d in GameData.ducklings:
-		if d["state"] != "delivering":
-			continue
-		var id: String = d["ducklingId"]
-		var current := _dict_to_vec3(d["position"])
-
-		# 배치 ID를 통해 어떤 둥지로 헤엄칠지 확인한다.
-		var target_nest := NEST_POSITIONS[0]
-		var batch_id: String = str(d.get("deliveryBatchId", ""))
-		if batch_id != "" and _delivery_batches.has(batch_id):
-			target_nest = _delivery_batches[batch_id].get("target_nest_pos", NEST_POSITIONS[0])
-
-		var to_nest := target_nest - current
-		var dist := to_nest.length()
-		if dist > NEST_ARRIVE_DISTANCE:
-			var step: float = min(DELIVER_MOVE_SPEED * delta, dist)
-			var next_pos := current + to_nest.normalized() * step
-			d["position"] = {"x": next_pos.x, "y": next_pos.y, "z": next_pos.z}
-			continue
-
-		# Reached the nest: pin it there and let it settle briefly so the visual
-		# duckling can catch up, then mark delivered (which despawns the node).
-		d["position"] = {"x": target_nest.x, "y": target_nest.y, "z": target_nest.z}
-		var settled: float = _delivering_settle.get(id, 0.0) + delta
-		_delivering_settle[id] = settled
-		if settled >= NEST_SETTLE_TIME:
-			_delivering_settle.erase(id)
-			_rescue_duckling(d)
-
-func _rescue_duckling(d: Dictionary) -> void:
-	d["state"] = "delivered"
-	GameData.score += 1
-
-	var batch_id: String = str(d.get("deliveryBatchId", ""))
-	d.erase("deliveryBatchId")
-
-	if batch_id == "" or not _delivery_batches.has(batch_id):
-		GameData.game_event.emit("duckling_delivered", {"ducklingId": d["ducklingId"], "count": 1})
-		if GameData.score >= GameData.target_score:
-			_end_game("duck", "duck_goal")
-		return
-
-	var batch: Dictionary = _delivery_batches[batch_id]
-	batch["delivered"] = int(batch.get("delivered", 0)) + 1
-	_delivery_batches[batch_id] = batch
-
-	if int(batch["delivered"]) < int(batch["total"]):
-		return
-
-	_delivery_batches.erase(batch_id)
-	GameData.game_event.emit("duckling_delivered", {
-		"ducklingId": d["ducklingId"],
-		"count": int(batch["total"]),
-		"playerId": str(batch["playerId"]),
-		"playerName": str(batch["playerName"]),
-	})
-	if GameData.score >= GameData.target_score:
-		_end_game("duck", "duck_goal")
+func leave_room() -> void:
+	_send("room:leave", {}, GameData.room_id)
+	GameData.room_id = ""
+	GameData.is_host = false
+	GameData.players = []
 
 # ──────────────────────────────────────────────────────────────────────────────
-# 대시 판정 (경찰 전용) — player.gd는 입력만 보고하고, 오리와의 겹침 판정은 여기서 한다.
+# 인게임
 # ──────────────────────────────────────────────────────────────────────────────
 
-func begin_dash(_player_id: String, start_pos: Vector3, end_pos: Vector3, duration: float) -> void:
-	# "player:dash" 격: player.gd가 대시를 시작하는 순간 시작/도착 지점을 알려주면,
-	# 그 경로가 유지되는 동안(매 틱) 오리와 겹치는지는 서버(MockServer)가 자체적으로 판정한다.
-	# 경로 자체는 시작 시점에 고정되므로 프레임마다 다시 계산할 필요가 없고, duration 동안
-	# 매 틱 최신 오리 위치와 비교해 어느 프레임에 겹치든 놓치지 않는다.
-	GameData.game_event.emit("dash_started", {"playerId": _player_id})
-	_active_dashes[_player_id] = {
-		"a": Vector2(start_pos.x, start_pos.z),
-		"b": Vector2(end_pos.x, end_pos.z),
-		"time_left": duration,
-	}
+func register_obstacles(_list: Array) -> void:
+	pass # 서버가 정적 장애물 좌표(Pond.tscn에서 추출해 하드코딩)를 자체적으로 알고 있어 필요 없다.
 
-func _update_dash_catches(delta: float) -> void:
-	for dasher_id in _active_dashes.keys():
-		var dash: Dictionary = _active_dashes[dasher_id]
-		dash["time_left"] -= delta
-		if dash["time_left"] <= 0.0:
-			_active_dashes.erase(dasher_id)
-			continue
-		_active_dashes[dasher_id] = dash
-		_check_dash_catch(dash["a"], dash["b"])
-
-func _check_dash_catch(seg_a: Vector2, seg_b: Vector2) -> void:
-	for player in GameData.players:
-		if str(player.get("team", "")) != "duck":
-			continue
-		if str(player.get("state", "")) == "jailed":
-			continue
-		var pos := _dict_to_vec3(player["position"])
-		var p := Vector2(pos.x, pos.z)
-		if _distance_point_to_segment(p, seg_a, seg_b) <= DASH_CATCH_HALF_WIDTH:
-			# 경로와 겹치는 그 틱에 바로 수감 처리해 "부딪힌 순간 = 잡힘"이 명확하게 보이도록 한다.
-			jail_player(str(player["playerId"]))
-
-func _distance_point_to_segment(p: Vector2, a: Vector2, b: Vector2) -> float:
-	var ab := b - a
-	var len_sq := ab.length_squared()
-	if len_sq < 0.0001:
-		return p.distance_to(a)
-	var t: float = clamp((p - a).dot(ab) / len_sq, 0.0, 1.0)
-	return p.distance_to(a + ab * t)
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 감옥 / 구출 로직
-# ──────────────────────────────────────────────────────────────────────────────
-
-func jail_player(player_id: String) -> void:
-	# 해당 플레이어를 수감 상태로 전환하고 들고 있던 새끼오리를 떨어뜨린다.
-	var player_found := false
-	for p in GameData.players:
-		if p["playerId"] != player_id:
-			continue
-		if p["state"] == "jailed":
-			return  # 이미 수감 중
-		player_found = true
-		p["state"] = "jailed"
-		if _count_duck_players() == 1:
-			p["jailRemaining"] = JAIL_SECONDS
-		else:
-			p.erase("jailRemaining")
-		var catch_pos := _dict_to_vec3(p["position"])
-		p["position"] = {"x": JAIL_POSITION.x, "y": JAIL_POSITION.y, "z": JAIL_POSITION.z}
-		release_ducklings(player_id, catch_pos)
-		break
-
-	if not player_found:
+func begin_dash(player_id: String, start_pos: Vector3, end_pos: Vector3, duration: float) -> void:
+	if player_id != GameData.local_player_id:
 		return
+	_send("player:dash", {
+		"startPosition": {"x": start_pos.x, "y": start_pos.y, "z": start_pos.z},
+		"endPosition": {"x": end_pos.x, "y": end_pos.y, "z": end_pos.z},
+		"duration": duration,
+	}, GameData.room_id)
 
-	# 1인 자동탈출 타이머 초기화
-	# 구출 진행 리셋
-	_reset_rescue()
-	GameData.game_event.emit("player_jailed", {"playerId": player_id})
-	var total_ducks := _count_duck_players()
-	if total_ducks > 1 and _count_jailed_ducks() >= total_ducks:
-		# 잡히는 동작(수감 처리)은 그대로 즉시 일어나지만, 종료 메세지는 여기서 바로 띄우지
-		# 않고 ALL_JAILED_END_DELAY초 뒤 _update_all_jailed_end에서 다시 확인 후 띄운다.
-		# (대시를 누른 프레임에 곧바로 승리 메세지가 뜨는 것처럼 보이는 문제를 방지)
-		_all_jailed_timer = ALL_JAILED_END_DELAY
-		GameData.game_state_changed.emit()
-		return
-	GameData.game_state_changed.emit()
+func report_local_transform(pos: Vector3, rotation_y: float) -> void:
+	# player.gd가 자기 자신(local_player_id)의 위치를 매 프레임 알려주면, 여기서
+	# INPUT_SEND_INTERVAL 주기로 스로틀링해 player:input으로 서버에 보고한다.
+	_pending_position = pos
+	_pending_rotation_y = rotation_y
+	_has_pending_input = true
 
-func _release_player(player_id: String, is_rescue: bool) -> void:
-	# 감옥 중심 주변 원 위의 랜덤 위치를 생성해 플레이어를 석방한다.
-	var release_pos := _random_release_pos()
-
-	for p in GameData.players:
-		if p["playerId"] != player_id:
-			continue
-		p["state"] = "idle"
-		p.erase("jailRemaining")
-		p["position"] = {
-			"x": release_pos.x,
-			"y": release_pos.y,
-			"z": release_pos.z,
-		}
-		break
-
-	var pos_dict := {"x": release_pos.x, "y": release_pos.y, "z": release_pos.z}
-	if is_rescue:
-		GameData.game_event.emit("player_rescued", {
-			"targetId": player_id,
-			"rescuerId": _active_rescuer_id,
-			"releasePosition": pos_dict,
-		})
-	else:
-		GameData.game_event.emit("player_released", {
-			"playerId": player_id,
-			"releasePosition": pos_dict,
-		})
-	GameData.game_state_changed.emit()
-
-func _random_release_pos() -> Vector3:
-	# 감옥 섬 XZ 중심에서 JAIL_RELEASE_RADIUS 거리의 원 위에서
-	# 랜덤 각도를 골라 석방 위치를 반환한다. Y=0 (연못 수면).
-	var angle := randf_range(0.0, TAU)
-	return Vector3(
-		JAIL_POSITION.x + cos(angle) * JAIL_RELEASE_RADIUS,
-		0.0,
-		JAIL_POSITION.z + sin(angle) * JAIL_RELEASE_RADIUS
-	)
-
-func _rescue_all_jailed() -> void:
-	# 현재 수감 중인 오리 플레이어를 전원 석방한다.
-	var jailed_ids: Array = []
-	for p in GameData.players:
-		if p["team"] == "duck" and p["state"] == "jailed":
-			jailed_ids.append(p["playerId"])
-	for pid in jailed_ids:
-		_release_player(pid, true)
-
-func _reset_rescue() -> void:
-	_rescue_timer = 0.0
-	_is_rescuing = false
-	_active_rescuer_id = ""
-	GameData.rescue_progress = 0.0
-	GameData.active_rescuer_id = ""
-
-func _count_jailed_ducks() -> int:
-	var count := 0
-	for p in GameData.players:
-		if p["team"] == "duck" and p["state"] == "jailed":
-			count += 1
-	return count
-
-func _count_duck_players() -> int:
-	var count := 0
-	for p in GameData.players:
-		if p["team"] == "duck":
-			count += 1
-	return count
-
-func _count_tagger_players() -> int:
-	var count := 0
-	for p in GameData.players:
-		if str(p.get("team", "")) == "tagger":
-			count += 1
-	return count
-
-func _update_auto_jail_release(delta: float) -> void:
-	if _count_duck_players() != 1:
-		return
-
-	var release_ids: Array = []
-	for i in range(GameData.players.size()):
-		var player: Dictionary = GameData.players[i]
-		if str(player.get("team", "")) != "duck":
-			continue
-		if str(player.get("state", "")) != "jailed":
-			continue
-		var remaining := float(player.get("jailRemaining", JAIL_SECONDS)) - delta
-		player["jailRemaining"] = remaining
-		GameData.players[i] = player
-		if remaining <= 0.0:
-			release_ids.append(str(player.get("playerId", "")))
-
-	for player_id in release_ids:
-		_active_rescuer_id = ""
-		_release_player(player_id, false)
-
-func _update_all_jailed_end(delta: float) -> void:
-	if _all_jailed_timer < 0.0:
-		return
-
-	var total_ducks := _count_duck_players()
-	if total_ducks <= 1 or _count_jailed_ducks() < total_ducks:
-		# 대기 중에 누군가 구출되어 더 이상 "전원 수감" 상태가 아니면 취소한다.
-		_all_jailed_timer = -1.0
-		return
-
-	_all_jailed_timer -= delta
-	if _all_jailed_timer <= 0.0:
-		_all_jailed_timer = -1.0
-		_end_game("tagger", "all_ducks_jailed")
-
-
-func _update_jail_and_rescue(delta: float) -> void:
-	_update_auto_jail_release(delta)
-	var jailed_count := _count_jailed_ducks()
-
-	# 수감된 오리가 없으면 리셋 후 종료
-	if jailed_count == 0:
-		if _is_rescuing:
-			_reset_rescue()
-		return
-
-	# ── 1인 모드: 자동 탈출 ──────────────────────────────────────────────────
-	if false:
-		# 모든 오리가 수감된 경우: 자동탈출 타이머만 진행
-		_jail_timer -= delta
-		if _jail_timer <= 0:
-			var jailed_ids: Array = []
-			for p in GameData.players:
-				if p["team"] == "duck" and p["state"] == "jailed":
-					jailed_ids.append(p["playerId"])
-			for pid in jailed_ids:
-				_active_rescuer_id = "" # 자동탈출은 구출자 없음
-				_release_player(pid, false)
-			_reset_rescue()
-		return
-
-	# ── 멀티 모드: 자유 오리가 감옥 근처에 있으면 구출 진행 ─────────────────
-	var jail_pos_vec := JAIL_POSITION
-	var potential_rescuer_id := ""
-
-	for p in GameData.players:
-		if p["team"] != "duck":
-			continue
-		if p["state"] == "jailed":
-			continue
-		var ppos := _dict_to_vec3(p["position"])
-		if ppos.distance_to(jail_pos_vec) <= RESCUE_RADIUS:
-			potential_rescuer_id = p["playerId"]
-			break
-
-	if potential_rescuer_id == "":
-		# 구출자가 구역을 벗어남 → 진행 리셋
-		if _is_rescuing:
-			_reset_rescue()
-		return
-
-	# 새 구출자가 들어왔을 때 또는 이미 진행 중인 경우
-	if not _is_rescuing:
-		_is_rescuing = true
-		_active_rescuer_id = potential_rescuer_id
-		_rescue_timer = 0.0
-		GameData.active_rescuer_id = potential_rescuer_id
-		GameData.game_event.emit("rescue_started", {"rescuerId": potential_rescuer_id})
-
-	# 같은 구출자가 계속 머무는 경우만 진행 (다른 사람이 오면 리셋)
-	if _active_rescuer_id != potential_rescuer_id:
-		_reset_rescue()
-		return
-
-	_rescue_timer += delta
-	GameData.rescue_progress = clamp(_rescue_timer / RESCUE_DURATION, 0.0, 1.0)
-
-	if _rescue_timer >= RESCUE_DURATION:
-		var rescuer_id := _active_rescuer_id
-		_rescue_all_jailed()
-		_reset_rescue()
-
-# ──────────────────────────────────────────────────────────────────────────────
-# 디버그 헬퍼
-# ──────────────────────────────────────────────────────────────────────────────
-
-func debug_jail_local_player() -> void:
-	if GameData.phase != "playing":
-		return
-	jail_player(GameData.local_player_id)
-
-func debug_toggle_fake_duck() -> void:
-	if GameData.phase != "playing":
-		return
-	if _has_fake_duck:
-		# npc2 제거
-		var new_players: Array = []
-		for p in GameData.players:
-			if p["playerId"] != "npc2":
-				new_players.append(p)
-		GameData.players = new_players
-		_carry_queues.erase("npc2")
-		_player_motion.erase("npc2")
-		_has_fake_duck = false
-	else:
-		# npc2 추가
-		GameData.players.append(_fake_player("npc2", "Mock Duck", "duck", "duck", true))
-		_has_fake_duck = true
-	GameData.game_state_changed.emit()
-
-func debug_jail_fake_duck() -> void:
-	if GameData.phase != "playing" or not _has_fake_duck:
-		return
-	jail_player("npc2")
-
-func _dict_to_vec3(pos: Dictionary) -> Vector3:
-	return Vector3(pos["x"], pos["y"], pos["z"])
-
-func _update_countdown(delta: float) -> void:
-	_countdown_timer = max(0.0, _countdown_timer - delta)
-	var next_seconds := int(ceil(_countdown_timer))
-	if next_seconds != GameData.countdown_seconds:
-		GameData.countdown_seconds = next_seconds
-		GameData.game_state_changed.emit()
-	if _countdown_timer <= 0.0:
-		_begin_playing()
-
-func _begin_playing() -> void:
-	GameData.phase = "playing"
-	GameData.countdown_seconds = 0
-	_place_players_at_role_spawns()
-	GameData.game_event.emit("game_started", {})
-	GameData.game_state_changed.emit()
-
-func _end_game(winner: String, reason: String = "") -> void:
-	GameData.phase = "ended"
-	GameData.countdown_seconds = 0
-	GameData.winner = winner
-	GameData.end_reason = reason
-	GameData.game_event.emit("game_ended", {"winner": winner, "reason": reason})
-	GameData.game_state_changed.emit()
-
-func _fake_player(id: String, nickname: String, team: String, character: String, is_mock: bool = false) -> Dictionary:
-	var spawn_pos := Vector3(-40.0, 0.0, 40.0) # 오리 기본 스폰 (남서쪽)
-	if character == "aligator":
-		spawn_pos = Vector3(40.0, 0.0, -40.0) # 악어 기본 스폰 (북동쪽)
-
-	return {
-		"playerId": id,
-		"nickname": nickname,
-		"team": team,
-		"character": character,
-		"isMock": is_mock,
-		"position": {"x": spawn_pos.x, "y": spawn_pos.y, "z": spawn_pos.z},
-		"rotationY": 0.0,
-		"state": "idle",
-		"carryingDucklingId": null,
-		"jailedUntil": null,
-	}
-
-func _spawn_position_for_character(character: String) -> Vector3:
-	if character == "aligator":
-		return Vector3(40.0, 0.0, -40.0)
-	return Vector3(-40.0, 0.0, 40.0)
-
-func _countdown_position_for_index(index: int) -> Vector3:
-	var offsets: Array[Vector3] = [
-		Vector3(-4.0, 0.0, 0.0),
-		Vector3(4.0, 0.0, 0.0),
-		Vector3(0.0, 0.0, 4.0),
-	]
-	return Vector3(0.0, 2.2, 0.0) + offsets[index % offsets.size()]
-
-func _place_players_in_countdown() -> void:
-	for i in range(GameData.players.size()):
-		var player: Dictionary = GameData.players[i]
-		var pos: Vector3 = _countdown_position_for_index(i)
-		player["state"] = "idle"
-		player["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
-		player["rotationY"] = 0.0
-		GameData.players[i] = player
-
-func _place_players_at_role_spawns() -> void:
-	for i in range(GameData.players.size()):
-		var player: Dictionary = GameData.players[i]
-		var pos: Vector3 = _random_player_spawn_position()
-		player["state"] = "idle"
-		player["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
-		player["rotationY"] = randf_range(-PI, PI)
-		GameData.players[i] = player
-
-func _player_exists(player_id: String) -> bool:
-	for player in GameData.players:
-		if str(player.get("playerId", "")) == player_id:
-			return true
-	return false
-
-func _random_player_spawn_position() -> Vector3:
-	var angle: float = randf_range(0.0, TAU)
-	var distance: float = randf_range(24.0, 58.0)
-	return Vector3(cos(angle) * distance, 0.0, sin(angle) * distance)
-
-const DUCKLING_MIN_SEPARATION := 30.0
-const DUCKLING_PLACEMENT_ATTEMPTS := 30
-
-func _fake_duckling(id: String, existing_positions: Array[Vector2] = []) -> Dictionary:
-	# 감옥 섬 외부(XZ 15.0 ~ 88.0 사이)의 물 영역 전체에 균일한 밀도로 스폰시킴.
-	# dist를 randf_range로 바로 뽑으면 중심부일수록 단위 면적당 표본 밀도가 높아져
-	# 섬 근처에 몰리는 것처럼 보이므로, 반지름 제곱을 균일 분포시켜 면적 기준으로 고르게 뽑는다.
-	# 또한 완전 독립 랜덤은 우연히 서로 가까이 뭉칠 수 있으므로, 이미 배치된 오리들과
-	# 최소 거리(DUCKLING_MIN_SEPARATION) 이상 떨어질 때까지 재시도(블루노이즈 방식)한다.
-	var min_dist := 15.0
-	var max_dist := 88.0
-	var spawn_pos := Vector2.ZERO
-	for attempt in range(DUCKLING_PLACEMENT_ATTEMPTS):
-		var angle := randf_range(0.0, TAU)
-		var dist := sqrt(randf_range(min_dist * min_dist, max_dist * max_dist))
-		spawn_pos = _push_out_of_props(Vector2(cos(angle) * dist, sin(angle) * dist))
-		var far_enough := true
-		for other in existing_positions:
-			if spawn_pos.distance_to(other) < DUCKLING_MIN_SEPARATION:
-				far_enough = false
-				break
-		if far_enough:
-			break
-
-	return {
-		"ducklingId": id,
-		"position": {"x": spawn_pos.x, "y": 0.0, "z": spawn_pos.y},
-		"state": "spawned",
-		"carrierPlayerId": null,
-	}
