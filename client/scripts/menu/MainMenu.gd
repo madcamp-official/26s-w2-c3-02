@@ -199,6 +199,7 @@ func _on_game_state_changed_for_lobby() -> void:
 
 
 func _on_create_room_button_pressed() -> void:
+	await _wait_for_ime_commit()
 	create_room_nickname_input.text = nickname_input.text
 	# 바깥 닉네임 필드가 아직 기본값(미편집) 상태일 때만 이 필드도 "기본값" 취급해서
 	# 처음 클릭했을 때 지워지게 한다. 이미 사용자가 직접 입력한 닉네임이면 그대로 둔다.
