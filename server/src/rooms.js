@@ -209,7 +209,8 @@ function setNickname(room, playerId, nickname) {
 // 역할은 게임 시작 시 무작위로 배정되므로, 시작 조건은 팀 구성이 아니라 인원수로만 판단한다.
 function canStartGame(room) {
   const count = room.players.size;
-  return count >= C.TAGGER_COUNT + C.DUCK_COUNT_MIN && count <= C.MAX_PLAYERS;
+  // Temporary solo-test mode: allow starting with one player while UI/gameplay is being tuned.
+  return count >= 1 && count <= C.MAX_PLAYERS;
 }
 
 function removePlayer(room, playerId) {

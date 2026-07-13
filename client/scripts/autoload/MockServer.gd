@@ -5,8 +5,8 @@ extends Node
 ## 함수 시그니처는 최대한 유지해 메뉴/HUD/월드/플레이어 쪽 호출부를 거의 건드리지
 ## 않고 교체할 수 있게 했다. 메시지 계약은 Docs/api-spec.md를 기준으로 한다.
 
-## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 배포 시 이 상수만 바꾸면 된다.
-const SERVER_URL := "ws://10.249.104.17:8080/ws"
+const SERVER_URL := "ws://127.0.0.1:8080/ws" # 배포 시 이 상수만 바꾸면 된다.
+## const SERVER_URL := "ws://10.249.104.17:8080/ws"
 
 const MVP_PLAYER_LIMIT := 3
 const MVP_TAGGER_COUNT := 1
@@ -215,15 +215,15 @@ func set_player_nickname(player_id: String, nickname: String) -> void:
 	_send("player:setNickname", {"nickname": nickname}, GameData.room_id)
 
 func can_start_game() -> bool:
-	# 역할은 게임 시작 시 서버가 무작위로 배정하므로, 시작 조건은 인원수로만 판단한다.
+	# 임시 테스트 모드: UI/게임 로직 확인을 쉽게 하려고 1명이어도 시작을 허용한다.
 	var player_count := GameData.players.size()
-	return player_count >= (MVP_TAGGER_COUNT + 1) and player_count <= MVP_PLAYER_LIMIT
+	return player_count >= 1 and player_count <= MVP_PLAYER_LIMIT
 
 func lobby_status_text() -> String:
 	var player_count := GameData.players.size()
 	if can_start_game():
-		return "시작 가능 (현재 %d명, 역할은 시작 시 무작위 배정)" % player_count
-	return "대기 중: 2~%d명이 모이면 시작할 수 있습니다 (현재 %d명)" % [MVP_PLAYER_LIMIT, player_count]
+		return "테스트 시작 가능 (현재 %d명, 역할은 시작 시 무작위 배정)" % player_count
+	return "대기 중: 1~%d명이면 테스트 시작할 수 있습니다 (현재 %d명)" % [MVP_PLAYER_LIMIT, player_count]
 
 func local_player_team() -> String:
 	for player in GameData.players:
