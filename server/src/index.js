@@ -1,6 +1,8 @@
 'use strict';
 
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { WebSocketServer } = require('ws');
 
 const C = require('./constants');
@@ -8,11 +10,49 @@ const gameLoop = require('./gameLoop');
 const { handleMessage, handleClose } = require('./messages');
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
+// Docker 이미지에는 Godot Web export 결과물(web/)을 서버 코드와 함께 담아, 정적 파일과
+// WebSocket을 같은 origin/포트에서 서빙한다(별도 CORS/wss 설정 없이 동작하게 하기 위함).
+const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, '../../web'));
+const INDEX_FILE = process.env.PUBLIC_INDEX || 'pol_duck.html';
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.pck': 'application/octet-stream',
+  '.png': 'image/png',
+};
+
+function serveStatic(req, res) {
+  const urlPath = req.url === '/' ? `/${INDEX_FILE}` : req.url.split('?')[0];
+  const filePath = path.join(PUBLIC_DIR, decodeURIComponent(urlPath));
+
+  if (!filePath.startsWith(PUBLIC_DIR)) {
+    res.writeHead(403);
+    res.end();
+    return;
+  }
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    const ext = path.extname(filePath);
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+    res.end(data);
+  });
+}
 
 const server = http.createServer((req, res) => {
   if (req.url === '/healthz') {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
+    return;
+  }
+  if (req.method === 'GET') {
+    serveStatic(req, res);
     return;
   }
   res.writeHead(404);
