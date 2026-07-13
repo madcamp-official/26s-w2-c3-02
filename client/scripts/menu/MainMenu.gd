@@ -4,13 +4,7 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 
 const ICON_SYMBOL_FONT := preload("res://themes/IconSymbolFont.tres")
 
-# 한글 등 IME 조합 중 마지막 글자가 완성되기 전에 버튼을 누르면, 브라우저의 composition
-# 종료(커밋) 이벤트가 LineEdit.text에 반영되기도 전에 텍스트를 읽어가 마지막 글자가 잘리는
-# 문제가 Web export에서 발생한다. 텍스트를 읽기 직전에 아주 짧게 대기해 커밋이 끝날 시간을
-# 벌어준다(사용자 체감 지연은 없음).
-func _wait_for_ime_commit() -> void:
-	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
-
+# Submit handlers apply pending IME composition before reading LineEdit.text.
 @onready var play_panel: PanelContainer = %PlayPanel
 @onready var inventory_panel: PanelContainer = %InventoryPanel
 @onready var inventory_duck_tab_button: Button = %InventoryDuckTabButton
@@ -50,7 +44,6 @@ func _wait_for_ime_commit() -> void:
 
 const NICKNAME_MAX_LENGTH := 10
 const ROOM_NAME_MAX_LENGTH := 10
-const TEXT_COMMIT_DELAY := 0.08
 const LOCK_ICON_PATH := "res://assets/ui/icons/lock_icon.png"
 
 const RULES_CARDS: Array[Dictionary] = [
@@ -200,7 +193,7 @@ func _on_game_state_changed_for_lobby() -> void:
 
 
 func _on_create_room_button_pressed() -> void:
-	await _wait_for_ime_commit()
+	await _commit_text_input(nickname_input)
 	create_room_nickname_input.text = nickname_input.text
 	# 바깥 닉네임 필드가 아직 기본값(미편집) 상태일 때만 이 필드도 "기본값" 취급해서
 	# 처음 클릭했을 때 지워지게 한다. 이미 사용자가 직접 입력한 닉네임이면 그대로 둔다.
@@ -212,20 +205,22 @@ func _on_create_room_button_pressed() -> void:
 	create_room_name_input.grab_focus()
 
 
-func _on_create_room_confirm_button_down() -> void:
-	_commit_text_input(create_room_name_input)
-	_commit_text_input(create_room_nickname_input)
-
-
 func _on_create_room_confirm_button_pressed() -> void:
-	await _wait_for_ime_commit()
+	await _commit_text_inputs([create_room_name_input, create_room_nickname_input])
 	var nickname := create_room_nickname_input.text.strip_edges()
 	if nickname == "":
 		_show_alert("닉네임을 입력해주세요.")
 		return
+	if nickname.length() > NICKNAME_MAX_LENGTH:
+		_show_alert("닉네임은 10자 이내로 입력해주세요.")
+		return
+	var room_name := create_room_name_input.text.strip_edges()
+	if room_name.length() > ROOM_NAME_MAX_LENGTH:
+		_show_alert("방 이름은 10자 이내로 입력해주세요.")
+		return
 	var duck_skin := get_selected_duck_skin()
 	var is_private := create_room_private_button.button_pressed
-	var result: Dictionary = await MockServer.create_room(nickname, create_room_name_input.text, duck_skin, is_private)
+	var result: Dictionary = await MockServer.create_room(nickname, room_name, duck_skin, is_private)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -237,18 +232,17 @@ func _on_create_room_close_button_pressed() -> void:
 	create_room_overlay.visible = false
 
 
-func _on_join_room_button_down() -> void:
-	_commit_text_input(nickname_input)
-	_commit_text_input(room_code_input)
-
-
 func _on_join_room_button_pressed() -> void:
 	if _selected_room.is_empty():
 		_show_alert("참가할 방을 먼저 선택해주세요.")
 		return
-	await _wait_for_ime_commit()
+	await _commit_text_inputs([nickname_input, room_code_input])
+	var nickname := nickname_input.text.strip_edges()
+	if nickname.length() > NICKNAME_MAX_LENGTH:
+		_show_alert("닉네임은 10자 이내로 입력해주세요.")
+		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.join_room(nickname_input.text, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
+	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -327,8 +321,22 @@ func _room_code_digits(value: String) -> String:
 
 
 func _commit_text_input(input: LineEdit) -> void:
-	if is_instance_valid(input):
-		input.release_focus()
+	if not is_instance_valid(input):
+		return
+	if input.has_ime_text():
+		input.apply_ime()
+	await get_tree().process_frame
+	if not is_instance_valid(input):
+		return
+	input.unedit()
+	input.release_focus()
+	await get_tree().process_frame
+
+
+func _commit_text_inputs(inputs: Array) -> void:
+	for input in inputs:
+		if input is LineEdit:
+			await _commit_text_input(input as LineEdit)
 
 
 func _set_content_view(view: ContentView) -> void:
@@ -812,7 +820,7 @@ func _commit_lobby_name_inputs() -> void:
 	if not is_instance_valid(players_list):
 		return
 	for input in _find_line_edits(players_list):
-		_commit_text_input(input)
+		await _commit_text_input(input)
 
 
 func _find_line_edits(node: Node) -> Array[LineEdit]:
@@ -824,13 +832,8 @@ func _find_line_edits(node: Node) -> Array[LineEdit]:
 	return inputs
 
 
-func _on_start_game_button_down() -> void:
-	_commit_lobby_name_inputs()
-
-
 func _on_start_game_button_pressed() -> void:
-	_commit_lobby_name_inputs()
-	await get_tree().create_timer(TEXT_COMMIT_DELAY).timeout
+	await _commit_lobby_name_inputs()
 
 	if not MockServer.can_start_game():
 		_show_alert("1~%d명이면 테스트 게임을 시작할 수 있습니다." % MockServer.MVP_PLAYER_LIMIT)
