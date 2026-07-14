@@ -131,6 +131,12 @@ function handleGameReturnToLobby(ws, msg) {
   gameLoop.returnToLobby(room);
 }
 
+function handleGameForceEnd(ws, msg) {
+  const { room, player } = requireRoomAndPlayer(ws);
+  if (!room || !player) return;
+  gameLoop.endGame(room, 'tagger', 'debug_force_end');
+}
+
 const HANDLERS = {
   'room:create': handleRoomCreate,
   'room:list': handleRoomList,
@@ -141,6 +147,7 @@ const HANDLERS = {
   'player:input': handlePlayerInput,
   'player:dash': handlePlayerDash,
   'game:returnToLobby': handleGameReturnToLobby,
+  'game:forceEnd': handleGameForceEnd,
 };
 
 function handleMessage(ws, raw) {

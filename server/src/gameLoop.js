@@ -148,6 +148,9 @@ function startGame(room) {
   room.score = 0;
   room.winner = null;
   room.endReason = null;
+  for (const player of room.players.values()) {
+    player.deliveredDucklings = 0;
+  }
 
   room.wanderState.clear();
   room.carryQueues.clear();
@@ -196,8 +199,13 @@ function endGame(room, winner, reason) {
   room.countdownSeconds = 0;
   room.winner = winner;
   room.endReason = reason;
-  broadcastEvent(room, 'game_ended', { winner, reason });
   broadcastGameState(room);
+  broadcastEvent(room, 'game_ended', {
+    winner,
+    reason,
+    score: room.score,
+    targetScore: room.targetScore,
+  });
 }
 
 function returnToLobby(room) {
@@ -219,6 +227,7 @@ function returnToLobby(room) {
   for (const player of room.players.values()) {
     player.state = 'idle';
     player.jailRemaining = null;
+    player.deliveredDucklings = 0;
     player.position = rooms.spawnPositionForCharacter(player.character);
   }
 
@@ -428,10 +437,14 @@ function checkDeliver(room) {
 
 function deliverDuckling(room, d) {
   d.state = 'delivered';
-  room.score += 1;
-
   const batchId = d.deliveryBatchId;
   d.deliveryBatchId = null;
+  const batch = batchId && room.deliveryBatches.has(batchId) ? room.deliveryBatches.get(batchId) : null;
+  if (batch && room.players.has(batch.playerId)) {
+    const player = room.players.get(batch.playerId);
+    player.deliveredDucklings = Number(player.deliveredDucklings || 0) + 1;
+  }
+  room.score += 1;
 
   room.ducklings.delete(d.ducklingId);
   if (countLiveDucklings(room) < C.MAX_DUCKLINGS_ON_MAP) {
@@ -446,7 +459,6 @@ function deliverDuckling(room, d) {
     return;
   }
 
-  const batch = room.deliveryBatches.get(batchId);
   batch.delivered += 1;
   if (batch.delivered < batch.total) return;
 

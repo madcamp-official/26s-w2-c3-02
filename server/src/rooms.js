@@ -36,6 +36,7 @@ function makePlayer({ playerId, nickname, team, character, ws }) {
     rotationY: 0.0,
     state: 'idle',
     jailRemaining: null,
+    deliveredDucklings: 0,
     ws,
   };
 }
@@ -52,6 +53,7 @@ function serializePlayer(player) {
     state: player.state,
     carryingDucklingId: null,
     jailedUntil: null,
+    deliveredDucklings: Number(player.deliveredDucklings || 0),
   };
   if (player.jailRemaining !== null && player.jailRemaining !== undefined) {
     out.jailRemaining = player.jailRemaining;
@@ -75,7 +77,7 @@ function serializeDuckling(d) {
 function createRoomObject({ roomId, roomName, isPrivate }) {
   return {
     roomId,
-    roomName: roomName || `${roomId} 방`,
+    roomName: roomName || roomId,
     hostPlayerId: '',
     isPrivate,
 
@@ -112,17 +114,27 @@ function createRoomObject({ roomId, roomName, isPrivate }) {
   };
 }
 
+function makeDefaultRoomName(isPrivate) {
+  const prefix = isPrivate ? '비공개방' : '공개방';
+  let index = 1;
+  let name = `${prefix} #${index}`;
+  const usedNames = new Set(Array.from(rooms.values()).map((room) => room.roomName));
+  while (usedNames.has(name)) {
+    index += 1;
+    name = `${prefix} #${index}`;
+  }
+  return name;
+}
+
 function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
   // 방의 참가코드는 별도로 관리하지 않고, 서버가 항상 무작위로 배정하는 4자리 roomId를
   // 그대로 참가코드로 사용한다(공개/비공개 모두 코드 자체는 존재).
   const roomId = generateRoomCode();
-  const normalizedRoomName = (roomName || '').trim();
+  const normalizedRoomName = (roomName || '').trim() || makeDefaultRoomName(!!isPrivate);
 
-  if (normalizedRoomName !== '') {
-    for (const room of rooms.values()) {
-      if (room.roomName === normalizedRoomName) {
-        return { ok: false, code: 'ROOM_NAME_IN_USE', message: '이미 사용 중인 방 이름입니다.' };
-      }
+  for (const room of rooms.values()) {
+    if (room.roomName === normalizedRoomName) {
+      return { ok: false, code: 'ROOM_NAME_IN_USE', message: '이미 사용 중인 방 이름입니다.' };
     }
   }
 
@@ -260,7 +272,13 @@ function broadcastToRoom(room, message) {
 function serializeRoomState(room) {
   const players = [];
   for (const p of room.players.values()) players.push(serializePlayer(p));
-  return { players, hostPlayerId: room.hostPlayerId, joinCode: room.roomId };
+  return {
+    players,
+    hostPlayerId: room.hostPlayerId,
+    joinCode: room.roomId,
+    roomName: room.roomName,
+    isPrivate: room.isPrivate,
+  };
 }
 
 function serializeGameState(room) {
