@@ -9,6 +9,12 @@ const WATER_ROLL_DEGREES := 5.0
 const WATER_ROLL_SPEED := 0.9
 const WATER_CHECK_INTERVAL := 0.15 # 물 위 흔들림 연출용 판정이라 매 프레임 정확할 필요 없음
 
+# 서버는 새끼오리 y좌표를 항상 물 높이(0.0)로만 보낸다(지형 개념이 없는 2D 시뮬레이션이라
+# 판정에도 x/z만 쓰임). 그래서 섬처럼 물보다 높은 지형 위로 올라갈 때는 실제로 밟고 선
+# 표면 높이를 클라이언트가 직접 레이캐스트로 구해 보정해야 섬 속으로 파묻히지 않는다.
+const GROUND_CHECK_TOP := 10.0
+const GROUND_CHECK_BOTTOM := -2.0
+
 # 오리를 따라다니는(state == "carried") 대형 연출 상수. 예전엔 서버가 이 값으로 매 틱
 # 좌표를 계산해 브로드캐스트했는데, carried 동안의 좌표는 서버 게임 로직(픽업/배달 판정)에
 # 전혀 쓰이지 않는 순수 연출이라 네트워크 브로드캐스트 지터가 그대로 버벅임으로 보였다.
@@ -41,6 +47,7 @@ var _base_y := 0.0
 var _bob_time := randf_range(0.0, TAU)
 var _roll_time := randf_range(0.0, TAU)
 var _on_water_cached := false
+var _ground_height_cached := 0.0
 var _water_check_timer := randf_range(0.0, WATER_CHECK_INTERVAL) # 새끼오리마다 검사 시점을 분산시켜 한 프레임에 몰리지 않게 함
 
 var _idle_spin := randf_range(0.0, TAU)
@@ -65,6 +72,7 @@ func _process(delta: float) -> void:
 	if _water_check_timer >= WATER_CHECK_INTERVAL:
 		_water_check_timer = 0.0
 		_on_water_cached = _is_water_directly_below()
+		_ground_height_cached = _ground_height_at(position.x, position.z)
 	var on_water := _on_water_cached
 
 	var target: Vector3
@@ -79,7 +87,7 @@ func _process(delta: float) -> void:
 		_carried_base_y_set = false # 다음에 다시 잡힐 때 pickup 시점 y로 재초기화되도록
 		_reset_delivering_state()
 		var pos: Dictionary = entry["position"]
-		_base_y = pos["y"]
+		_base_y = max(float(pos["y"]), _ground_height_cached)
 		_bob_time += delta * BOB_SPEED
 		var bob := sin(_bob_time) * BOB_HEIGHT if on_water else 0.0
 		target = Vector3(pos["x"], _base_y + bob, pos["z"])
@@ -109,7 +117,7 @@ func _compute_carried_target(entry: Dictionary, delta: float, on_water: bool) ->
 		_carried_base_y_set = true
 	_bob_time += delta * BOB_SPEED
 	var bob := sin(_bob_time) * BOB_HEIGHT if on_water else 0.0
-	_base_y = _carried_base_y
+	_base_y = max(_carried_base_y, _ground_height_cached)
 
 	var carrier_id := str(entry.get("carrierPlayerId", ""))
 	var queue_index := int(entry.get("queueIndex", 0))
@@ -179,7 +187,7 @@ func _compute_delivering_target(delta: float, on_water: bool) -> Vector3:
 			MockServer.notify_duckling_delivered(duckling_id)
 		return Vector3(_delivering_nest.x, _base_y + bob, _delivering_nest.y)
 
-	_base_y = 0.0
+	_base_y = max(0.0, _ground_height_cached)
 	var step: float = min(DELIVER_MOVE_SPEED * delta, dist)
 	var next2 := current2 + to_nest / dist * step
 	return Vector3(next2.x, _base_y + bob, next2.y)
@@ -213,6 +221,17 @@ func _count_queue(carrier_id: String) -> int:
 		if str(d.get("carrierPlayerId", "")) == carrier_id:
 			count += 1
 	return count
+
+func _ground_height_at(x: float, z: float) -> float:
+	var space_state := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(
+		Vector3(x, GROUND_CHECK_TOP, z),
+		Vector3(x, GROUND_CHECK_BOTTOM, z)
+	)
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		return 0.0
+	return result["position"].y
 
 func _is_water_directly_below() -> bool:
 	var space_state := get_world_3d().direct_space_state

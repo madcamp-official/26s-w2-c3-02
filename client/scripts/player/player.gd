@@ -30,6 +30,11 @@ const STEP_CHECK_DISTANCE := 2.0
 # 실측 결과 섬의 실제 해안선(마른 땅의 마지막 표면)은 y≈0.3, 물 표면은 y=0.0
 # (오리 원점 = 발 높이 기준). 그 사이에서 물에 거의 닿았을 때만 반응하도록 0.1로 설정.
 const JAIL_WATER_MARGIN_Y := 0.3
+# 필드 전역에서 "맵 밖으로 빠짐"만 잡는 안전망용 임계값. 저수심 구간을 헤엄칠 때도
+# global_position.y가 물 표면(0.0) 근처까지 자연스럽게 내려갈 수 있으므로, JAIL_WATER_MARGIN_Y
+# 같은 얕은 값을 재사용하면 정상 수영 중에도 오탐이 난다. 실제 지형 최저 높이보다 확실히
+# 낮은 값으로 잡아, 진짜로 바닥을 뚫고 떨어졌을 때만 반응하게 한다.
+const FALL_RECOVERY_Y := -1.0
 
 const CHARACTER_CONFIG := {
 	"duck": {
@@ -311,10 +316,10 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	# 대시처럼 빠른 이동이 지형 이음매(연못 바닥 메쉬 조각 사이 틈, 섬 콜리전 경계 등)를
-	# 스치면 한두 프레임 is_on_floor()가 false가 되면서 중력이 붙어 물 밑으로 떨어질 수
-	# 있다. _move_inside_jail()과 동일한 안전망: 물 표면 높이 이하로 내려가면 그냥 이번
-	# 프레임 이동을 되돌린다.
-	if global_position.y <= JAIL_WATER_MARGIN_Y:
+	# 스치면 한두 프레임 is_on_floor()가 false가 되면서 중력이 붙어 맵 밖으로 떨어질 수
+	# 있다. 정상 수영 중과 구분하기 위해 실제 지형보다 훨씬 낮은 FALL_RECOVERY_Y를 기준으로
+	# 삼는다.
+	if global_position.y <= FALL_RECOVERY_Y:
 		global_position = prev_pos
 		velocity = Vector3.ZERO
 
