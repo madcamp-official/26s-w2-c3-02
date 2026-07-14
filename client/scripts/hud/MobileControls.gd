@@ -10,7 +10,7 @@ const DASH_RING_INNER_RADIUS := 42.0
 const DASH_TRACK_COLOR := Color(0.05, 0.05, 0.05, 0.55)
 const DASH_READY_COLOR := Color(0.35, 0.85, 0.45, 0.95)
 const DASH_COOLDOWN_COLOR := Color(0.95, 0.72, 0.24, 0.95)
-const SAFE_AREA_EXTRA_MARGIN := 12.0
+const SAFE_AREA_EXTRA_MARGIN := 4.0
 const DASH_BASE_MARGIN_RIGHT := 116.0
 const DASH_BASE_MARGIN_BOTTOM := 116.0
 
@@ -54,9 +54,9 @@ func _input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _dash_button == null:
 		return
-	var should_show_dash := GameData.phase == "playing" and _local_player_can_dash()
+	var should_show_dash := GameData.phase == "playing"
 	_dash_button.visible = should_show_dash
-	_dash_button.disabled = not should_show_dash
+	_dash_button.disabled = not should_show_dash or not _local_player_can_dash()
 	_update_dash_cooldown_ring()
 
 
@@ -235,12 +235,17 @@ func _safe_area_margins() -> Vector4:
 		return Vector4.ZERO
 
 	var viewport_size := get_viewport_rect().size
+	var screen_size := Vector2(DisplayServer.screen_get_size())
 	var safe_rect := DisplayServer.get_display_safe_area()
 	if safe_rect.size.x <= 0 or safe_rect.size.y <= 0:
 		return Vector4.ZERO
 
-	var left := float(safe_rect.position.x)
-	var top := float(safe_rect.position.y)
-	var right: float = max(0.0, viewport_size.x - float(safe_rect.position.x + safe_rect.size.x))
-	var bottom: float = max(0.0, viewport_size.y - float(safe_rect.position.y + safe_rect.size.y))
+	var scale := Vector2.ONE
+	if screen_size.x > 0.0 and screen_size.y > 0.0:
+		scale = Vector2(viewport_size.x / screen_size.x, viewport_size.y / screen_size.y)
+
+	var left := float(safe_rect.position.x) * scale.x
+	var top := float(safe_rect.position.y) * scale.y
+	var right: float = max(0.0, screen_size.x - float(safe_rect.position.x + safe_rect.size.x)) * scale.x
+	var bottom: float = max(0.0, screen_size.y - float(safe_rect.position.y + safe_rect.size.y)) * scale.y
 	return Vector4(left, top, right, bottom)
