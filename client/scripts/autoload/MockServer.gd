@@ -6,7 +6,7 @@ extends Node
 ## 않고 교체할 수 있게 했다. 메시지 계약은 Docs/api-spec.md를 기준으로 한다.
 
 const SERVER_URL := "wss://cops-and-ducks.madcamp-kaist.org/ws" # 배포 시 이 상수만 바꾸면 된다.
-## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 로컬 테스트용
+## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 로컬 서버 테스트용
 ## const SERVER_URL := "wss://54.180.118.137:8080/ws"
 
 const MVP_PLAYER_LIMIT := 5

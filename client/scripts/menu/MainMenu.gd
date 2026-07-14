@@ -269,6 +269,11 @@ func _on_create_room_nickname_input_text_changed(new_text: String) -> void:
 		return
 	if new_text.length() <= NICKNAME_MAX_LENGTH:
 		return
+	# 한글 IME 조합 중에는 .text를 재기록하면 조합기 내부 상태와 어긋나 글자가 깨져
+	# 보인다(예: "숳" 같은 초성+중성+종성 조합). 조합이 끝난 뒤(has_ime_text() == false)
+	# 다음 text_changed에서 절단해도 늦지 않으므로, 조합 중에는 건드리지 않는다.
+	if create_room_nickname_input.has_ime_text():
+		return
 	var caret := create_room_nickname_input.caret_column
 	var truncated := new_text.substr(0, NICKNAME_MAX_LENGTH)
 	_normalizing_create_room_nickname = true
@@ -570,21 +575,9 @@ func _refresh_room_list() -> void:
 		room_list.remove_child(child)
 		child.queue_free()
 
-	var room_count := 0
 	for room in await MockServer.list_rooms():
 		_rooms_by_id[str(room.get("room_id", ""))] = room
 		room_list.add_child(_make_room_row(room))
-		room_count += 1
-	if room_count % 2 == 1:
-		room_list.add_child(_make_room_grid_spacer())
-
-
-func _make_room_grid_spacer() -> Control:
-	var spacer := Control.new()
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	spacer.custom_minimum_size = Vector2(0, 54)
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	return spacer
 
 
 func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
@@ -688,7 +681,6 @@ func _on_room_row_pressed(room_id: String) -> void:
 	var is_private := bool(_selected_room.get("is_private", false))
 	selected_room_label.text = "%s 선택됨" % room_name
 	join_details.visible = true
-	_set_join_form_visible(true)
 	room_code_input.editable = is_private
 	if is_private:
 		room_code_input.text = ""
@@ -707,24 +699,10 @@ func _clear_selected_room() -> void:
 		return
 	join_details.visible = true
 	selected_room_label.text = "방을 선택하세요"
-	_set_join_form_visible(false)
 	room_code_input.text = ""
 	room_code_input.editable = false
 	room_code_input.placeholder_text = "4자리 숫자"
 	_refresh_join_room_button_state()
-
-
-func _set_join_form_visible(is_visible: bool) -> void:
-	if is_instance_valid(nickname_input):
-		var nickname_row := nickname_input.get_parent()
-		if is_instance_valid(nickname_row):
-			nickname_row.visible = is_visible
-	if is_instance_valid(room_code_input):
-		var room_code_row := room_code_input.get_parent()
-		if is_instance_valid(room_code_row):
-			room_code_row.visible = is_visible
-	if is_instance_valid(join_room_button):
-		join_room_button.visible = is_visible
 
 
 func _refresh_join_room_button_state() -> void:

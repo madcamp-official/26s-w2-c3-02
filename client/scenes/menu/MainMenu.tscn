@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=19 format=3]
 
 [ext_resource type="Script" path="res://scripts/menu/MainMenu.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/menu/MenuBackground3D.tscn" id="3"]
@@ -164,6 +164,11 @@ corner_radius_top_left = 12
 corner_radius_top_right = 12
 corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_play_body_separator"]
+content_margin_left = 1.0
+content_margin_right = 1.0
+bg_color = Color(0.247059, 0.352941, 0.470588, 1)
 
 [sub_resource type="ButtonGroup" id="ButtonGroup_sidebar"]
 
@@ -347,7 +352,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="PlayBody" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content"]
+[node name="PlayBody" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 28
@@ -372,12 +377,12 @@ theme_override_font_sizes/font_size = 24
 [node name="RefreshRoomListButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/RoomListSection/RoomListHeader"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(96, 42)
+custom_minimum_size = Vector2(112, 42)
 text = "새로고침"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
 theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
@@ -387,11 +392,11 @@ layout_mode = 2
 custom_minimum_size = Vector2(128, 42)
 text = "방 만들기"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0.0196078, 0.0862745, 0.188235, 1)
+theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_blue")
-theme_override_styles/hover = SubResource("StyleBoxFlat_blue_hover")
+theme_override_styles/normal = SubResource("StyleBoxFlat_green")
+theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
 [node name="RoomListScroll" type="ScrollContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/RoomListSection"]
@@ -404,18 +409,24 @@ vertical_scroll_mode = 1
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-columns = 2
+columns = 1
 theme_override_constants/h_separation = 20
 theme_override_constants/v_separation = 10
 theme_override_constants/separation = 10
 
+[node name="PlayBodySeparator" type="VSeparator" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+theme_override_styles/separator = SubResource("StyleBoxFlat_play_body_separator")
+
 [node name="JoinCreateColumn" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody"]
 layout_mode = 2
-custom_minimum_size = Vector2(0, 160)
-size_flags_horizontal = 3
+custom_minimum_size = Vector2(260, 0)
+size_flags_horizontal = 0
 size_flags_vertical = 3
 theme_override_constants/separation = 10
-alignment = 2
+alignment = 1
 
 [node name="JoinDetails" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn"]
 unique_name_in_owner = true
@@ -434,68 +445,63 @@ autowrap_mode = 3
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 25
 
-[node name="JoinFormRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails"]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 12
-
-[node name="NicknameRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow"]
+[node name="NicknameRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="NicknameLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/NicknameRow"]
+[node name="NicknameLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/NicknameRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(88, 0)
+custom_minimum_size = Vector2(72, 0)
 text = "닉네임:"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 
-[node name="NicknameInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/NicknameRow"]
+[node name="NicknameInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/NicknameRow"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(220, 60)
+custom_minimum_size = Vector2(150, 56)
 size_flags_horizontal = 3
 placeholder_text = "한/영 10자 이내"
 max_length = 10
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
-[node name="RoomCodeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow"]
+[node name="RoomCodeRow" type="HBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="RoomCodeFieldLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/RoomCodeRow"]
+[node name="RoomCodeFieldLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/RoomCodeRow"]
 layout_mode = 2
-custom_minimum_size = Vector2(108, 0)
+custom_minimum_size = Vector2(72, 0)
 text = "참가코드:"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 
-[node name="RoomCodeInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinFormRow/RoomCodeRow"]
+[node name="RoomCodeInput" type="LineEdit" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/RoomCodeRow"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(220, 60)
+custom_minimum_size = Vector2(150, 56)
 size_flags_horizontal = 3
 placeholder_text = "4자리 숫자"
 max_length = 4
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_placeholder_color = Color(0.682353, 0.780392, 0.886275, 0.7)
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 22
 theme_override_styles/normal = SubResource("StyleBoxFlat_input")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 
 [node name="JoinRoomButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(300, 60)
-size_flags_horizontal = 4
+custom_minimum_size = Vector2(0, 60)
+size_flags_horizontal = 3
 text = "참가하기"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.129412, 0.207843, 0.0784314, 1)
