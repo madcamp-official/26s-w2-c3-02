@@ -29,7 +29,7 @@ const CIRCLE_SPIN_SPEED := 0.4
 # 'duckling:deliver' 메시지로만 도착을 판단한다). carried에서 넘어온 그 자리(position)에서
 # 그대로 이어서 걷기 시작하므로 상태 전환 경계에서 순간이동이 생길 수 없다(예전
 # server/src/gameLoop.js updateDelivering()과 동일한 등속 이동 + 정착 시간 수식).
-const DELIVER_MOVE_SPEED := 20.0 # player.gd SPEED(오리 기본 이동속도)와 동일하게 맞춤
+const DELIVER_MOVE_SPEED := 25.0 # player.gd SPEED(오리 기본 이동속도)와 동일하게 맞춤
 const NEST_ARRIVE_DISTANCE := 0.35
 const NEST_SETTLE_TIME := 0.35
 const NEST_1_POS := Vector2(-58.5, 58.5)
