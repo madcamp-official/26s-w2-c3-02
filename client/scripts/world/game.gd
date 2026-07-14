@@ -3,6 +3,12 @@ extends Node3D
 const CAMERA_OFFSET := Vector3(0, 16, 14)
 const WARNING_BGM_RADIUS := 40.0
 const PlayerScene := preload("res://scenes/player/Player.tscn")
+# 새끼오리(duckling.gd)가 CharacterBody3D 물리 충돌로 지형을 피해가도록, 밟고 다닐 수 있는
+# 정적 지형(바닥/벽/바위)에 부여하는 전용 레이어. duckling.gd의 GROUND_QUERY_MASK(layer 3)와
+# 반드시 같은 값이어야 한다 — 오리/악어(layer 1)와는 겹치지 않아 새끼오리가 플레이어나
+# 서로에게 물리적으로 부딪히는 일은 없다. jail_island.gd는 섬 모델 자신의 트라이메쉬
+# 콜리전에 이미 이 레이어를 붙이고 있어 여기서 따로 처리하지 않는다.
+const DUCKLING_TERRAIN_LAYER_BIT := 4 # layer 3
 
 var _target: Node3D = null
 var _remote_players: Dictionary = {}
@@ -37,6 +43,8 @@ func _register_pond_obstacles() -> void:
 	var obstacles: Array = []
 	for child in pond.get_children():
 		if child.name.begins_with("Rock"):
+			if child is CollisionObject3D:
+				(child as CollisionObject3D).collision_layer |= DUCKLING_TERRAIN_LAYER_BIT
 			var model := child.get_node_or_null("Model")
 			if model:
 				var obs := _obstacle_from_node(model)
@@ -58,6 +66,13 @@ func _register_pond_obstacles() -> void:
 	var ground := pond.get_node_or_null("Ground")
 	if ground:
 		ground.add_to_group("water_surface")
+		if ground is CollisionObject3D:
+			(ground as CollisionObject3D).collision_layer |= DUCKLING_TERRAIN_LAYER_BIT
+
+	for wall_name in ["WallNorth", "WallSouth", "WallEast", "WallWest"]:
+		var wall := pond.get_node_or_null(wall_name)
+		if wall is CollisionObject3D:
+			(wall as CollisionObject3D).collision_layer |= DUCKLING_TERRAIN_LAYER_BIT
 
 func _obstacle_from_node(node: Node3D) -> Dictionary:
 	var aabb: AABB

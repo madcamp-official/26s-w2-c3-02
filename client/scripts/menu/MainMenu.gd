@@ -68,7 +68,7 @@ var SKINS_BY_ROLE: Dictionary = {
 	InventoryRole.DUCK: [
 		{
 			"id": "duck_default",
-			"name": "기본",
+			"name": "카이스트 오리",
 			"character": "duck",
 			"model": preload("res://assets/duck/duck.glb"),
 			"model_position": Vector3(0, 0.622, 0),
@@ -97,7 +97,7 @@ var SKINS_BY_ROLE: Dictionary = {
 	InventoryRole.TAGGER: [
 		{
 			"id": "tagger_default",
-			"name": "기본",
+			"name": "악어",
 			"character": "aligator",
 			"model": preload("res://assets/aligator/aligator.glb"),
 			"model_position": Vector3(0, 0.684, 0),
