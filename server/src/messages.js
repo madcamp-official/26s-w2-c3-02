@@ -21,6 +21,7 @@ function handleRoomCreate(ws, msg) {
     roomName: payload.roomName,
     isPrivate: payload.isPrivate,
     characterSkin: payload.characterSkin,
+    taggerSkin: payload.taggerSkin,
     ws,
   });
   if (!result.ok) {
@@ -48,6 +49,7 @@ function handleRoomJoin(ws, msg) {
     nickname: payload.nickname,
     joinCode: payload.joinCode,
     characterSkin: payload.characterSkin,
+    taggerSkin: payload.taggerSkin,
     ws,
   });
   if (!result.ok) {

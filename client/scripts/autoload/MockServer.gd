@@ -179,12 +179,13 @@ func _flush_pending_input(delta: float) -> void:
 # 방/로비
 # ──────────────────────────────────────────────────────────────────────────────
 
-func create_room(nickname: String, room_name: String = "", character_skin: String = "duck", is_private: bool = false) -> Dictionary:
+func create_room(nickname: String, room_name: String = "", character_skin: String = "duck", is_private: bool = false, tagger_skin: String = "aligator") -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:create", {
 		"nickname": nickname,
 		"roomName": room_name,
 		"isPrivate": is_private,
 		"characterSkin": character_skin,
+		"taggerSkin": tagger_skin,
 	})
 	if not result.get("ok", false):
 		return {"ok": false, "message": result.get("message", "방을 만들 수 없습니다.")}
@@ -192,11 +193,12 @@ func create_room(nickname: String, room_name: String = "", character_skin: Strin
 	GameData.menu_entry_view = "lobby"
 	return {"ok": true}
 
-func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck") -> Dictionary:
+func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck", tagger_skin: String = "aligator") -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:join", {
 		"nickname": nickname,
 		"joinCode": join_code,
 		"characterSkin": character_skin,
+		"taggerSkin": tagger_skin,
 	}, room_id)
 	if not result.get("ok", false):
 		return {"ok": false, "message": result.get("message", "방에 입장할 수 없습니다.")}
