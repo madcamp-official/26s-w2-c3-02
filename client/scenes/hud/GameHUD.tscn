@@ -124,7 +124,7 @@ theme_override_font_sizes/font_size = 34
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "남은 새끼오리 0/5"
+text = "모은 새끼오리 0/5"
 horizontal_alignment = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
@@ -443,7 +443,7 @@ vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 
-[node name="DebugModeButton" type="Button" parent="Root"]
+[node name="EndGameButton" type="Button" parent="Root"]
 unique_name_in_owner = true
 layout_mode = 1
 anchors_preset = 3
@@ -654,4 +654,4 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[connection signal="pressed" from="Root/DebugModeButton" to="." method="_on_debug_mode_button_pressed"]
+[connection signal="pressed" from="Root/EndGameButton" to="." method="_on_end_game_button_pressed"]

@@ -136,6 +136,10 @@ func _resolve_request(msg: Dictionary, result: Dictionary) -> void:
 		_response_received.emit(request_id, result)
 
 func _apply_room_state(state: Dictionary) -> void:
+	if state.has("roomName"):
+		GameData.room_name = str(state.get("roomName", ""))
+	if state.has("isPrivate"):
+		GameData.room_is_private = bool(state.get("isPrivate", false))
 	if state.has("joinCode"):
 		var join_code_value = state.get("joinCode")
 		GameData.join_code = "" if join_code_value == null else str(join_code_value)
@@ -184,6 +188,7 @@ func create_room(nickname: String, room_name: String = "", character_skin: Strin
 	})
 	if not result.get("ok", false):
 		return {"ok": false, "message": result.get("message", "방을 만들 수 없습니다.")}
+	GameData.room_is_private = is_private
 	GameData.menu_entry_view = "lobby"
 	return {"ok": true}
 
@@ -225,9 +230,9 @@ func can_start_game() -> bool:
 
 func lobby_status_text() -> String:
 	var player_count := GameData.players.size()
-	if can_start_game():
-		return "테스트 시작 가능 (현재 %d명, 역할은 시작 시 무작위 배정)" % player_count
-	return "대기 중: 1~%d명이면 테스트 시작할 수 있습니다 (현재 %d명)" % [MVP_PLAYER_LIMIT, player_count]
+	if player_count <= 1:
+		return "테스트로 시작 가능"
+	return "경찰 1명 / 오리 %d명" % (player_count - 1)
 
 func local_player_team() -> String:
 	for player in GameData.players:
@@ -261,9 +266,14 @@ func return_to_lobby() -> void:
 	GameData.menu_entry_view = "lobby"
 	_send("game:returnToLobby", {}, GameData.room_id)
 
+func force_end_game() -> void:
+	_send("game:forceEnd", {}, GameData.room_id)
+
 func leave_room() -> void:
 	_send("room:leave", {}, GameData.room_id)
 	GameData.room_id = ""
+	GameData.room_name = ""
+	GameData.room_is_private = false
 	GameData.join_code = ""
 	GameData.is_host = false
 	GameData.players = []

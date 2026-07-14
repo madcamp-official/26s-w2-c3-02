@@ -31,7 +31,7 @@ const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 @onready var jail_photo: TextureRect = %JailPhoto
 @onready var nest_photo: TextureRect = %NestPhoto
 @onready var nest_2_photo: TextureRect = %Nest2Photo
-@onready var debug_mode_button: Button = %DebugModeButton
+@onready var debug_mode_button: Button = %EndGameButton
 @onready var debug_panel: PanelContainer = %DebugPanel
 @onready var debug_summary_label: Label = %DebugSummaryLabel
 @onready var settings_button: TextureButton = %SettingsButton
@@ -54,12 +54,12 @@ var _settings_button_tween: Tween = null
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
-	GameData.debug_mode_changed.connect(_on_debug_mode_changed)
 	_init_settings_overlay()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
-	_on_debug_mode_changed(GameData.debug_mode_enabled)
+	debug_mode_button.text = "종료 테스트"
+	debug_panel.visible = false
 	_refresh()
 	_update_direction_indicators()
 
@@ -147,7 +147,7 @@ func _on_hud_sfx_volume_slider_value_changed(value: float) -> void:
 
 func _refresh() -> void:
 	timer_label.text = "남은 시간 %s" % _format_time(GameData.remaining_seconds)
-	score_label.text = "남은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
+	score_label.text = "모은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
 	_refresh_countdown()
 	_refresh_player_list()
 	_refresh_debug_summary()
@@ -173,6 +173,7 @@ func _format_time(seconds: int) -> String:
 
 func _on_game_event(event: String, data: Dictionary) -> void:
 	if event == "game_ended":
+		_hide_game_toasts()
 		SceneRouter.show_overlay("result")
 		return
 	if event == "game_started":
@@ -182,6 +183,13 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 	var message := _event_message(event, data)
 	if message != "":
 		_show_event_toast(message)
+
+
+func _hide_game_toasts() -> void:
+	_toast_remaining = 0.0
+	_objective_remaining = 0.0
+	event_toast.visible = false
+	objective_toast.visible = false
 
 
 func _show_objective_toast() -> void:
@@ -201,8 +209,8 @@ func _local_team() -> String:
 	return "duck"
 
 
-func _on_debug_mode_button_pressed() -> void:
-	GameData.set_debug_mode(not GameData.debug_mode_enabled)
+func _on_end_game_button_pressed() -> void:
+	MockServer.force_end_game()
 
 
 func _on_debug_mode_changed(enabled: bool) -> void:
