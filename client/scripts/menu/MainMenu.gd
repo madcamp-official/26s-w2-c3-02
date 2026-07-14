@@ -746,12 +746,50 @@ func _refresh_lobby() -> void:
 	if GameData.is_host:
 		start_game_button.disabled = not MockServer.can_start_game()
 
-	for child in players_list.get_children():
-		players_list.remove_child(child)
-		child.queue_free()
+	_sync_players_list()
 
-	for player in GameData.players:
-		players_list.add_child(_make_player_row(player))
+
+# 예전엔 매번 리스트를 통째로 지우고 새로 만들었는데, 로컬 플레이어가 자기 닉네임을
+# 입력하는 도중에도 (매 키 입력마다 서버로 setNickname을 보내고 그 브로드캐스트가
+# 다시 도착해) game:state가 갱신될 때마다 입력 중이던 LineEdit이 파괴되고 새 노드로
+# 교체돼 포커스/캐럿이 날아갔다 — 그래서 한 글자 입력하면 포커스가 풀려서 다시
+# 클릭해야만 다음 글자가 입력되는 것처럼 보였다. playerId 기준으로 기존 행을
+# 재사용하고, 지금 포커스가 있는(편집 중인) 입력창의 텍스트는 서버 값으로 덮어쓰지
+# 않는다.
+func _sync_players_list() -> void:
+	var existing_rows := {}
+	for child in players_list.get_children():
+		existing_rows[str(child.get_meta("player_id", ""))] = child
+
+	var seen_ids := {}
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		var player_id: String = str(player.get("playerId", ""))
+		seen_ids[player_id] = true
+		var row: Control = existing_rows.get(player_id)
+		if row == null:
+			row = _make_player_row(player)
+			players_list.add_child(row)
+		else:
+			_update_player_row(row, player)
+		players_list.move_child(row, i)
+
+	for player_id in existing_rows:
+		if not seen_ids.has(player_id):
+			var row: Control = existing_rows[player_id]
+			players_list.remove_child(row)
+			row.queue_free()
+
+
+func _update_player_row(row: Control, player: Dictionary) -> void:
+	var name_input := row.get_child(1) as LineEdit
+	if name_input == null:
+		return
+	if name_input.editable and (name_input.has_focus() or name_input.has_ime_text()):
+		return # 편집 중인 입력창은 서버 값으로 덮어쓰지 않는다(캐럿/포커스 보존).
+	var server_text := str(player.get("nickname", "Player"))
+	if name_input.text != server_text:
+		name_input.text = server_text
 
 
 func _make_player_row(player: Dictionary) -> Control:
@@ -760,6 +798,7 @@ func _make_player_row(player: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 12)
 
 	var player_id: String = str(player.get("playerId", ""))
+	row.set_meta("player_id", player_id)
 	var is_local := player_id == GameData.local_player_id
 	var role_label: Label = Label.new()
 	role_label.custom_minimum_size = Vector2(68, 0)
