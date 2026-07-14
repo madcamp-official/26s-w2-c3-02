@@ -34,4 +34,16 @@ jobs:
               cops-and-ducks-server
 
             docker ps
-            curl -f http://localhost:8080/healthz
+
+            for i in $(seq 1 15); do
+              if curl -sf http://localhost:8080/healthz > /dev/null; then
+                echo "server is healthy"
+                exit 0
+              fi
+              echo "waiting for server... ($i)"
+              sleep 2
+            done
+
+            echo "server did not become healthy in time"
+            docker logs cops-and-ducks-server
+            exit 1
