@@ -135,9 +135,24 @@ async function main() {
     );
     assert(!!pickedUpState, `새끼오리 자동 획득 (ducklingId=${nearestDuckling.ducklingId})`);
 
-    // 오리를 둥지로 이동 -> delivering -> delivered, score 증가 확인
+    // 오리를 둥지로 이동 -> delivering 전환 확인. 둥지까지 걷는 연출/도착 판정은 이제
+    // 클라이언트(duckling.gd)가 로컬로 하고 'duckling:deliver'로 알려줘야 서버가 점수를
+    // 준다 — 실제 클라이언트가 하는 것과 동일하게 여기서도 명시적으로 보내준다.
     send(duckSocket, 'player:input', { position: nestPos, rotationY: 0 }, { roomId });
-    const deliveredState = await waitUntil(duckSocket, 'game:state', (m) => m.payload.score >= 1, 300, 'score >= 1');
+    const deliveringState = await waitUntil(
+      duckSocket,
+      'game:state',
+      (m) => {
+        const d = m.payload.ducklings.find((x) => x.ducklingId === nearestDuckling.ducklingId);
+        return d && d.state === 'delivering';
+      },
+      30,
+      'duckling delivering 전환'
+    );
+    assert(!!deliveringState, 'delivering 상태로 전환 확인');
+
+    send(duckSocket, 'duckling:deliver', { ducklingId: nearestDuckling.ducklingId }, { roomId });
+    const deliveredState = await waitUntil(duckSocket, 'game:state', (m) => m.payload.score >= 1, 30, 'score >= 1');
     assert(deliveredState.payload.score >= 1, `둥지 반납 -> score=${deliveredState.payload.score}`);
 
     // 경찰이 오리 위치를 관통하는 대시를 보내 수감 확인

@@ -151,8 +151,6 @@ function startGame(room) {
 
   room.wanderState.clear();
   room.carryQueues.clear();
-  room.playerMotion.clear();
-  room.deliveringSettle.clear();
   room.deliveryBatches.clear();
   room.activeDashes.clear();
   room.nextDeliveryBatchId = 1;
@@ -211,7 +209,6 @@ function returnToLobby(room) {
   room.deliveryBatches.clear();
   room.wanderState.clear();
   room.carryQueues.clear();
-  room.playerMotion.clear();
   room.deliveringSettle.clear();
   room.activeDashes.clear();
   resetRescue(room);
@@ -293,87 +290,6 @@ function releaseDucklings(room, playerId, atPosition) {
   broadcastGameState(room);
 }
 
-function updatePlayerMotion(room, delta) {
-  for (const player of room.players.values()) {
-    if (player.team !== 'duck') continue;
-    const pos = player.position;
-    const m = room.playerMotion.get(player.playerId) || { prevPos: pos, isMoving: false, idleSpin: 0 };
-    let speed = 0;
-    if (delta > 0) {
-      speed = Math.hypot(pos.x - m.prevPos.x, pos.y - m.prevPos.y, pos.z - m.prevPos.z) / delta;
-    }
-    m.isMoving = speed > C.MOVING_SPEED_THRESHOLD;
-    m.prevPos = pos;
-    if (!m.isMoving) {
-      m.idleSpin += delta * C.CIRCLE_SPIN_SPEED;
-    }
-    room.playerMotion.set(player.playerId, m);
-  }
-}
-
-function updateDucklingFollow(room, delta) {
-  for (const [playerId, queue] of room.carryQueues) {
-    if (queue.length === 0) continue;
-    const player = room.players.get(playerId);
-    if (!player) continue;
-    const playerPos = player.position;
-    const motion = room.playerMotion.get(playerId) || { isMoving: false, idleSpin: 0 };
-
-    if (motion.isMoving) {
-      let leaderPos = playerPos;
-      for (let i = 0; i < queue.length; i++) {
-        const d = room.ducklings.get(queue[i]);
-        if (!d) continue;
-        const current = d.position;
-        const toLeaderX = current.x - leaderPos.x;
-        const toLeaderZ = current.z - leaderPos.z;
-        const dist = Math.hypot(toLeaderX, toLeaderZ);
-        let dirX = 0;
-        let dirZ = -1; // Vector3.BACK -> (0,0,1) in Godot, but sign only matters when dist>0.01
-        if (dist > 0.01) {
-          dirX = toLeaderX / dist;
-          dirZ = toLeaderZ / dist;
-        } else {
-          dirX = 0;
-          dirZ = 1;
-        }
-        let nextPos;
-        if (dist > C.FOLLOW_LEASH) {
-          nextPos = { x: leaderPos.x + dirX * C.FOLLOW_LEASH, y: current.y, z: leaderPos.z + dirZ * C.FOLLOW_LEASH };
-        } else {
-          const targetX = leaderPos.x + dirX * C.FOLLOW_SPACING;
-          const targetZ = leaderPos.z + dirZ * C.FOLLOW_SPACING;
-          const lerpSpeed = Math.max(C.FOLLOW_LERP_MIN, C.FOLLOW_LERP_SPEED - i * C.FOLLOW_LERP_FALLOFF);
-          const t = Math.max(0, Math.min(1, delta * lerpSpeed));
-          nextPos = {
-            x: current.x + (targetX - current.x) * t,
-            y: current.y,
-            z: current.z + (targetZ - current.z) * t,
-          };
-        }
-        d.position = nextPos;
-        leaderPos = nextPos;
-      }
-    } else {
-      const count = queue.length;
-      for (let i = 0; i < count; i++) {
-        const d = room.ducklings.get(queue[i]);
-        if (!d) continue;
-        const angle = motion.idleSpin + ((Math.PI * 2) / count) * i;
-        const targetX = playerPos.x + Math.cos(angle) * C.CIRCLE_RADIUS;
-        const targetZ = playerPos.z + Math.sin(angle) * C.CIRCLE_RADIUS;
-        const current = d.position;
-        const t = Math.max(0, Math.min(1, delta * C.CIRCLE_LERP_SPEED));
-        d.position = {
-          x: current.x + (targetX - current.x) * t,
-          y: current.y,
-          z: current.z + (targetZ - current.z) * t,
-        };
-      }
-    }
-  }
-}
-
 function nearestNest(pos) {
   let nearest = C.NEST_POSITIONS[0];
   let minDist = Math.hypot(pos.x - nearest.x, pos.z - nearest.z);
@@ -393,7 +309,7 @@ function checkDeliver(room) {
     const queue = room.carryQueues.get(player.playerId) || [];
     if (queue.length === 0) continue;
 
-    const { nest, dist } = nearestNest(player.position);
+    const { dist } = nearestNest(player.position);
     if (dist > C.DELIVER_DISTANCE) continue;
 
     const deliveringDucklings = [];
@@ -413,9 +329,13 @@ function checkDeliver(room) {
       playerName: player.nickname,
       total: deliveringDucklings.length,
       delivered: 0,
-      targetNestPos: nest,
     });
 
+    // 둥지까지 걸어가는 연출은 client/scripts/duckling/duckling.gd가 화면에 보이는 그
+    // 자리에서 이어서 로컬로 계산한다(carried와 동일한 이유 — 좌표 자체는 게임 로직에
+    // 안 쓰인다). 도착 판정도 클라이언트가 직접 하고 'duckling:deliver' 메시지로
+    // 알려주면 그때 deliverDuckling()을 호출한다 — 그래서 여기서는 상태 전환만 하고
+    // 서버가 좌표/도착 타이머를 따로 시뮬레이션하지 않는다.
     for (const d of deliveringDucklings) {
       d.state = 'delivering';
       d.carrierPlayerId = null;
@@ -458,40 +378,6 @@ function deliverDuckling(room, d) {
     playerName: batch.playerName,
   });
   if (room.score >= room.targetScore) endGame(room, 'duck', 'duck_goal');
-}
-
-function updateDelivering(room, delta) {
-  for (const d of room.ducklings.values()) {
-    if (d.state !== 'delivering') continue;
-    const current = d.position;
-
-    let targetNest = C.NEST_POSITIONS[0];
-    const batchId = d.deliveryBatchId;
-    if (batchId && room.deliveryBatches.has(batchId)) {
-      targetNest = room.deliveryBatches.get(batchId).targetNestPos;
-    }
-
-    const toNestX = targetNest.x - current.x;
-    const toNestZ = targetNest.z - current.z;
-    const dist = Math.hypot(toNestX, toNestZ);
-    if (dist > C.NEST_ARRIVE_DISTANCE) {
-      const step = Math.min(C.DELIVER_MOVE_SPEED * delta, dist);
-      d.position = {
-        x: current.x + (toNestX / dist) * step,
-        y: current.y,
-        z: current.z + (toNestZ / dist) * step,
-      };
-      continue;
-    }
-
-    d.position = { x: targetNest.x, y: targetNest.y, z: targetNest.z };
-    const settled = (room.deliveringSettle.get(d.ducklingId) || 0) + delta;
-    room.deliveringSettle.set(d.ducklingId, settled);
-    if (settled >= C.NEST_SETTLE_TIME) {
-      room.deliveringSettle.delete(d.ducklingId);
-      deliverDuckling(room, d);
-    }
-  }
 }
 
 // ── 대시 판정 ────────────────────────────────────────────────────────────────
@@ -713,10 +599,7 @@ function tick(room, delta) {
 
   updateDucklingWander(room, delta);
   checkPickup(room);
-  updatePlayerMotion(room, delta);
-  updateDucklingFollow(room, delta);
   checkDeliver(room);
-  updateDelivering(room, delta);
   updateDashCatches(room, delta);
   updateJailAndRescue(room, delta);
   updateAllJailedEnd(room, delta);
@@ -740,6 +623,7 @@ module.exports = {
   jailPlayer,
   returnToLobby,
   endGame,
+  deliverDuckling,
   tick,
   tickAll,
   broadcastRoomState,

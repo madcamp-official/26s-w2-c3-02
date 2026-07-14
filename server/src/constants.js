@@ -26,9 +26,6 @@ const NEST_POSITIONS = [
   { x: -58.5, y: 1.68, z: 58.5 },
   { x: 58.5, y: 1.68, z: -58.5 },
 ];
-const DELIVER_MOVE_SPEED = 5.0; // units/sec, MockServer.gd DELIVER_MOVE_SPEED
-const NEST_ARRIVE_DISTANCE = 0.35;
-const NEST_SETTLE_TIME = 0.35;
 
 const DASH_DISTANCE = 9.8;
 const DASH_DURATION = 0.25;
@@ -50,17 +47,6 @@ const WANDER_SPEED = 1.2;
 const WANDER_TURN_INTERVAL = 2.0;
 const POND_BOUND = 91.0;
 const DUCKLING_OBSTACLE_PADDING = 0.4;
-
-// 추종(follow) 대형 — MockServer.gd 상수와 동일
-const FOLLOW_SPACING = 1.5;
-const FOLLOW_LEASH = FOLLOW_SPACING * 1.6;
-const FOLLOW_LERP_SPEED = 4.0;
-const FOLLOW_LERP_FALLOFF = 0.5;
-const FOLLOW_LERP_MIN = 1.5;
-const MOVING_SPEED_THRESHOLD = 1.0;
-const CIRCLE_RADIUS = 2.2;
-const CIRCLE_LERP_SPEED = 4.0;
-const CIRCLE_SPIN_SPEED = 0.4;
 
 // 새끼오리 회피용 정적 장애물 좌표. client/scenes/world/Pond.tscn + JailIsland의
 // MeshInstance3D AABB를 한 번(헤드리스 Godot 스크립트로) 추출해 하드코딩한 값이다.
@@ -132,9 +118,6 @@ module.exports = {
   PICKUP_DISTANCE,
   DELIVER_DISTANCE,
   NEST_POSITIONS,
-  DELIVER_MOVE_SPEED,
-  NEST_ARRIVE_DISTANCE,
-  NEST_SETTLE_TIME,
   DASH_DISTANCE,
   DASH_DURATION,
   DASH_COOLDOWN,
@@ -149,14 +132,5 @@ module.exports = {
   WANDER_TURN_INTERVAL,
   POND_BOUND,
   DUCKLING_OBSTACLE_PADDING,
-  FOLLOW_SPACING,
-  FOLLOW_LEASH,
-  FOLLOW_LERP_SPEED,
-  FOLLOW_LERP_FALLOFF,
-  FOLLOW_LERP_MIN,
-  MOVING_SPEED_THRESHOLD,
-  CIRCLE_RADIUS,
-  CIRCLE_LERP_SPEED,
-  CIRCLE_SPIN_SPEED,
   POND_OBSTACLES,
 };

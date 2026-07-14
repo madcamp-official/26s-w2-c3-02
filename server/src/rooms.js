@@ -59,7 +59,7 @@ function serializePlayer(player) {
   return out;
 }
 
-function serializeDuckling(d) {
+function serializeDuckling(d, queueIndex) {
   const out = {
     ducklingId: d.ducklingId,
     position: d.position,
@@ -68,6 +68,12 @@ function serializeDuckling(d) {
   };
   if (d.deliveryBatchId) {
     out.deliveryBatchId = d.deliveryBatchId;
+  }
+  // carried 상태일 때만 의미 있음 — 클라이언트가 대열에서 몇 번째로 따라가는지(누구 뒤를
+  // 이어야 하는지) 판단하는 데 쓴다. 좌표 자체는 서버가 더 이상 계산하지 않고, 이 순서
+  // 정보만으로 각 클라이언트가 로컬에서 팔로우 위치를 재현한다.
+  if (queueIndex !== undefined) {
+    out.queueIndex = queueIndex;
   }
   return out;
 }
@@ -95,8 +101,6 @@ function createRoomObject({ roomId, roomName, isPrivate }) {
     // 내부 시뮬레이션 상태 (game:state로 나가지 않음) — gameLoop.js가 사용
     wanderState: new Map(),
     carryQueues: new Map(),
-    playerMotion: new Map(),
-    deliveringSettle: new Map(),
     deliveryBatches: new Map(),
     nextDeliveryBatchId: 1,
     nextDucklingId: 1,
@@ -197,7 +201,11 @@ function assignRandomRoles(room) {
     const j = Math.floor(Math.random() * (i + 1));
     [players[i], players[j]] = [players[j], players[i]];
   }
-  const taggerIds = new Set(players.slice(0, C.TAGGER_COUNT).map((p) => p.playerId));
+  // 1인 디버그 모드에서는 TAGGER_COUNT(1)가 인원수(1)와 같아 슬라이스 방식이 항상
+  // 그 한 명을 경찰로 고정시켜버린다. 이 경우엔 50% 확률로 아예 경찰을 안 뽑아
+  // 오리/경찰이 랜덤으로 나오게 한다.
+  const taggerCount = players.length <= C.TAGGER_COUNT && Math.random() < 0.5 ? 0 : C.TAGGER_COUNT;
+  const taggerIds = new Set(players.slice(0, taggerCount).map((p) => p.playerId));
   for (const p of players) {
     if (taggerIds.has(p.playerId)) {
       p.team = 'tagger';
@@ -225,7 +233,6 @@ function canStartGame(room) {
 function removePlayer(room, playerId) {
   room.players.delete(playerId);
   room.carryQueues.delete(playerId);
-  room.playerMotion.delete(playerId);
   room.activeDashes.delete(playerId);
 
   if (room.players.size === 0) {
@@ -266,8 +273,14 @@ function serializeRoomState(room) {
 function serializeGameState(room) {
   const players = [];
   for (const p of room.players.values()) players.push(serializePlayer(p));
+  const queueIndexById = new Map();
+  for (const queue of room.carryQueues.values()) {
+    queue.forEach((ducklingId, index) => queueIndexById.set(ducklingId, index));
+  }
   const ducklings = [];
-  for (const d of room.ducklings.values()) ducklings.push(serializeDuckling(d));
+  for (const d of room.ducklings.values()) {
+    ducklings.push(serializeDuckling(d, queueIndexById.get(d.ducklingId)));
+  }
   return {
     roomId: room.roomId,
     phase: room.phase,

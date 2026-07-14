@@ -160,6 +160,27 @@ func _player_by_id(player_id: String) -> Dictionary:
 			return player
 	return {}
 
+# 특정 playerId를 지금 화면에 그리고 있는 실제 Node를 돌려준다(위치/회전이 매 프레임
+# 갱신되는 살아있는 노드 — GameData.players의 마지막 브로드캐스트 값이 아니라).
+# 새끼오리가 "따라다니는 리더"의 실시간 위치를 로컬에서 참조하기 위해 필요하다.
+func get_player_node(player_id: String) -> Node3D:
+	if player_id == "":
+		return null
+	if _duck != null and str(_duck.get("controlled_player_id")) == player_id:
+		return _duck
+	if _aligator != null and str(_aligator.get("controlled_player_id")) == player_id:
+		return _aligator
+	return _remote_players.get(player_id)
+
+# 대열에서 자기 바로 앞 순번의 새끼오리를 리더 삼아 체인으로 따라가려면, 그 새끼오리의
+# 실시간 Node가 필요하다. duckling_spawner.gd가 ducklingId -> Node 매핑을 들고 있으므로
+# 여기서 한 다리 건너 노출한다(duckling.gd가 노드 경로를 직접 알 필요 없게).
+func get_duckling_node(duckling_id: String) -> Node3D:
+	var spawner := get_node_or_null("DucklingSpawner")
+	if spawner == null or not spawner.has_method("get_node_for_duckling"):
+		return null
+	return spawner.call("get_node_for_duckling", duckling_id)
+
 func _sync_remote_players() -> void:
 	_sync_builtin_counterpart()
 

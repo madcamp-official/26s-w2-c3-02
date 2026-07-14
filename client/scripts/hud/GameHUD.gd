@@ -147,7 +147,7 @@ func _on_hud_sfx_volume_slider_value_changed(value: float) -> void:
 
 func _refresh() -> void:
 	timer_label.text = "남은 시간 %s" % _format_time(GameData.remaining_seconds)
-	score_label.text = "남은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
+	score_label.text = "모은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
 	_refresh_countdown()
 	_refresh_player_list()
 	_refresh_debug_summary()

@@ -90,15 +90,6 @@ const SKINS_BY_ROLE: Dictionary = {
 			"model_rotation_degrees": Vector3(0, 0, 0),
 			"model_scale": Vector3(3.1, 3.1, 3.1),
 		},
-		{
-			"id": "mecha_duck",
-			"name": "메카오리",
-			"character": "mecha_duck",
-			"model": preload("res://assets/mecha_duck/mecha_duck.glb"),
-			"model_position": Vector3(0, 0, 0),
-			"model_rotation_degrees": Vector3(0, 180, 0),
-			"model_scale": Vector3(1.5, 1.5, 1.5),
-		},
 	],
 	InventoryRole.TAGGER: [
 		{

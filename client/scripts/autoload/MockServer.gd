@@ -5,8 +5,8 @@ extends Node
 ## 함수 시그니처는 최대한 유지해 메뉴/HUD/월드/플레이어 쪽 호출부를 거의 건드리지
 ## 않고 교체할 수 있게 했다. 메시지 계약은 Docs/api-spec.md를 기준으로 한다.
 
-const SERVER_URL := "wss://cops-and-ducks.madcamp-kaist.org/ws" # 배포 시 이 상수만 바꾸면 된다.
-## const SERVER_URL := "ws://127.0.0.1:8080/ws" # 로컬 테스트용
+## const SERVER_URL := "wss://cops-and-ducks.madcamp-kaist.org/ws" # 배포 시 이 상수만 바꾸면 된다.
+const SERVER_URL := "ws://127.0.0.1:8080/ws" # 로컬 테스트용
 ## const SERVER_URL := "wss://54.180.118.137:8080/ws"
 
 const MVP_PLAYER_LIMIT := 5
@@ -283,6 +283,11 @@ func begin_dash(player_id: String, start_pos: Vector3, end_pos: Vector3, duratio
 		"endPosition": {"x": end_pos.x, "y": end_pos.y, "z": end_pos.z},
 		"duration": duration,
 	}, GameData.room_id)
+
+func notify_duckling_delivered(duckling_id: String) -> void:
+	# 둥지까지 걷는 연출과 도착 판정을 클라이언트(duckling.gd)가 로컬로 하고, 실제로
+	# 도착했다고 판단한 순간 이 메시지로 서버에 알려야 점수/새끼오리 삭제가 반영된다.
+	_send("duckling:deliver", {"ducklingId": duckling_id}, GameData.room_id)
 
 func report_local_transform(pos: Vector3, rotation_y: float) -> void:
 	# player.gd가 자기 자신(local_player_id)의 위치를 매 프레임 알려주면, 여기서

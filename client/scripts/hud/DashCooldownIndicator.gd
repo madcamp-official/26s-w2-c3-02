@@ -11,6 +11,7 @@ const FILL_COLOR_READY := Color(0.35, 0.85, 0.45, 0.95)
 const FILL_COLOR_COOLDOWN := Color(0.85, 0.65, 0.25, 0.95)
 
 @onready var _label: Label = $Label
+@onready var _space_bar_icon: TextureRect = $SpaceBarIcon
 
 var _texture_ready: ImageTexture
 var _texture_cooldown: ImageTexture
@@ -44,9 +45,10 @@ func _process(_delta: float) -> void:
 	value = ready_fraction
 	texture_progress = _texture_ready if ready_fraction >= 1.0 else _texture_cooldown
 
-	if remaining <= 0.0:
-		_label.text = "대시"
-	else:
+	var is_ready := remaining <= 0.0
+	_space_bar_icon.visible = is_ready
+	_label.visible = not is_ready
+	if not is_ready:
 		_label.text = "%.1f" % remaining
 
 
