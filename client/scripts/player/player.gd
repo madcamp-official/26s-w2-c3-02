@@ -89,12 +89,15 @@ const CHARACTER_CONFIG := {
 	},
 	"shark": {
 		"model": "res://assets/shark/shark.glb",
-		# TODO: 실측 미완료 — aligator 값을 초기값으로 사용. 에디터에서 실제 모델을 보고
-		# model_pos.y(발/바닥 높이 맞춤)와 collision_size/collision_pos를 조정해야 한다.
+		# TODO: 실측 미완료 — aligator 값을 초기값으로 사용하되 인게임에서 너무 커 보인다는
+		# 피드백으로 model_scale을 0.3배 줄임(6.0 -> 1.8). 모델의 원점(발/바닥 위치)은
+		# model_scale과 무관하게 유지되므로 model_pos는 그대로 두되, 판정 박스가 이제
+		# 시각적으로 훨씬 작아진 모델과 안 맞을 수 있어 collision_size/collision_pos도
+		# 같은 비율로 함께 줄였다. 에디터에서 실측 후 재조정 필요.
 		"model_pos": Vector3(0, 1.684, 0),
-		"model_scale": 6.0,
-		"collision_size": Vector3(4.0, 3.36, 12.0),
-		"collision_pos": Vector3(0, 1.68, 0),
+		"model_scale": 1.8,
+		"collision_size": Vector3(1.2, 1.008, 3.6),
+		"collision_pos": Vector3(0, 0.504, 0),
 		"water_submerge_depth": 1.7,
 		"water_effect_scale": 1.8,
 	},
