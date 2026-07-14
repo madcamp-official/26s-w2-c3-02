@@ -307,7 +307,17 @@ func _physics_process(delta: float) -> void:
 
 	_apply_free_movement(delta)
 	_apply_step_up()
+	var prev_pos := global_position
 	move_and_slide()
+
+	# 대시처럼 빠른 이동이 지형 이음매(연못 바닥 메쉬 조각 사이 틈, 섬 콜리전 경계 등)를
+	# 스치면 한두 프레임 is_on_floor()가 false가 되면서 중력이 붙어 물 밑으로 떨어질 수
+	# 있다. _move_inside_jail()과 동일한 안전망: 물 표면 높이 이하로 내려가면 그냥 이번
+	# 프레임 이동을 되돌린다.
+	if global_position.y <= JAIL_WATER_MARGIN_Y:
+		global_position = prev_pos
+		velocity = Vector3.ZERO
+
 	_update_water_submersion(delta)
 	_update_local_transform_if_needed()
 
