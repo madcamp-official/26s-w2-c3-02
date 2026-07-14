@@ -488,7 +488,8 @@ func _update_dash(delta: float) -> void:
 		dash_cooldown_remaining = max(0.0, dash_cooldown_remaining - delta)
 
 	var action_suffix := "_arrow" if control_scheme == "arrows" else ""
-	if not dash_active and dash_cooldown_remaining <= 0.0 and Input.is_action_just_pressed("dash" + action_suffix):
+	var mobile_dash_requested := controlled_player_id == GameData.local_player_id and GameData.consume_mobile_dash_request()
+	if not dash_active and dash_cooldown_remaining <= 0.0 and (Input.is_action_just_pressed("dash" + action_suffix) or mobile_dash_requested):
 		AudioManager.play_sfx("dash")
 		dash_active = true
 		_dash_time_left = DASH_DURATION
@@ -534,6 +535,9 @@ func _input_direction() -> Vector3:
 		input_dir.x -= 1.0
 	if Input.is_action_pressed("move_right" + action_suffix):
 		input_dir.x += 1.0
+	if controlled_player_id == GameData.local_player_id:
+		input_dir.x += GameData.mobile_move_input.x
+		input_dir.z += GameData.mobile_move_input.y
 	return input_dir.normalized()
 
 

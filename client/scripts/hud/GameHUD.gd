@@ -12,6 +12,7 @@ const INDICATOR_SAFE_RADIUS := 96.0
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
 const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
+const MobileControlsScript := preload("res://scripts/hud/MobileControls.gd")
 
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
@@ -49,12 +50,14 @@ var _icon_mask_shader: Shader = null
 var _circle_photo_mask_shader: Shader = null
 var _settings_button_rest_position := Vector2.ZERO
 var _settings_button_tween: Tween = null
+var _mobile_controls: Control = null
 
 
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
 	_init_settings_overlay()
+	_init_mobile_controls()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
@@ -62,6 +65,11 @@ func _ready() -> void:
 	debug_panel.visible = false
 	_refresh()
 	_update_direction_indicators()
+
+
+func _init_mobile_controls() -> void:
+	_mobile_controls = MobileControlsScript.new()
+	get_node("Root").add_child(_mobile_controls)
 
 
 func _process(delta: float) -> void:
