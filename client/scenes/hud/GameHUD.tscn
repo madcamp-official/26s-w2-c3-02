@@ -257,6 +257,7 @@ theme_override_styles/panel = SubResource("StyleBoxEmpty_no_panel")
 [node name="PlayerListContent" type="VBoxContainer" parent="Root/PlayerListPanel"]
 unique_name_in_owner = true
 layout_mode = 2
+alignment = 1
 theme_override_constants/separation = 8
 
 [node name="JailDirectionIndicator" type="Control" parent="Root"]

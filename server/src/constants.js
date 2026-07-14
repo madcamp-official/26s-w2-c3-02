@@ -10,7 +10,7 @@ const DUCK_COUNT_MAX = 4;
 
 const GAME_DURATION_SECONDS = 180;
 const TARGET_SCORE = 5; // 로비(게임 시작 전) 표시용 기본값. 실제 목표점수는 게임 시작 시 (오리 인원 * 10)으로 덮어써진다.
-const COUNTDOWN_SECONDS = 5;
+const COUNTDOWN_SECONDS = 10;
 const MAX_DUCKLINGS_ON_MAP = 10; // 게임 시작 시 스폰 개수이자, 배달로 줄어들 때마다 다시 채우는 상한
 
 const JAIL_SECONDS = 8.0; // 오리가 1명뿐일 때만 적용되는 자동 탈출 시간(초)

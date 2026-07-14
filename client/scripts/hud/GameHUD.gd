@@ -382,7 +382,7 @@ func _apply_static_text_styles() -> void:
 	_apply_game_text_style(timer_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(score_label, 34, Color.WHITE, 8, 5)
 	_apply_game_text_style(event_message_label, 30, Color.WHITE, 7, 4)
-	_apply_game_text_style(countdown_label, 96, Color.WHITE, 12, 7)
+	_apply_game_text_style(countdown_label, 72, Color.WHITE, 12, 7)
 	_apply_game_text_style(objective_label, 34, Color.WHITE, 7, 4)
 
 
