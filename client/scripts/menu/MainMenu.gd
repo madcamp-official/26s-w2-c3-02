@@ -29,6 +29,7 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var create_room_private_button: Button = %CreateRoomPrivateButton
 @onready var refresh_room_list_button: Button = %RefreshRoomListButton
 @onready var lobby_overlay: Control = %LobbyOverlay
+@onready var lobby_title_label: Label = %LobbyTitleLabel
 @onready var room_code_label: Label = %RoomCodeLabel
 @onready var players_list: VBoxContainer = %PlayersList
 @onready var lobby_status_label: Label = %LobbyStatusLabel
@@ -731,16 +732,19 @@ func _refresh_lobby() -> void:
 	if not is_instance_valid(room_code_label) or not is_instance_valid(players_list):
 		return
 
+	var room_name := GameData.room_name.strip_edges()
+	if room_name == "":
+		room_name = "비공개방 #1" if GameData.room_is_private else "공개방 #1"
+	lobby_title_label.text = room_name
+
 	var display_join_code := GameData.join_code.strip_edges()
 	room_code_label.text = "참가코드: %s" % ("-" if display_join_code == "" else display_join_code)
 	# 시작 버튼은 호스트에게만 보여준다 — 참가자가 눌러도 서버가 NOT_HOST로 거부할 뿐이라,
 	# 애초에 호스트가 아니면 버튼 자체를 숨겨서 왜 안 되는지 헷갈리지 않게 한다.
 	start_game_button.visible = GameData.is_host
+	lobby_status_label.text = MockServer.lobby_status_text()
 	if GameData.is_host:
-		lobby_status_label.text = MockServer.lobby_status_text()
 		start_game_button.disabled = not MockServer.can_start_game()
-	else:
-		lobby_status_label.text = "호스트가 게임을 시작하기를 기다리는 중... (역할은 시작 시 무작위 배정)"
 
 	for child in players_list.get_children():
 		players_list.remove_child(child)

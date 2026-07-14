@@ -131,6 +131,7 @@ function handleGameReturnToLobby(ws, msg) {
   gameLoop.returnToLobby(room);
 }
 
+<<<<<<< HEAD
 // 둥지까지 걸어가는 연출은 duckling.gd가 로컬로 그리고, 도착 판정도 클라이언트가 직접
 // 내려서 알려준다(carried와 같은 이유로 좌표 자체가 서버 판정에 쓰이지 않으므로). 서버는
 // 이 duckling이 실제로 이 방의 delivering 상태였는지만 확인하고 점수/삭제를 처리한다.
@@ -141,6 +142,12 @@ function handleDucklingDeliver(ws, msg) {
   const d = room.ducklings.get(ducklingId);
   if (!d || d.state !== 'delivering') return;
   gameLoop.deliverDuckling(room, d);
+=======
+function handleGameForceEnd(ws, msg) {
+  const { room, player } = requireRoomAndPlayer(ws);
+  if (!room || !player) return;
+  gameLoop.endGame(room, 'tagger', 'debug_force_end');
+>>>>>>> 7df60045d89fad1e469fd02722f382342f8d00ac
 }
 
 const HANDLERS = {
@@ -153,7 +160,11 @@ const HANDLERS = {
   'player:input': handlePlayerInput,
   'player:dash': handlePlayerDash,
   'game:returnToLobby': handleGameReturnToLobby,
+<<<<<<< HEAD
   'duckling:deliver': handleDucklingDeliver,
+=======
+  'game:forceEnd': handleGameForceEnd,
+>>>>>>> 7df60045d89fad1e469fd02722f382342f8d00ac
 };
 
 function handleMessage(ws, raw) {
