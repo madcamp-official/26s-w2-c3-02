@@ -10,6 +10,9 @@ const DASH_RING_INNER_RADIUS := 42.0
 const DASH_TRACK_COLOR := Color(0.05, 0.05, 0.05, 0.55)
 const DASH_READY_COLOR := Color(0.35, 0.85, 0.45, 0.95)
 const DASH_COOLDOWN_COLOR := Color(0.95, 0.72, 0.24, 0.95)
+const SAFE_AREA_EXTRA_MARGIN := 12.0
+const DASH_BASE_MARGIN_RIGHT := 116.0
+const DASH_BASE_MARGIN_BOTTOM := 116.0
 
 var _touch_index := -1
 var _joystick_active := false
@@ -51,7 +54,9 @@ func _input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _dash_button == null:
 		return
-	_dash_button.disabled = GameData.phase != "playing" or MockServer.local_player_team() != "tagger"
+	var should_show_dash := GameData.phase == "playing" and _local_player_can_dash()
+	_dash_button.visible = should_show_dash
+	_dash_button.disabled = not should_show_dash
 	_update_dash_cooldown_ring()
 
 
@@ -142,8 +147,9 @@ func _create_dash_cooldown_ring() -> void:
 func _position_dash_button() -> void:
 	if _dash_button == null:
 		return
-	var margin_right := 116.0
-	var margin_bottom := 116.0
+	var safe_margins := _safe_area_margins()
+	var margin_right: float = max(DASH_BASE_MARGIN_RIGHT, safe_margins.z + SAFE_AREA_EXTRA_MARGIN)
+	var margin_bottom: float = max(DASH_BASE_MARGIN_BOTTOM, safe_margins.w + SAFE_AREA_EXTRA_MARGIN)
 	_dash_button.anchor_left = 1.0
 	_dash_button.anchor_top = 1.0
 	_dash_button.anchor_right = 1.0
@@ -167,7 +173,7 @@ func _position_dash_button() -> void:
 func _update_dash_cooldown_ring() -> void:
 	if _dash_cooldown_ring == null:
 		return
-	var should_show := visible and GameData.phase == "playing" and MockServer.local_player_team() == "tagger"
+	var should_show := visible and _dash_button.visible and GameData.phase == "playing" and _local_player_can_dash()
 	_dash_cooldown_ring.visible = should_show
 	if not should_show:
 		return
@@ -201,6 +207,11 @@ func _on_dash_button_pressed() -> void:
 	GameData.request_mobile_dash()
 
 
+func _local_player_can_dash() -> bool:
+	var team := MockServer.local_player_team()
+	return team == "tagger" or team == "police"
+
+
 func _draw() -> void:
 	if not _joystick_active:
 		return
@@ -217,3 +228,19 @@ func _notification(what: int) -> void:
 
 func _should_show_mobile_controls() -> bool:
 	return OS.has_feature("android") or OS.has_feature("ios") or DisplayServer.is_touchscreen_available()
+
+
+func _safe_area_margins() -> Vector4:
+	if not _should_show_mobile_controls():
+		return Vector4.ZERO
+
+	var viewport_size := get_viewport_rect().size
+	var safe_rect := DisplayServer.get_display_safe_area()
+	if safe_rect.size.x <= 0 or safe_rect.size.y <= 0:
+		return Vector4.ZERO
+
+	var left := float(safe_rect.position.x)
+	var top := float(safe_rect.position.y)
+	var right: float = max(0.0, viewport_size.x - float(safe_rect.position.x + safe_rect.size.x))
+	var bottom: float = max(0.0, viewport_size.y - float(safe_rect.position.y + safe_rect.size.y))
+	return Vector4(left, top, right, bottom)

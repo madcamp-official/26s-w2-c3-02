@@ -9,11 +9,22 @@ const INDICATOR_MARGIN := 20.0
 const INDICATOR_SIZE := Vector2(180, 180)
 const INDICATOR_CENTER := Vector2(90, 90)
 const INDICATOR_SAFE_RADIUS := 96.0
+const SAFE_AREA_EXTRA_MARGIN := 12.0
+const TOP_BAR_BASE_LEFT := 24.0
+const TOP_BAR_BASE_TOP := 18.0
+const TOP_BAR_BASE_RIGHT := 24.0
+const TOP_BAR_HEIGHT := 78.0
+const PLAYER_LIST_BASE_LEFT := 24.0
+const PLAYER_LIST_WIDTH := 264.0
+const SETTINGS_BUTTON_BASE_RIGHT := 28.0
+const SETTINGS_BUTTON_BASE_BOTTOM := 28.0
+const SETTINGS_BUTTON_SIZE := 56.0
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
 const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 const MobileControlsScript := preload("res://scripts/hud/MobileControls.gd")
 
+@onready var top_bar: PanelContainer = $Root/TopBar
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
 @onready var event_toast: PanelContainer = %EventToast
@@ -22,6 +33,7 @@ const MobileControlsScript := preload("res://scripts/hud/MobileControls.gd")
 @onready var countdown_label: Label = %CountdownLabel
 @onready var objective_toast: PanelContainer = %ObjectiveToast
 @onready var objective_label: Label = %ObjectiveLabel
+@onready var player_list_panel: PanelContainer = %PlayerListPanel
 @onready var player_list_content: VBoxContainer = %PlayerListContent
 @onready var jail_direction_indicator: Control = %JailDirectionIndicator
 @onready var nest_direction_indicator: Control = %NestDirectionIndicator
@@ -56,11 +68,13 @@ var _mobile_controls: Control = null
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
+	get_viewport().size_changed.connect(_apply_safe_area_margins)
 	_init_settings_overlay()
 	_init_mobile_controls()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
+	_apply_safe_area_margins()
 	debug_mode_button.text = "종료 테스트"
 	debug_panel.visible = false
 	_refresh()
@@ -87,6 +101,8 @@ func _process(delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	if get_viewport().size_changed.is_connected(_apply_safe_area_margins):
+		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
 	if GameData.game_state_changed.is_connected(_refresh):
 		GameData.game_state_changed.disconnect(_refresh)
 	if GameData.game_event.is_connected(_on_game_event):
@@ -98,7 +114,6 @@ func _exit_tree() -> void:
 func _init_settings_overlay() -> void:
 	settings_overlay.visible = false
 	_apply_settings_button_style()
-	_settings_button_rest_position = settings_button.position
 	settings_button.pressed.connect(_on_settings_button_pressed)
 	settings_button.mouse_entered.connect(_on_settings_button_mouse_entered)
 	settings_button.mouse_exited.connect(_on_settings_button_mouse_exited)
@@ -108,6 +123,48 @@ func _init_settings_overlay() -> void:
 	hud_bgm_volume_slider.set_value_no_signal(AudioManager.get_bgm_volume() * 100.0)
 	hud_sfx_volume_slider.set_value_no_signal(AudioManager.get_sfx_volume() * 100.0)
 	_refresh_hud_audio_volume_labels()
+
+
+func _apply_safe_area_margins() -> void:
+	var safe_margins := _safe_area_margins()
+	var left_margin: float = max(TOP_BAR_BASE_LEFT, safe_margins.x + SAFE_AREA_EXTRA_MARGIN)
+	var top_margin: float = max(TOP_BAR_BASE_TOP, safe_margins.y + SAFE_AREA_EXTRA_MARGIN)
+	var right_margin: float = max(TOP_BAR_BASE_RIGHT, safe_margins.z + SAFE_AREA_EXTRA_MARGIN)
+	var bottom_margin: float = max(SETTINGS_BUTTON_BASE_BOTTOM, safe_margins.w + SAFE_AREA_EXTRA_MARGIN)
+
+	top_bar.offset_left = left_margin
+	top_bar.offset_top = top_margin
+	top_bar.offset_right = -right_margin
+	top_bar.offset_bottom = top_margin + TOP_BAR_HEIGHT
+
+	player_list_panel.offset_left = max(PLAYER_LIST_BASE_LEFT, safe_margins.x + SAFE_AREA_EXTRA_MARGIN)
+	player_list_panel.offset_right = player_list_panel.offset_left + PLAYER_LIST_WIDTH
+
+	settings_button.offset_left = -right_margin - SETTINGS_BUTTON_SIZE
+	settings_button.offset_top = -bottom_margin - SETTINGS_BUTTON_SIZE
+	settings_button.offset_right = -right_margin
+	settings_button.offset_bottom = -bottom_margin
+	_settings_button_rest_position = settings_button.position
+
+
+func _safe_area_margins() -> Vector4:
+	if not _is_mobile_safe_area_target():
+		return Vector4.ZERO
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var safe_rect := DisplayServer.get_display_safe_area()
+	if safe_rect.size.x <= 0 or safe_rect.size.y <= 0:
+		return Vector4.ZERO
+
+	var left := float(safe_rect.position.x)
+	var top := float(safe_rect.position.y)
+	var right: float = max(0.0, viewport_size.x - float(safe_rect.position.x + safe_rect.size.x))
+	var bottom: float = max(0.0, viewport_size.y - float(safe_rect.position.y + safe_rect.size.y))
+	return Vector4(left, top, right, bottom)
+
+
+func _is_mobile_safe_area_target() -> bool:
+	return OS.has_feature("android") or OS.has_feature("ios") or DisplayServer.is_touchscreen_available()
 
 
 func _refresh_hud_audio_volume_labels() -> void:
