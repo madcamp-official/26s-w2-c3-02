@@ -17,20 +17,21 @@ function generateRoomCode() {
   return code;
 }
 
-function spawnPositionForCharacter(character) {
-  if (character === 'aligator') {
+function spawnPositionForTeam(team) {
+  if (team === 'tagger') {
     return { x: 40.0, y: 0.0, z: -40.0 };
   }
   return { x: -40.0, y: 0.0, z: 40.0 };
 }
 
-function makePlayer({ playerId, nickname, team, character, ws }) {
-  const spawn = spawnPositionForCharacter(character);
+function makePlayer({ playerId, nickname, team, character, taggerCharacter, ws }) {
+  const spawn = spawnPositionForTeam(team);
   return {
     playerId,
     nickname,
     team,
     duckSkin: team === 'tagger' ? 'duck' : character || 'duck',
+    taggerSkin: taggerCharacter || 'aligator',
     character,
     position: spawn,
     rotationY: 0.0,
@@ -130,7 +131,7 @@ function makeDefaultRoomName(isPrivate) {
   return name;
 }
 
-function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
+function createRoom({ nickname, roomName, isPrivate, characterSkin, taggerSkin, ws }) {
   // 방의 참가코드는 별도로 관리하지 않고, 서버가 항상 무작위로 배정하는 4자리 roomId를
   // 그대로 참가코드로 사용한다(공개/비공개 모두 코드 자체는 존재).
   const roomId = generateRoomCode();
@@ -150,7 +151,14 @@ function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
 
   const playerId = crypto.randomUUID();
   const nick = (nickname || '').trim() || 'Player';
-  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  const player = makePlayer({
+    playerId,
+    nickname: nick,
+    team: 'duck',
+    character: characterSkin || 'duck',
+    taggerCharacter: taggerSkin || 'aligator',
+    ws,
+  });
   room.players.set(playerId, player);
   room.hostPlayerId = playerId;
 
@@ -175,7 +183,7 @@ function listRooms() {
   return out;
 }
 
-function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
+function joinRoom({ roomId, nickname, joinCode, characterSkin, taggerSkin, ws }) {
   const room = rooms.get(roomId);
   if (!room) {
     return { ok: false, code: 'ROOM_NOT_FOUND', message: '존재하지 않는 방입니다.' };
@@ -192,7 +200,14 @@ function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
 
   const playerId = crypto.randomUUID();
   const nick = (nickname || '').trim() || 'Player';
-  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  const player = makePlayer({
+    playerId,
+    nickname: nick,
+    team: 'duck',
+    character: characterSkin || 'duck',
+    taggerCharacter: taggerSkin || 'aligator',
+    ws,
+  });
   room.players.set(playerId, player);
 
   return { ok: true, room, player };
@@ -221,7 +236,7 @@ function assignRandomRoles(room) {
   for (const p of players) {
     if (taggerIds.has(p.playerId)) {
       p.team = 'tagger';
-      p.character = 'aligator';
+      p.character = p.taggerSkin || 'aligator';
     } else {
       p.team = 'duck';
       p.character = p.duckSkin || 'duck';
@@ -331,6 +346,6 @@ module.exports = {
   serializeDuckling,
   serializeRoomState,
   serializeGameState,
-  spawnPositionForCharacter,
+  spawnPositionForTeam,
   countTeam,
 };

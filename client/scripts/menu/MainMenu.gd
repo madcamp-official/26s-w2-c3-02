@@ -62,7 +62,9 @@ enum InventoryRole { DUCK, TAGGER }
 
 const SKIN_PREVIEW_SCENE := preload("res://scenes/menu/SkinPreview3D.tscn")
 
-const SKINS_BY_ROLE: Dictionary = {
+# load()로 채우는 항목(shark)이 있어 const가 아닌 var로 선언한다 — const는 컴파일 시점
+# 상수만 허용하고, load()는 런타임에 평가되는 함수라 const 초기화식에 쓸 수 없다.
+var SKINS_BY_ROLE: Dictionary = {
 	InventoryRole.DUCK: [
 		{
 			"id": "duck_default",
@@ -101,6 +103,21 @@ const SKINS_BY_ROLE: Dictionary = {
 			"model_position": Vector3(0, 0.684, 0),
 			"model_rotation_degrees": Vector3(0, 180, 0),
 			"model_scale": Vector3(1.4, 1.4, 1.4),
+		},
+		{
+			"id": "shark",
+			"name": "상어",
+			"character": "shark",
+			# 새로 추가된 에셋이라 아직 .import가 없을 수 있다. preload()는 컴파일 시점에
+			# 리졸브해야 해서 임포트가 안 된 리소스를 가리키면 이 스크립트 전체가 파싱
+			# 실패해 홈 화면 버튼이 전부 죽어버린다(실제로 겪음) — load()로 런타임에
+			# 지연 로드해 그런 실패가 스크립트를 통째로 깨뜨리지 않게 한다.
+			"model": load("res://assets/shark/shark.glb"),
+			# TODO: 실측 미완료 — tagger_default 값을 초기값으로 사용. 인벤토리 미리보기에서
+			# 실제 모델을 보고 위치/스케일을 조정해야 한다.
+			"model_position": Vector3(0, 0.684, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(0.6, 0.6, 0.6),
 		},
 	],
 }
@@ -209,8 +226,9 @@ func _on_create_room_confirm_button_pressed() -> void:
 		_show_alert("방 이름은 10자 이내로 입력해주세요.")
 		return
 	var duck_skin := get_selected_duck_skin()
+	var tagger_skin := get_selected_tagger_skin()
 	var is_private := create_room_private_button.button_pressed
-	var result: Dictionary = await MockServer.create_room(nickname, room_name, duck_skin, is_private)
+	var result: Dictionary = await MockServer.create_room(nickname, room_name, duck_skin, is_private, tagger_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -232,7 +250,8 @@ func _on_join_room_button_pressed() -> void:
 		_show_alert("닉네임은 10자 이내로 입력해주세요.")
 		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
+	var tagger_skin := get_selected_tagger_skin()
+	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin, tagger_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -446,7 +465,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	box.flat = true
 	box.text = ""
 	box.focus_mode = Control.FOCUS_NONE
-	box.custom_minimum_size = Vector2(110, 134)
+	box.custom_minimum_size = Vector2(160, 194)
 	box.pressed.connect(_on_skin_box_pressed.bind(role, str(skin["id"]), str(skin["character"])))
 
 	var content: VBoxContainer = VBoxContainer.new()
@@ -456,7 +475,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var preview_stack: PanelContainer = PanelContainer.new()
-	preview_stack.custom_minimum_size = Vector2(110, 110)
+	preview_stack.custom_minimum_size = Vector2(160, 160)
 	preview_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_stack.add_theme_stylebox_override("panel", _skin_preview_box_style())
 	content.add_child(preview_stack)
@@ -469,7 +488,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	var viewport: SubViewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
-	viewport.size = Vector2i(110, 110)
+	viewport.size = Vector2i(160, 160)
 	viewport_container.add_child(viewport)
 
 	var preview: Node3D = SKIN_PREVIEW_SCENE.instantiate()
@@ -485,7 +504,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	var name_label: Label = Label.new()
 	name_label.text = str(skin.get("name", ""))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_font_size_override("font_size", 24)
 	name_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
 	content.add_child(name_label)
 
@@ -500,17 +519,17 @@ func _make_check_badge(is_selected: bool) -> Control:
 	var badge: Panel = Panel.new()
 	badge.anchor_left = 1.0
 	badge.anchor_right = 1.0
-	badge.offset_left = -20.0
-	badge.offset_right = -4.0
-	badge.offset_top = 4.0
-	badge.offset_bottom = 20.0
+	badge.offset_left = -29.0
+	badge.offset_right = -6.0
+	badge.offset_top = 6.0
+	badge.offset_bottom = 29.0
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var badge_style := StyleBoxFlat.new()
 	badge_style.bg_color = Color(0.45098, 0.670588, 0.164706, 1)
-	badge_style.corner_radius_top_left = 8
-	badge_style.corner_radius_top_right = 8
-	badge_style.corner_radius_bottom_right = 8
-	badge_style.corner_radius_bottom_left = 8
+	badge_style.corner_radius_top_left = 11
+	badge_style.corner_radius_top_right = 11
+	badge_style.corner_radius_bottom_right = 11
+	badge_style.corner_radius_bottom_left = 11
 	badge.add_theme_stylebox_override("panel", badge_style)
 	anchor.add_child(badge)
 
@@ -518,7 +537,7 @@ func _make_check_badge(is_selected: bool) -> Control:
 	check_label.text = "V"
 	check_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	check_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	check_label.add_theme_font_size_override("font_size", 11)
+	check_label.add_theme_font_size_override("font_size", 15)
 	check_label.add_theme_color_override("font_color", Color.WHITE)
 	check_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	check_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -869,4 +888,11 @@ func get_selected_duck_skin() -> String:
 	var skin_id: String = str(_selected_skin_by_role.get(InventoryRole.DUCK, "duck_default"))
 	if skin_id == "duck_default":
 		return "duck"
+	return skin_id
+
+
+func get_selected_tagger_skin() -> String:
+	var skin_id: String = str(_selected_skin_by_role.get(InventoryRole.TAGGER, "tagger_default"))
+	if skin_id == "tagger_default":
+		return "aligator"
 	return skin_id

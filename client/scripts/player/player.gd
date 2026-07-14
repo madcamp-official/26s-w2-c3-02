@@ -87,6 +87,17 @@ const CHARACTER_CONFIG := {
 		# 악어는 오리보다 몸집이 훨씬 크므로(model_scale 2배), 물결/포말 효과도 그만큼 크게 보이도록.
 		"water_effect_scale": 1.8,
 	},
+	"shark": {
+		"model": "res://assets/shark/shark.glb",
+		# TODO: 실측 미완료 — aligator 값을 초기값으로 사용. 에디터에서 실제 모델을 보고
+		# model_pos.y(발/바닥 높이 맞춤)와 collision_size/collision_pos를 조정해야 한다.
+		"model_pos": Vector3(0, 1.684, 0),
+		"model_scale": 6.0,
+		"collision_size": Vector3(4.0, 3.36, 12.0),
+		"collision_pos": Vector3(0, 1.68, 0),
+		"water_submerge_depth": 1.7,
+		"water_effect_scale": 1.8,
+	},
 }
 
 # 오리 팀으로 취급되는 캐릭터(스킨) 키 목록. 인벤토리에 오리 스킨이 추가되면 여기에도 더한다.
@@ -148,7 +159,7 @@ func _ready() -> void:
 	if controlled_player_id == "":
 		if character in DUCK_CHARACTERS:
 			character = GameData.local_duck_character
-		elif character == "aligator":
+		else:
 			character = GameData.local_tagger_character
 		controlled_player_id = GameData.local_player_id
 	else:
@@ -307,7 +318,7 @@ func _physics_process(delta: float) -> void:
 		_move_inside_jail(delta)
 		return
 
-	if character == "aligator":
+	if character not in DUCK_CHARACTERS:
 		_update_dash(delta)
 
 	_apply_free_movement(delta)
