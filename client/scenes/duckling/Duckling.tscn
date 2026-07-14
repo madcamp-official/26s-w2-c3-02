@@ -1,10 +1,20 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="PackedScene" path="res://assets/duckling/duckling.glb" id="1"]
 [ext_resource type="Script" path="res://scripts/duckling/duckling.gd" id="2"]
 
-[node name="Duckling" type="Node3D"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_duckling"]
+radius = 0.3
+height = 0.6
+
+[node name="Duckling" type="CharacterBody3D"]
+collision_layer = 0
+collision_mask = 4
 script = ExtResource("2")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("CapsuleShape3D_duckling")
 
 [node name="Model" parent="." instance=ExtResource("1")]
 position = Vector3(0, 0, 0)
