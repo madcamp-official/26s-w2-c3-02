@@ -33,7 +33,7 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	var should_show := GameData.phase == "playing" and _local_team() == "tagger"
+	var should_show := not _is_mobile_controls_target() and GameData.phase == "playing" and _local_team() == "tagger"
 	if should_show != visible:
 		visible = should_show
 	if not visible:
@@ -57,3 +57,7 @@ func _local_team() -> String:
 		if str(player.get("playerId", "")) == GameData.local_player_id:
 			return str(player.get("team", "duck"))
 	return "duck"
+
+
+func _is_mobile_controls_target() -> bool:
+	return OS.has_feature("android") or OS.has_feature("ios") or DisplayServer.is_touchscreen_available()
