@@ -137,7 +137,7 @@ function startGame(room) {
   if (!rooms.canStartGame(room)) return false;
 
   rooms.assignRandomRoles(room);
-  room.targetScore = rooms.countTeam(room, 'duck') * 7;
+  room.targetScore = rooms.countTeam(room, 'duck') * 8;
 
   room.broadcastTimer = 0;
   room.secondTimer = 0;
@@ -217,7 +217,6 @@ function returnToLobby(room) {
   room.deliveryBatches.clear();
   room.wanderState.clear();
   room.carryQueues.clear();
-  room.deliveringSettle.clear();
   room.activeDashes.clear();
   resetRescue(room);
 
