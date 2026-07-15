@@ -213,7 +213,19 @@
 - **산출물 설명:** 악어(경찰)가 술래, 오리가 도망자가 되어 3D 연못 위에서 새끼오리 구출/체포를 겨루는 실시간 멀티플레이 캐주얼 게임
 - **실행 환경:** PC 웹 브라우저(WASM) / 모바일 앱(Android), Node.js 웹소켓 서버
 - **실행 방법:** 배포된 웹 링크 접속 또는 모바일 앱 실행 → 방 만들기/참가 → 로비에서 준비 완료 → 게임 시작
-- **시연 영상 / 이미지:** (선택)
+- **시연 영상 / 이미지:**
+
+| 메인화면 | 게임 목록 |
+|---|---|
+| <img src="screenshot/image.png" width="400"> | <img src="screenshot/image (1).png" width="400"> |
+
+| 스킨 | 대기실 화면 |
+|---|---|
+| <img src="screenshot/image (2).png" width="400"> | <img src="screenshot/image (3).png" width="400"> |
+
+| 인게임 |
+|---|
+| <img src="screenshot/image (4).png" width="600"> |
 
 ### 실행 방법
 
