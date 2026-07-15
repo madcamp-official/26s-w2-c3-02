@@ -220,7 +220,7 @@ func _sync_remote_players() -> void:
 		var pos: Dictionary = p["position"]
 		var target_pos: Vector3 = _dict_to_vec3(pos)
 		var target_rot: float = float(p["rotationY"])
-		if was_created or GameData.phase == "countdown":
+		if was_created:
 			_remote_players[pid].snap_to_state(target_pos, target_rot)
 		else:
 			_remote_players[pid].set_remote_state(target_pos, target_rot)
@@ -250,7 +250,7 @@ func _sync_builtin_counterpart() -> void:
 		_synced_counterpart_node.visible = true
 	var target_pos: Vector3 = _dict_to_vec3(player["position"])
 	var target_rot: float = float(player.get("rotationY", 0.0))
-	if was_hidden or GameData.phase == "countdown":
+	if was_hidden:
 		_synced_counterpart_node.snap_to_state(target_pos, target_rot)
 	else:
 		_synced_counterpart_node.set_remote_state(target_pos, target_rot)

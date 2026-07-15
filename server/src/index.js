@@ -108,8 +108,8 @@ setInterval(() => {
 }, HEARTBEAT_INTERVAL_MS);
 
 // 방마다 setInterval을 따로 두지 않고, 전체 방을 한 번에 순회하는 단일 시뮬레이션
-// 루프를 돈다. Docs/api-spec.md의 STATE_TICK_RATE(10Hz)는 game:state 브로드캐스트
-// 주기이고, 이 tick 자체는 그보다 촘촘한 SIM_TICK_HZ(30Hz)로 판정을 갱신한다.
+// 루프를 돈다. STATE_TICK_RATE(64Hz)는 game:state 브로드캐스트 주기이고, 이 tick
+// 자체는 SIM_TICK_HZ(64Hz)로 판정을 갱신한다(현재는 둘이 같은 값).
 const SIM_INTERVAL_MS = 1000 / C.SIM_TICK_HZ;
 // GC pause, 다른 방의 무거운 연산 등으로 콜백이 밀리면 delta가 순간적으로 커져
 // 이동/판정 계산이 한 번에 크게 튈 수 있으므로, 정상 틱 간격의 몇 배로 상한을 둔다.

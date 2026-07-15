@@ -608,9 +608,24 @@ func _refresh_room_list() -> void:
 		room_list.remove_child(child)
 		child.queue_free()
 
-	for room in await MockServer.list_rooms():
+	var rooms: Array = await MockServer.list_rooms()
+	for room in rooms:
 		_rooms_by_id[str(room.get("room_id", ""))] = room
 		room_list.add_child(_make_room_row(room))
+
+	if rooms.is_empty():
+		var empty_label := Label.new()
+		empty_label.text = "현재 생성된 방이 없습니다"
+		empty_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		empty_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		empty_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.45))
+		# 목록이 비었을 때 문구가 맨 위가 아니라 목록 영역 세로 중앙에 오도록,
+		# 스크롤 영역의 현재 높이만큼 라벨을 늘려 라벨 내부에서 세로 중앙 정렬한다.
+		var scroll := room_list.get_parent() as Control
+		if scroll and scroll.size.y > 0.0:
+			empty_label.custom_minimum_size.y = scroll.size.y
+		room_list.add_child(empty_label)
 
 
 func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
