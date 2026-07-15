@@ -33,6 +33,7 @@ var _awaited_request_ids: Dictionary = {} # request_id -> true, _send_and_await�
 
 var _pending_position := Vector3.ZERO
 var _pending_rotation_y := 0.0
+var _pending_phase := ""
 var _has_pending_input := false
 var _input_send_timer := 0.0
 
@@ -202,6 +203,7 @@ func _flush_pending_input(delta: float) -> void:
 	_send("player:input", {
 		"position": {"x": _pending_position.x, "y": _pending_position.y, "z": _pending_position.z},
 		"rotationY": _pending_rotation_y,
+		"phase": _pending_phase,
 	}, GameData.room_id)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -340,4 +342,5 @@ func report_local_transform(pos: Vector3, rotation_y: float) -> void:
 	# INPUT_SEND_INTERVAL 주기로 스로틀링해 player:input으로 서버에 보고한다.
 	_pending_position = pos
 	_pending_rotation_y = rotation_y
+	_pending_phase = GameData.phase
 	_has_pending_input = true

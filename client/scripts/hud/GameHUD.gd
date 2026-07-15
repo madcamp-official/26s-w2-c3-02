@@ -22,7 +22,6 @@ const SETTINGS_BUTTON_SIZE := 56.0
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
 const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
-const MobileControlsScript := preload("res://scripts/hud/MobileControls.gd")
 
 @onready var top_bar: PanelContainer = $Root/TopBar
 @onready var timer_label: Label = %TimerLabel
@@ -59,7 +58,6 @@ var _icon_mask_shader: Shader = null
 var _circle_photo_mask_shader: Shader = null
 var _settings_button_rest_position := Vector2.ZERO
 var _settings_button_tween: Tween = null
-var _mobile_controls: Control = null
 
 
 func _ready() -> void:
@@ -67,18 +65,12 @@ func _ready() -> void:
 	GameData.game_event.connect(_on_game_event)
 	get_viewport().size_changed.connect(_apply_safe_area_margins)
 	_init_settings_overlay()
-	_init_mobile_controls()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
 	_apply_safe_area_margins()
 	_refresh()
 	_update_direction_indicators()
-
-
-func _init_mobile_controls() -> void:
-	_mobile_controls = MobileControlsScript.new()
-	get_node("Root").add_child(_mobile_controls)
 
 
 func _process(delta: float) -> void:
@@ -235,6 +227,7 @@ func _format_time(seconds: int) -> String:
 
 func _on_game_event(event: String, data: Dictionary) -> void:
 	if event == "game_ended":
+		_apply_game_end_event(data)
 		_hide_game_toasts()
 		SceneRouter.show_overlay("result")
 		return
@@ -247,6 +240,18 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 		_show_event_toast(message)
 
 
+func _apply_game_end_event(data: Dictionary) -> void:
+	GameData.phase = "ended"
+	if data.has("winner"):
+		GameData.winner = data.get("winner")
+	if data.has("reason"):
+		GameData.end_reason = str(data.get("reason", ""))
+	if data.has("score"):
+		GameData.score = int(data.get("score", GameData.score))
+	if data.has("targetScore"):
+		GameData.target_score = int(data.get("targetScore", GameData.target_score))
+
+
 func _hide_game_toasts() -> void:
 	_toast_remaining = 0.0
 	_objective_remaining = 0.0
@@ -257,7 +262,7 @@ func _hide_game_toasts() -> void:
 func _show_objective_toast() -> void:
 	var team := _local_team()
 	if team == "tagger":
-		objective_label.text = "오리를 잡아 감옥에 보내세요."
+		objective_label.text = "대시로 오리를 잡아 감옥에 보내세요."
 	else:
 		objective_label.text = "새끼오리를 둥지로 데려가세요."
 	objective_toast.visible = true

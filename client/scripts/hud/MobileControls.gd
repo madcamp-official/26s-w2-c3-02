@@ -18,26 +18,25 @@ var _touch_index := -1
 var _joystick_active := false
 var _base_position := Vector2.ZERO
 var _stick_position := Vector2.ZERO
-var _dash_button: Button
-var _dash_cooldown_ring: TextureProgressBar
+@onready var _dash_button: Button = $DashButton
+@onready var _dash_cooldown_ring: TextureProgressBar = $DashCooldownRing
 var _dash_ready_texture: ImageTexture
 var _dash_cooldown_texture: ImageTexture
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
-	anchor_right = 1.0
-	anchor_bottom = 1.0
-	grow_horizontal = Control.GROW_DIRECTION_BOTH
-	grow_vertical = Control.GROW_DIRECTION_BOTH
-	mouse_filter = Control.MOUSE_FILTER_PASS
 	visible = _should_show_mobile_controls()
-	_create_dash_button()
+	_configure_dash_button()
+	_configure_dash_cooldown_ring()
+	get_viewport().size_changed.connect(_position_dash_button)
+	call_deferred("_position_dash_button")
 	set_process_input(true)
 	set_process(true)
 
 
 func _exit_tree() -> void:
+	if get_viewport().size_changed.is_connected(_position_dash_button):
+		get_viewport().size_changed.disconnect(_position_dash_button)
 	GameData.mobile_move_input = Vector2.ZERO
 
 
@@ -54,9 +53,9 @@ func _input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _dash_button == null:
 		return
-	var should_show_dash := GameData.phase == "playing"
+	var should_show_dash := visible and GameData.phase == "playing" and _local_player_can_dash()
 	_dash_button.visible = should_show_dash
-	_dash_button.disabled = not should_show_dash or not _local_player_can_dash()
+	_dash_button.disabled = not should_show_dash
 	_update_dash_cooldown_ring()
 
 
@@ -104,14 +103,9 @@ func _is_joystick_start_position(position: Vector2) -> bool:
 	return position.y > viewport_size.y * 0.18
 
 
-func _create_dash_button() -> void:
-	_dash_button = Button.new()
-	_dash_button.text = "대시"
-	_dash_button.custom_minimum_size = Vector2(DASH_BUTTON_SIZE, DASH_BUTTON_SIZE)
-	_dash_button.focus_mode = Control.FOCUS_NONE
-	_dash_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	_dash_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	_dash_button.pressed.connect(_on_dash_button_pressed)
+func _configure_dash_button() -> void:
+	if not _dash_button.pressed.is_connected(_on_dash_button_pressed):
+		_dash_button.pressed.connect(_on_dash_button_pressed)
 	_dash_button.add_theme_font_size_override("font_size", 28)
 	_dash_button.add_theme_color_override("font_color", Color.WHITE)
 	_dash_button.add_theme_color_override("font_outline_color", Color(0.04, 0.05, 0.06, 1.0))
@@ -120,28 +114,13 @@ func _create_dash_button() -> void:
 	_dash_button.add_theme_stylebox_override("hover", _make_dash_style(Color(0.25, 0.58, 0.92, 0.95), Color(0.05, 0.18, 0.34, 0.95)))
 	_dash_button.add_theme_stylebox_override("pressed", _make_dash_style(Color(0.08, 0.27, 0.48, 0.95), Color(0.03, 0.11, 0.22, 1.0)))
 	_dash_button.add_theme_stylebox_override("disabled", _make_dash_style(Color(0.08, 0.16, 0.24, 0.45), Color(0.03, 0.08, 0.14, 0.6)))
-	add_child(_dash_button)
-	_create_dash_cooldown_ring()
-	_position_dash_button()
 
 
-func _create_dash_cooldown_ring() -> void:
-	_dash_cooldown_ring = TextureProgressBar.new()
-	_dash_cooldown_ring.custom_minimum_size = Vector2(DASH_RING_SIZE, DASH_RING_SIZE)
-	_dash_cooldown_ring.fill_mode = TextureProgressBar.FILL_CLOCKWISE
-	_dash_cooldown_ring.radial_initial_angle = 0.0
-	_dash_cooldown_ring.radial_fill_degrees = 360.0
-	_dash_cooldown_ring.min_value = 0.0
-	_dash_cooldown_ring.max_value = 1.0
-	_dash_cooldown_ring.step = 0.0
-	_dash_cooldown_ring.value = 1.0
-	_dash_cooldown_ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+func _configure_dash_cooldown_ring() -> void:
 	_dash_cooldown_ring.texture_under = RingTexture.generate(DASH_RING_SIZE, DASH_RING_OUTER_RADIUS, DASH_RING_INNER_RADIUS, DASH_TRACK_COLOR)
 	_dash_ready_texture = RingTexture.generate(DASH_RING_SIZE, DASH_RING_OUTER_RADIUS, DASH_RING_INNER_RADIUS, DASH_READY_COLOR)
 	_dash_cooldown_texture = RingTexture.generate(DASH_RING_SIZE, DASH_RING_OUTER_RADIUS, DASH_RING_INNER_RADIUS, DASH_COOLDOWN_COLOR)
 	_dash_cooldown_ring.texture_progress = _dash_ready_texture
-	add_child(_dash_cooldown_ring)
-	move_child(_dash_cooldown_ring, _dash_button.get_index() + 1)
 
 
 func _position_dash_button() -> void:
@@ -150,6 +129,9 @@ func _position_dash_button() -> void:
 	var safe_margins := _safe_area_margins()
 	var margin_right: float = max(DASH_BASE_MARGIN_RIGHT, safe_margins.z + SAFE_AREA_EXTRA_MARGIN)
 	var margin_bottom: float = max(DASH_BASE_MARGIN_BOTTOM, safe_margins.w + SAFE_AREA_EXTRA_MARGIN)
+	var viewport_size := get_viewport_rect().size
+	margin_right = min(margin_right, max(0.0, viewport_size.x - DASH_BUTTON_SIZE - 16.0))
+	margin_bottom = min(margin_bottom, max(0.0, viewport_size.y - DASH_BUTTON_SIZE - 16.0))
 	_dash_button.anchor_left = 1.0
 	_dash_button.anchor_top = 1.0
 	_dash_button.anchor_right = 1.0
@@ -223,7 +205,7 @@ func _draw() -> void:
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED:
-		_position_dash_button()
+		call_deferred("_position_dash_button")
 
 
 func _should_show_mobile_controls() -> bool:

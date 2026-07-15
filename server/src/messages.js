@@ -116,6 +116,8 @@ function handlePlayerInput(ws, msg) {
   const { room, player } = requireRoomAndPlayer(ws);
   if (!room || !player) return;
   const payload = msg.payload || {};
+  if (room.phase !== 'countdown' && room.phase !== 'playing') return;
+  if (typeof payload.phase === 'string' && payload.phase !== room.phase) return;
   if (payload.position) {
     player.position = { x: payload.position.x, y: payload.position.y, z: payload.position.z };
   }

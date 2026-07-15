@@ -64,12 +64,6 @@ function broadcastEvent(room, event, data) {
 
 // ── 스폰 위치 ────────────────────────────────────────────────────────────────
 
-function randomPlayerSpawnPosition() {
-  const angle = randRange(0, Math.PI * 2);
-  const distance = randRange(24.0, 58.0);
-  return { x: Math.cos(angle) * distance, y: 0.0, z: Math.sin(angle) * distance };
-}
-
 function countdownPositionForIndex(index) {
   const offsets = [
     { x: -4.0, y: 0.0, z: 0.0 },
@@ -91,10 +85,25 @@ function placePlayersInCountdown(room) {
 }
 
 function placePlayersAtRoleSpawns(room) {
-  for (const player of room.players.values()) {
+  const players = Array.from(room.players.values());
+  if (players.length === 0) return;
+
+  const angleStep = (Math.PI * 2) / players.length;
+  const startAngle = randRange(0, Math.PI * 2);
+  const maxJitter = Math.min(Math.PI / 18, angleStep * 0.15);
+
+  for (let i = 0; i < players.length; i++) {
+    const player = players[i];
+    const angle = startAngle + angleStep * i + randRange(-maxJitter, maxJitter);
+    const outwardX = Math.cos(angle);
+    const outwardZ = Math.sin(angle);
     player.state = 'idle';
-    player.position = randomPlayerSpawnPosition();
-    player.rotationY = randRange(-Math.PI, Math.PI);
+    player.position = {
+      x: C.JAIL_POSITION.x + outwardX * C.GAME_START_SPAWN_RADIUS,
+      y: 0.0,
+      z: C.JAIL_POSITION.z + outwardZ * C.GAME_START_SPAWN_RADIUS,
+    };
+    player.rotationY = Math.atan2(-outwardX, -outwardZ);
   }
 }
 
@@ -176,8 +185,8 @@ function beginPlaying(room) {
   room.phase = 'playing';
   room.countdownSeconds = 0;
   placePlayersAtRoleSpawns(room);
-  broadcastEvent(room, 'game_started', {});
   broadcastGameState(room);
+  broadcastEvent(room, 'game_started', {});
 }
 
 function tickCountdown(room, delta) {
