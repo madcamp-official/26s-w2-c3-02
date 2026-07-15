@@ -224,6 +224,7 @@ function returnToLobby(room) {
     player.state = 'idle';
     player.jailRemaining = null;
     player.deliveredDucklings = 0;
+    player.ready = false;
     player.position = rooms.spawnPositionForTeam(player.team);
   }
 
