@@ -80,7 +80,7 @@ func _reason_text() -> String:
 		"duck_goal":
 			return "오리 팀이 새끼오리를 목표 수만큼 모았습니다."
 		"time_up":
-			return "제한 시간이 끝났습니다."
+			return "제한 시간이 종료되었습니다."
 		"all_ducks_jailed":
 			return "모든 오리가 감옥에 갇혔습니다."
 	return "게임이 종료되었습니다."

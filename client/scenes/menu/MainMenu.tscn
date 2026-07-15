@@ -700,6 +700,7 @@ theme_override_font_sizes/font_size = 28
 [node name="BgmVolumeSlider" type="HSlider" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/SettingsPanel/Content/BgmVolumeRow"]
 unique_name_in_owner = true
 layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
 size_flags_horizontal = 3
 min_value = 0.0
 max_value = 100.0
