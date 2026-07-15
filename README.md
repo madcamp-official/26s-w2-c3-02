@@ -16,14 +16,15 @@
 
 **결과물:** 선택한 옵션이 적용된 작동 가능한 산출물, 실행 가능한 코드, 시연 자료 및 관련 문서
 
+https://madcamp-official.github.io/26s-w2-c3-02/
 ---
 
 ## 팀원
 
 | 이름 | 학교 | GitHub | 역할 |
 |---|---|---|---|
-| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 B 트랙 (Godot, 인게임 월드·캐릭터·새끼오리) |
-| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 A 트랙 (Godot, 화면 흐름·메뉴·HUD) → 이후 네트워크/백엔드 (Node.js, 웹소켓 동기화) |
+| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 & 서버 내부로직 파트, 게임 에셋|
+| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 & 서버 UI 파트, 배포 |
 
 > 서버 착수 전까지는 [Docs/Plan.md](Docs/Plan.md)의 클라이언트 병렬 개발 계획을 따른다: 박수현이 B 트랙(인게임 월드·캐릭터), 조예준이 A 트랙(화면 흐름·UI)을 담당한다.
 
@@ -107,7 +108,7 @@
 - **클라이언트:** Godot Engine (GDScript) → PC 웹(WebGL/WASM 빌드) & 모바일 앱으로 동일 코드베이스 내보내기
 - **서버:** Node.js + `ws` 라이브러리 기반 순수 웹소켓 서버, 방(room) 단위 인메모리 상태 관리
 - **통신:** 클라이언트 ↔ 서버 간 JSON 메시지 기반 WebSocket 양방향 통신 (위치 갱신, 포획/구출 판정, 새끼오리 획득 이벤트 브로드캐스트)
-- **배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**에 자동 배포(커스텀 도메인 `cop-and-ducks.art`). Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
+- **배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**(`https://madcamp-official.github.io/26s-w2-c3-02/`)에 자동 배포. Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
 
 ---
 
@@ -297,9 +298,29 @@
 ## 산출물 및 실행 방법
 
 - **산출물 설명:** 악어(경찰)가 술래, 오리가 도망자가 되어 3D 연못 위에서 새끼오리 구출/체포를 겨루는 실시간 멀티플레이 캐주얼 게임
-- **실행 환경:** PC 웹 브라우저(WASM) / 모바일 앱(Android APK), Node.js 웹소켓 서버
-- **실행 방법:** 배포된 웹 링크 접속 또는 Android APK 설치 후 실행 → 방 만들기/참가 → 로비에서 준비 완료 → 게임 시작
-- **시연 영상 / 이미지:** (선택)
+- **실행 환경:** PC 웹 브라우저(WASM) / 모바일 앱(Android), Node.js 웹소켓 서버
+- **실행 방법:** 배포된 웹 링크 접속 또는 모바일 앱 실행 → 방 만들기/참가 → 로비에서 준비 완료 → 게임 시작
+- **시연 영상 / 이미지:**
+
+**메인화면**
+
+<img src="screenshot/image.png" width="600">
+
+**게임 목록**
+
+<img src="screenshot/image (1).png" width="600">
+
+**스킨**
+
+<img src="screenshot/image (2).png" width="600">
+
+**대기실 화면**
+
+<img src="screenshot/image (3).png" width="600">
+
+**인게임**
+
+<img src="screenshot/image (4).png" width="600">
 
 ### 실행 방법
 
