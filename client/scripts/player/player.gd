@@ -77,8 +77,8 @@ const CHARACTER_CONFIG := {
 		"model": "res://assets/aligator/aligator.glb",
 		"model_pos": Vector3(0, 1.684, 0),
 		"model_scale": 6.0,
-		"collision_size": Vector3(4.0, 3.36, 12.0),
-		"collision_pos": Vector3(0, 1.68, 0),
+		"collision_size": Vector3(3.0, 3.0, 12.0),
+		"collision_pos": Vector3(0, 1.5, 0), # 바닥이 y=0에 닿도록 size.y/2로 재계산
 		# 실측 결과 model_pos.y=1.684는 모델 바닥이 정확히 수면(y=0)에 딱 맞아 전혀 잠기지
 		# 않았음(전신 높이 약 3.37). 물(연못 바닥)을 밟고 있을 때만 이만큼 모델을 내려서
 		# 다리와 몸통 아랫부분이 잠기게 하고, 섬(땅) 위에서는 원래 높이(발 기준)를 유지한다.
@@ -91,12 +91,11 @@ const CHARACTER_CONFIG := {
 		"model": "res://assets/shark/shark.glb",
 		"model_pos": Vector3(0, 1.684, 0),
 		"model_scale": 1.8,
-		# 이전 값은 실측이 아니라 aligator 콜리전 박스를 model_scale 비율(0.3배)만큼 그대로
-		# 줄인 값이었는데, shark.glb 원본 메쉬의 실제 비율이 aligator와 달라 판정 박스가
-		# 눈에 보이는 모델보다 한참 작았다. model_pos/model_scale/model_rotation_degrees를
-		# 그대로 적용해 인스턴스한 뒤 메쉬의 실제 월드 AABB를 측정해 아래 값으로 교체했다.
-		"collision_size": Vector3(4.264, 4.559, 11.928),
-		"collision_pos": Vector3(0, 2.506, -0.36),
+		# 실측한 shark.glb 자체 AABB(약 4.26 x 4.56 x 11.93)는 등지느러미까지 포함돼 악어보다
+		# 판정 범위가 크게 느껴져서, 대신 aligator와 완전히 동일한 판정 박스를 그대로 쓴다
+		# (몸통 길이/폭이 비슷한 포식자 캐릭터라 게임플레이상 같은 판정이어도 위화감이 적다).
+		"collision_size": Vector3(3.0, 3.0, 12.0),
+		"collision_pos": Vector3(0, 1.5, 0), # 바닥이 y=0에 닿도록 size.y/2로 재계산
 		"water_submerge_depth": 1.7,
 		"water_effect_scale": 1.8,
 	},
