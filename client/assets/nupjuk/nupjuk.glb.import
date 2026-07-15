@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dl3i0hvus84lp"
-path="res://.godot/imported/nupjuk.glb-6f87eaf63c4abaac358d3f2a1e48ef28.scn"
+valid=false
 
 [deps]
 
 source_file="res://assets/nupjuk/nupjuk.glb"
-dest_files=["res://.godot/imported/nupjuk.glb-6f87eaf63c4abaac358d3f2a1e48ef28.scn"]
 
 [params]
 

@@ -4,12 +4,11 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cmbf6216kmuyr"
-path="res://.godot/imported/aligator.glb-5a1eab2204c3318b4742ab83dc61392b.scn"
+valid=false
 
 [deps]
 
 source_file="res://assets/aligator/aligator.glb"
-dest_files=["res://.godot/imported/aligator.glb-5a1eab2204c3318b4742ab83dc61392b.scn"]
 
 [params]
 
