@@ -46,7 +46,15 @@
   - 오리(도망자) / 악어(술래·경찰) 역할 기반 실시간 멀티플레이 동기화 (위치, 포획, 구출, 새끼오리 획득 상태)
   - 가로 모드 고정 + Anchor/Safe Area 기반 반응형 UI로 PC 웹·모바일 앱 동시 대응
   - 연못 위 새끼오리 스폰 및 둥지 인솔, 감옥/구출 기믹을 포함한 게임 규칙 구현
-- **사용 / 시연 시나리오:** 플레이어가 방을 만들거나 방 코드로 참가 → 로비에서 캐릭터(오리/악어 스킨) 선택 및 준비 → 게임 시작 시 서버가 오리/술래 역할을 무작위 배정 → 오리는 제한 시간 내 새끼오리를 둥지로 인솔, 악어(술래)는 오리를 체포해 감옥에 가두며 방해 → 시간 종료 또는 승리 조건 달성 시 결과 화면에서 승패 및 개인 기록 확인
+- **사용 / 시연 시나리오:** 메인 화면에서 캐릭터(오리/악어) 스킨 선택 
+
+  → 플레이어가 방을 만들거나 생성된 방을 참가(비공개 방의 경우 방 코드 입력 필요) 
+
+  → 게임 시작 시 서버가 오리/술래 역할을 무작위 배정 
+
+  → 오리는 제한 시간 내 새끼오리를 둥지로 인솔, 악어(술래)는 오리를 체포해 감옥에 가두며 방해 
+  
+  → 시간 종료 또는 승리 조건 달성 시 결과 화면에서 승패 및 개인 기록 확인
 - **팀원별 역할:** 박수현(클라이언트 B 트랙 - 인게임 월드·캐릭터·새끼오리, 3D 에셋 배치), 조예준(클라이언트 A 트랙 - 화면 흐름·메뉴·HUD·반응형 UI, 이후 Node.js 서버 구축·웹소켓 동기화·서버 배포)
 
 ### 개발 일정
@@ -69,8 +77,9 @@
 |---|---|---|
 | 실시간 위치/상태 동기화 | 오리·악어(술래)의 이동, 포획, 구출, 새끼오리 획득 상태를 WebSocket으로 모든 클라이언트에 실시간 반영 | 필수 |
 | 크로스플랫폼 반응형 UI | PC 웹과 모바일 앱에서 가로 모드 고정, Anchor/Safe Area 기반 UI로 동일하게 동작 | 필수 |
-| 오리 & 악어 스킨 선택 | 로비에서 캐릭터 외형(스킨)을 선택할 수 있는 커스터마이징 기능 | 선택 |
-| 대기방(로비) 화면 | 참가자 목록, 준비 상태, 방 코드/초대 기능을 갖춘 로비 화면 | 선택 |
+| 오리 & 악어 스킨 선택 | 메인 화면에서 캐릭터 외형(스킨)을 선택할 수 있는 커스터마이징 기능 | 선택 |
+| 방 목록 및 대기실 | 방 이름 및 상태, 공개/비공개 여부, 닉네임 및 참가코드 입력, 유저별 준비 상태 등 | 선택 |
+| 배경음 & 효과음| 로비의 배경음과 클릭 효과음, 인게임의 배경음과 이벤트별 효과음 삽입 | 선택 | 
 
 ---
 
@@ -99,21 +108,22 @@
 게임 실행
 ├─ 로딩
 ├─ 메인 화면
-│  ├─ 빠른 참가 / 방 만들기 / 방 코드 참가
+│  ├─ 빠른 참가 / 방 만들기 / 닉네임 설정 / 방 코드 참가
 │  ├─ 캐릭터 꾸미기
+│  ├─ 게임 규칙 
 │  └─ 설정
 ├─ 로비
-│  ├─ 참가자 목록 / 준비 상태 / 방 설정
-│  ├─ 초대 / 방 코드
+│  ├─ 참가자 목록 / 준비 상태 / 닉네임 설정
+│  ├─ 방 코드
 │  └─ 게임 시작
-├─ 역할 안내 (오리 역할 / 술래 역할)
 ├─ 인게임
-│  ├─ 일반 플레이 / 오리 새끼 인솔 / 체포 시도
+│  ├─ 역할 안내 (오리 역할 / 술래 역할)
+│  ├─ 일반 플레이 / 오리 새끼 인솔 / 수감 시도
 │  ├─ 수감 상태 / 구출 상태
 │  └─ 일시정지 / 연결 끊김
 └─ 결과 화면
    ├─ 승리 / 패배 / 개인 기록
-   └─ 다시 하기 / 로비로 돌아가기 / 메인 화면
+   └─ 로비로 돌아가기 / 메인 화면
 ```
 
 화면 레이아웃은 가로 모드 고정, 좌측 이동 입력 / 중앙 게임 시야 / 우측 행동 버튼 3분할 구조를 기준으로 하며, 상단 상태 바(남은 시간, 목표 진행도)는 Safe Area 안쪽에 배치한다.
@@ -122,7 +132,71 @@
 
 <!-- DB 스키마, JSON 구조, 파일 저장 방식 등 -->
 
-별도 DB 없이 Node.js 서버 인메모리(`Map<roomId, Room>`)로 방 단위 상태를 관리한다. 서버는 매 틱 시뮬레이션 후 아래 형태의 `game:state`를 같은 방 전체에 브로드캐스트한다(30Hz). 판정과 무관한 장식 오브젝트(물고기·연잎·물결 등)는 동기화하지 않고 각 클라이언트가 로컬로 처리하며, 운반 중(`carried`) 새끼오리의 좌표도 서버 판정에 쓰이지 않으므로 순서(`queueIndex`)만 내려주고 실제 대열 좌표는 각 클라이언트가 로컬 계산한다.
+별도 DB 없이 Node.js 서버 인메모리(`Map<roomId, Room>`)로 방 단위 상태를 관리한다. 방은 공개/비공개 여부, 방 이름, 참가코드, 참가자 준비 상태를 포함하며, 게임 중에는 서버가 매 틱 시뮬레이션 후 같은 방 전체에 `game:state`를 브로드캐스트한다(30Hz). 판정과 무관한 장식 오브젝트(물고기·연잎·물결 등)는 동기화하지 않고 각 클라이언트가 로컬로 처리한다.
+
+방 목록(`room:list`)에는 참가 가능한 방의 요약 정보만 내려간다. 비공개방은 방 목록에 참가코드를 노출하지 않고, 클라이언트가 선택한 뒤 입력한 참가코드로 `room:join`을 요청한다.
+
+```json
+{
+  "rooms": [
+    {
+      "roomId": "0427",
+      "roomName": "공개방 #1",
+      "isPrivate": false,
+      "playerCount": 1,
+      "maxPlayers": 5,
+      "phase": "lobby"
+    },
+    {
+      "roomId": "8315",
+      "roomName": "비공개방 #1",
+      "isPrivate": true,
+      "playerCount": 2,
+      "maxPlayers": 5,
+      "phase": "lobby"
+    }
+  ]
+}
+```
+
+방 생성(`room:create`) 시에는 `roomName`, `isPrivate`, `joinCode`를 함께 보낸다. 공개방은 `joinCode`를 `null`로 저장하고, 방 이름을 입력하지 않으면 서버가 `공개방 #1`, `비공개방 #1` 같은 기본 이름을 부여한다.
+
+```json
+{
+  "nickname": "Player",
+  "roomName": "친구방",
+  "isPrivate": true,
+  "joinCode": "1234"
+}
+```
+
+대기실 상태(`room:state`)는 방 이름, 참가코드 표시값, 참가자 목록, 준비 여부를 포함한다. 모든 참가자가 준비 완료 상태가 되어야 방장이 게임을 시작할 수 있다.
+
+```json
+{
+  "roomId": "8315",
+  "roomName": "친구방",
+  "isPrivate": true,
+  "joinCode": "1234",
+  "phase": "lobby",
+  "players": [
+    {
+      "playerId": "uuid-host",
+      "nickname": "Jossi",
+      "isHost": true,
+      "ready": true
+    },
+    {
+      "playerId": "uuid-guest",
+      "nickname": "James",
+      "isHost": false,
+      "ready": false
+    }
+  ]
+}
+```
+
+게임 상태(`game:state`)는 점수, 남은 시간, 승리 팀, 종료 이유, 플레이어별 역할/위치/수감 상태/반납 기록을 포함한다. 결과 팝업은 `winner`, `endReason`, `players[].deliveredDucklings`를 사용해 승리 팀, 종료 사유, 플레이어별 모은 새끼오리 수를 표시한다. 운반 중(`carried`) 새끼오리의 좌표는 서버 판정에 직접 쓰이지 않으므로 순서(`queueIndex`)만 내려주고, 실제 대열 좌표는 각 클라이언트가 로컬 계산한다.
 
 ```json
 {
@@ -142,6 +216,8 @@
       "position": { "x": 0, "y": 0, "z": 0 },
       "rotationY": 0.0,
       "state": "idle | jailed",
+      "ready": true,
+      "isHost": true,
       "deliveredDucklings": 2
     }
   ],
@@ -161,7 +237,14 @@
 
 | Method / 방식 | Endpoint / 서비스 | 설명 | 요청 | 응답 | 비고 |
 |---|---|---|---|---|---|
-| WebSocket | `/ws` | 실시간 방/게임 동기화 — 방 생성·참가·퇴장, 게임 시작, 플레이어 이동·대시, 새끼오리 반납, 결과 처리 | `{ type, roomId?, requestId?, payload }` JSON — 주요 type: `room:create`·`room:list`·`room:join`·`player:input`·`player:dash`·`duckling:deliver`·`game:start`·`ping` | 요청자 응답 `{ type, requestId, payload }`(`room:joined`·`pong`·`error`) + 같은 방 전체 브로드캐스트(`room:state`·`game:state`) | Godot `WebSocketPeer` ↔ Node.js `ws`; 유휴 연결 유지를 위해 서버가 30초 주기 heartbeat ping 전송 |
+| WebSocket | `/ws` | 방 목록 조회 | `room:list` — `{}` | `room:list` — `{ rooms: [{ roomId, roomName, isPrivate, playerCount, maxPlayers, phase }] }` | 비공개방은 참가코드를 목록에 노출하지 않는다 |
+| WebSocket | `/ws` | 방 생성 | `room:create` — `{ nickname, roomName?, isPrivate, joinCode? }` | `room:joined` + `room:state` | 공개방은 `joinCode: null`, 비공개방은 4자리 참가코드 사용. 방 이름이 비어 있으면 서버가 기본 이름을 부여한다 |
+| WebSocket | `/ws` | 방 참가 | `room:join` — `{ nickname, roomId, joinCode? }` | `room:joined` + `room:state` | 공개방은 닉네임만 필요하고, 비공개방은 닉네임과 참가코드가 모두 필요하다 |
+| WebSocket | `/ws` | 준비 상태 변경 | `player:setReady` — `{ ready }` | 같은 방 전체에 `room:state` 브로드캐스트 | 방장도 준비 완료해야 하며, 모든 참가자가 준비 완료 상태일 때만 게임 시작 가능 |
+| WebSocket | `/ws` | 게임 시작 | `game:start` — `{}` | `room:state`, `game:state`, `game:event` | 서버가 역할을 배정하고 카운트다운 후 인게임으로 전환한다 |
+| WebSocket | `/ws` | 플레이어 조작 | `player:input`·`player:dash` — `{ direction?, pressed? }` | 같은 방 전체에 `game:state` 브로드캐스트 | 이동, 회전, 악어 대시 입력을 서버 판정에 반영한다 |
+| WebSocket | `/ws` | 새끼오리 반납/게임 이벤트 | `duckling:deliver` 등 | `game:state`, `game:event` | 새끼오리 반납, 수감, 구출, 게임 종료 이벤트를 동기화한다 |
+| WebSocket | `/ws` | 연결 유지 | `ping` — `{}` | `pong` | Godot `WebSocketPeer` ↔ Node.js `ws`; 서버도 유휴 연결 유지를 위해 heartbeat를 사용한다 |
 
 ---
 
