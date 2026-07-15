@@ -71,6 +71,15 @@
 | 크로스플랫폼 반응형 UI | PC 웹과 모바일 앱에서 가로 모드 고정, Anchor/Safe Area 기반 UI로 동일하게 동작 | 필수 |
 | 오리 & 악어 스킨 선택 | 로비에서 캐릭터 외형(스킨)을 선택할 수 있는 커스터마이징 기능 | 선택 |
 | 대기방(로비) 화면 | 참가자 목록, 준비 상태, 방 코드/초대 기능을 갖춘 로비 화면 | 선택 |
+| 대시 체포 판정 | 술래가 대시(가속 돌진)로 판정 폭(`DASH_CATCH_HALF_WIDTH`) 안의 오리를 체포, 쿨다운(5초) 적용 | 필수 |
+| 감옥 / 자동 탈출 | 체포된 오리는 감옥으로 이동, 오리가 1명만 남았을 때만 일정 시간(8초) 후 자동 탈출 | 필수 |
+| 협동 구출 | 감옥 반경 안에서 일정 시간(3초) 머물면 진행도(`rescueProgress`)가 쌓여 갇힌 오리를 구출 | 필수 |
+| 새끼오리 스폰/배회 | 맵 내 최대 10마리 유지, 블루노이즈 방식으로 서로 겹치지 않게 배치 후 랜덤 배회(장애물 회피) | 필수 |
+| 새끼오리 인솔/배달 | 오리가 근접(`PICKUP_DISTANCE`) 시 새끼오리를 줍고 대열로 데려가 둥지 근처(`DELIVER_DISTANCE`)에서 배달 | 필수 |
+| 동적 목표 점수 | 목표 점수를 오리 인원수에 비례(오리 수 × 8)해 게임 시작 시 재계산 | 필수 |
+| 라운드 종료 조건 | 시간 종료(180초) / 목표 점수 달성 / 오리 전원 수감 중 하나로 승패 판정 | 필수 |
+| 카운트다운 시작 | 전원 준비(ready) 완료 시 10초 카운트다운 후 게임 시작 | 선택 |
+| 공개/비공개 방 & 참가 코드 | 방 목록에서 공개방은 바로 참가, 비공개방은 4자리 참가 코드로만 입장 | 선택 |
 
 ---
 
@@ -156,12 +165,46 @@
   ]
 }
 ```
+---
+### 🔌 API 문서
 
-### API / 외부 서비스 연동
+실시간 통신은 JSON 메시지 기반 WebSocket(`/ws`) 한 채널로 이루어지며, 별도 인증 없이 연결 시 전달하는 `roomId`로 방을 구분합니다. 각 메시지는 `type` 필드로 종류를 구분합니다.
 
-| Method / 방식 | Endpoint / 서비스 | 설명 | 요청 | 응답 | 비고 |
-|---|---|---|---|---|---|
-| WebSocket | `/ws` | 실시간 방/게임 동기화 — 방 생성·참가·퇴장, 게임 시작, 플레이어 이동·대시, 새끼오리 반납, 결과 처리 | `{ type, roomId?, requestId?, payload }` JSON — 주요 type: `room:create`·`room:list`·`room:join`·`player:input`·`player:dash`·`duckling:deliver`·`game:start`·`ping` | 요청자 응답 `{ type, requestId, payload }`(`room:joined`·`pong`·`error`) + 같은 방 전체 브로드캐스트(`room:state`·`game:state`) | Godot `WebSocketPeer` ↔ Node.js `ws`; 유휴 연결 유지를 위해 서버가 30초 주기 heartbeat ping 전송 |
+<details>
+<summary><strong>연결 / 방</strong></summary>
+
+| Method / 방식 | Endpoint / type | 설명 | 요청 | 응답 |
+|---|---|---|---|---|
+| WebSocket | `/ws` | 서버 연결 | query `roomId?, nickname` | `{ type: "connected", playerId }` |
+| WS type | `room:create` | 방 생성 | `{ type, payload: { nickname } }` | `{ type, requestId, payload: { roomId } }` |
+| WS type | `room:list` | 참가 가능한 방 목록 조회 | `{ type, requestId }` | `{ type, requestId, payload: { rooms } }` |
+| WS type | `room:join` | 방 참가 | `{ type, roomId, payload: { nickname } }` | 요청자 `room:joined` + 전체 `room:state` 브로드캐스트 |
+| WS type | `game:start` | 게임 시작 | `{ type, roomId }` | 전체 `game:state` 브로드캐스트 |
+| WS type | `ping` | 유휴 연결 유지 (30초 주기) | `{ type: "ping" }` | `{ type: "pong" }` |
+
+</details>
+
+<details>
+<summary><strong>인게임 동기화</strong></summary>
+
+| Method / 방식 | Endpoint / type | 설명 | 요청 | 응답 |
+|---|---|---|---|---|
+| WS type | `player:input` | 플레이어 이동 입력 동기화 | `{ type, roomId, payload: { position, direction } }` | 같은 방 `game:state` 브로드캐스트 |
+| WS type | `player:dash` | 플레이어 대시(가속) 동작 | `{ type, roomId, payload: { direction } }` | 같은 방 `game:state` 브로드캐스트 |
+| WS type | `player:catch` | 거위가 오리 체포 | `{ type, roomId, payload: { targetId } }` | 같은 방 `game:state` 브로드캐스트 (`targetId` → jailed) |
+| WS type | `player:rescue` | 감옥에 갇힌 오리 구출 | `{ type, roomId, payload: { targetId } }` | 같은 방 `game:state` 브로드캐스트 (`targetId` → normal) |
+| WS type | `duckling:deliver` | 새끼오리 둥지 반납(점수) | `{ type, roomId, payload: { ducklingId } }` | 같은 방 `game:state` 브로드캐스트 |
+
+</details>
+
+<details>
+<summary><strong>오류</strong></summary>
+
+| Method / 방식 | Endpoint / type | 설명 | 요청 | 응답 |
+|---|---|---|---|---|
+| WS type | `error` | 요청 처리 실패 시 응답 | - | `{ type: "error", requestId, payload: { code, message } }` |
+
+</details>
 
 ---
 
@@ -173,6 +216,8 @@
 - **시연 영상 / 이미지:** (선택)
 
 ### 실행 방법
+
+단순 실행: https://madcamp-official.github.io/26s-w2-c3-02/
 
 ```bash
 # 1) 서버 (Node.js + ws) — 기본 ws://localhost:8080/ws
@@ -212,27 +257,29 @@ docker compose up --build   # http/ws 모두 8080 포트
 
 ### Keep — 잘 된 점, 다음에도 유지할 것
 
--
--
--
+- 시작 전 원하는 방향에 대한 문서 작성
+- 처음부터 완벽하게 하려 하지 않고 일단 만들어보고 고치는 방법론
+- 여러 세션을 이용해서 개발속도 향상
+- 배포 파이프라인 구축
+- 개발 과정부터 다른 분반원과 지속적인 피드백
 
 ### Problem — 아쉬웠던 점, 개선이 필요한 것
 
--
--
--
+- 처음부터 마음만 앞서서 에셋을 추가하다 보니 디버깅에 어려움이 있었음
+- UI 레이아웃을 잡지 않고 개발 시작해서 수정이 잦았음
+- 게임 엔진 사용법이 익숙하지 않은데도 무작적 AI 믿고 개발 시작해서 프롬프트를 모호하게 작성함
 
 ### Try — 다음번에 시도해볼 것
 
--
--
--
+- 일주일치 계획을 세우고 시작하는 것.
+- 파일 구조의 소유권을 나눠서 깃 충돌 방지
+- 전체적인 UI 틀을 피그마로 잡고 개발 시작
 
 ### 팀원별 소감
 
 **박수현:**
 
-> 
+> 개발 프로세스는 그 분야의 현업에서 실제로 사용하는 프로세스를 그대로 따라가면서 상황에 맞게 조금씩 바꾸는게 좋다. 처음부터 내 맘대로 에셋 적용하고 시작하니까 나중에 최적화가 너무 힘들다. 게임 처음 만들어보지만 나름 괜찮게 나온 것 같다
 
 **조예준:**
 
