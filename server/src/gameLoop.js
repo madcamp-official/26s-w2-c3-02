@@ -192,12 +192,25 @@ function beginPlaying(room) {
 function tickCountdown(room, delta) {
   room.countdownTimer = Math.max(0, room.countdownTimer - delta);
   const nextSeconds = Math.ceil(room.countdownTimer);
-  if (nextSeconds !== room.countdownSeconds) {
+  const secondsChanged = nextSeconds !== room.countdownSeconds;
+  if (secondsChanged) {
     room.countdownSeconds = nextSeconds;
-    broadcastGameState(room);
   }
   if (room.countdownTimer <= 0) {
     beginPlaying(room);
+    return;
+  }
+
+  // 카운트다운 중에도 플레이어는 감옥 구역 안에서 자유롭게 움직일 수 있고, 클라이언트는
+  // player:input을 30Hz로 계속 보낸다(messages.js가 countdown 단계도 허용). 그런데
+  // 브로드캐스트를 초 단위 라벨 갱신 시점(1Hz)에만 보내면, 다른 클라이언트 화면에서는
+  // 서로의 위치가 1초에 한 번만 갱신돼 뚝뚝 끊겨 보인다(로컬 lerp만으로는 근본적으로
+  // 못 메꾼다 — 애초에 새 목표 자체가 1Hz로만 온다). playing과 동일한 STATE_TICK_RATE로
+  // 위치 브로드캐스트를 돌려 원격 플레이어 이동도 매끄럽게 보이게 한다.
+  room.broadcastTimer += delta;
+  if (secondsChanged || room.broadcastTimer >= 1 / C.STATE_TICK_RATE) {
+    room.broadcastTimer = 0;
+    broadcastGameState(room);
   }
 }
 

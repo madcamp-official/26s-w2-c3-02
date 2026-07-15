@@ -34,8 +34,8 @@ const DASH_DURATION = 0.25;
 const DASH_COOLDOWN = 5.0;
 const DASH_CATCH_HALF_WIDTH = 4.0;
 
-const STATE_TICK_RATE = 30; // Hz, game:state 브로드캐스트 주기
-const SIM_TICK_HZ = 30; // 내부 시뮬레이션(대시 판정 등)은 브로드캐스트보다 촘촘하게 돈다
+const STATE_TICK_RATE = 64; // Hz, game:state 브로드캐스트 주기
+const SIM_TICK_HZ = 64; // 내부 시뮬레이션(대시 판정 등)은 브로드캐스트보다 촘촘하게 돈다
 
 const ROOM_CODE_LENGTH = 4;
 const ROOM_CODE_CHARS = '0123456789';
