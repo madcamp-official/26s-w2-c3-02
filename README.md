@@ -106,7 +106,21 @@
 - **클라이언트:** Godot Engine (GDScript) → PC 웹(WebGL/WASM 빌드) & 모바일 앱으로 동일 코드베이스 내보내기
 - **서버:** Node.js + `ws` 라이브러리 기반 순수 웹소켓 서버, 방(room) 단위 인메모리 상태 관리
 - **통신:** 클라이언트 ↔ 서버 간 JSON 메시지 기반 WebSocket 양방향 통신 (위치 갱신, 포획/구출 판정, 새끼오리 획득 이벤트 브로드캐스트)
-- **배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**(`https://madcamp-official.github.io/26s-w2-c3-02/`)에 자동 배포. Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
+- **웹 배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**(`https://madcamp-official.github.io/26s-w2-c3-02/`)에 자동 배포. Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
+
+### Android APK 배포
+
+Android 버전은 Godot의 Android Export 프리셋으로 APK를 생성해 배포한다. 최종 배포용 APK는 debug keystore가 아니라 직접 생성한 release keystore로 서명해야 하며, 이후 업데이트 APK도 반드시 같은 keystore와 alias로 서명해야 한다. 서명 키가 달라지면 기존 앱 위에 업데이트 설치가 되지 않을 수 있다.
+
+APK 파일은 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으므로 Git 저장소에 직접 커밋하지 않는다. 배포용 APK는 GitHub Releases, Google Drive, Notion, Slack 등 별도 공유 경로를 통해 전달한다.
+
+```bash
+# Godot Editor 기준
+Project > Export > Android 프리셋 선택
+Export With Debug 해제
+Keystore > Release 항목에 release keystore 경로/alias/password 설정
+Export Project로 APK 생성
+```
 
 ---
 
