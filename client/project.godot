@@ -13,7 +13,7 @@ config_version=5
 config/name="26s-w2-c3-02"
 run/main_scene="res://scenes/boot/Boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
-config/icon="res://assets/ui/icons/app_thumbnail.png"
+config/icon="res://assets/ui/icons/duckwithknife.png"
 
 [autoload]
 
