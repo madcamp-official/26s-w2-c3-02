@@ -23,10 +23,8 @@ https://madcamp-official.github.io/26s-w2-c3-02/
 
 | 이름 | 학교 | GitHub | 역할 |
 |---|---|---|---|
-| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 & 서버 내부로직 파트, 게임 에셋|
-| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 & 서버 UI 파트, 배포 |
-
-> 서버 착수 전까지는 [Docs/Plan.md](Docs/Plan.md)의 클라이언트 병렬 개발 계획을 따른다: 박수현이 B 트랙(인게임 월드·캐릭터), 조예준이 A 트랙(화면 흐름·UI)을 담당한다.
+| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 & 서버 내부로직 파트, 게임 에셋, PC 웹 버전 배포 |
+| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 & 서버 UI 파트, 모바일 버전 배포 |
 
 ---
 
@@ -56,7 +54,7 @@ https://madcamp-official.github.io/26s-w2-c3-02/
   → 오리는 제한 시간 내 새끼오리를 둥지로 인솔, 악어(술래)는 오리를 체포해 감옥에 가두며 방해 
   
   → 시간 종료 또는 승리 조건 달성 시 결과 화면에서 승패 및 개인 기록 확인
-- **팀원별 역할:** 박수현(클라이언트 B 트랙 - 인게임 월드·캐릭터·새끼오리, 3D 에셋 배치), 조예준(클라이언트 A 트랙 - 화면 흐름·메뉴·HUD·반응형 UI, 이후 Node.js 서버 구축·웹소켓 동기화·서버 배포)
+- **팀원별 역할:** 박수현(클라이언트 & 서버 내부로직 파트, 게임 에셋, PC 웹 버전 배포), 조예준(클라이언트 & 서버 UI 파트, 모바일 버전 배포)
 
 ### 개발 일정
 
@@ -370,11 +368,12 @@ Android APK는 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으
 
 | 분류 | 사용 기술 |
 |---|---|
-| 핵심 기술 | Godot Engine (GDScript), Node.js, WebSocket (`ws`) |
-| 실행 환경 | PC 웹(WASM), 모바일 앱(Android), Node.js 서버 |
-| 데이터 저장 | 인메모리 (Node.js `Map<roomId, Room>`), 별도 DB 미사용 (추후 필요 시 Redis 검토) |
-| 외부 API / 서비스 | 없음 (프로토타입 단계 미도입) |
-| 기타 | Kenney / Sketchfab / Poly Pizza 무료 3D 에셋(.gltf/.glb), GitHub Pages(웹, 커스텀 도메인) + AWS EC2 Docker(서버) 배포, GitHub Actions CI/CD |
+| 핵심 기술 | Godot Engine 4.7 (GDScript), Node.js, WebSocket (`ws`) |
+| 실행 환경 | PC 웹 브라우저(WASM), Android APK, Node.js 서버 |
+| 데이터 저장 | 인메모리 (Node.js `Map<roomId, Room>`), 별도 DB 미사용 |
+| 외부 API / 서비스 | 없음 |
+| 배포 / 운영 | Godot Web Export(`web/`), Android Export(APK), Docker, AWS EC2, Nginx, GitHub Actions |
+| 에셋 / 리소스 | Kenney / Sketchfab / Poly Pizza 무료 3D 에셋(.gltf/.glb), 커스텀 UI 이미지·사운드 에셋 |
 
 ---
 
@@ -410,7 +409,7 @@ Android APK는 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으
 
 **조예준:**
 
-> 
+> 저번 주에 2D 게임을 만들다가 3D 게임을 만드니 익숙하면서도 새롭다. 게임에 대한 긍정적인 피드백을 많이 받아서 힘이 났다. 저번 프로젝트 때보다 AI를 더 잘 활용할 수 있게 된 것 같다. UI 틀과 기능을 처음에 확실하게 잡고 시작해야 겠다. 짧은 시간이지만 내 자신이 발전하고 있다고 느꼈다. 
 
 ---
 
