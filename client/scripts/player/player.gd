@@ -89,15 +89,14 @@ const CHARACTER_CONFIG := {
 	},
 	"shark": {
 		"model": "res://assets/shark/shark.glb",
-		# TODO: 실측 미완료 — aligator 값을 초기값으로 사용하되 인게임에서 너무 커 보인다는
-		# 피드백으로 model_scale을 0.3배 줄임(6.0 -> 1.8). 모델의 원점(발/바닥 위치)은
-		# model_scale과 무관하게 유지되므로 model_pos는 그대로 두되, 판정 박스가 이제
-		# 시각적으로 훨씬 작아진 모델과 안 맞을 수 있어 collision_size/collision_pos도
-		# 같은 비율로 함께 줄였다. 에디터에서 실측 후 재조정 필요.
 		"model_pos": Vector3(0, 1.684, 0),
 		"model_scale": 1.8,
-		"collision_size": Vector3(1.2, 1.008, 3.6),
-		"collision_pos": Vector3(0, 0.504, 0),
+		# 이전 값은 실측이 아니라 aligator 콜리전 박스를 model_scale 비율(0.3배)만큼 그대로
+		# 줄인 값이었는데, shark.glb 원본 메쉬의 실제 비율이 aligator와 달라 판정 박스가
+		# 눈에 보이는 모델보다 한참 작았다. model_pos/model_scale/model_rotation_degrees를
+		# 그대로 적용해 인스턴스한 뒤 메쉬의 실제 월드 AABB를 측정해 아래 값으로 교체했다.
+		"collision_size": Vector3(4.264, 4.559, 11.928),
+		"collision_pos": Vector3(0, 2.506, -0.36),
 		"water_submerge_depth": 1.7,
 		"water_effect_scale": 1.8,
 	},
