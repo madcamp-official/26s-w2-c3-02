@@ -38,6 +38,7 @@ function makePlayer({ playerId, nickname, team, character, taggerCharacter, ws }
     state: 'idle',
     jailRemaining: null,
     deliveredDucklings: 0,
+    ready: false,
     ws,
   };
 }
@@ -55,6 +56,7 @@ function serializePlayer(player) {
     carryingDucklingId: null,
     jailedUntil: null,
     deliveredDucklings: Number(player.deliveredDucklings || 0),
+    ready: !!player.ready,
   };
   if (player.jailRemaining !== null && player.jailRemaining !== undefined) {
     out.jailRemaining = player.jailRemaining;
@@ -249,10 +251,20 @@ function setNickname(room, playerId, nickname) {
   player.nickname = (nickname || '').trim() || 'Player';
 }
 
+function setReady(room, playerId, ready) {
+  const player = room.players.get(playerId);
+  if (!player || room.phase !== 'lobby') return;
+  player.ready = !!ready;
+}
+
 // 역할은 게임 시작 시 무작위로 배정되므로, 시작 조건은 팀 구성이 아니라 인원수로만 판단한다.
 function canStartGame(room) {
   const count = room.players.size;
-  return count >= C.MIN_PLAYERS && count <= C.MAX_PLAYERS;
+  if (count < C.MIN_PLAYERS || count > C.MAX_PLAYERS) return false;
+  for (const player of room.players.values()) {
+    if (!player.ready) return false;
+  }
+  return true;
 }
 
 function removePlayer(room, playerId) {
@@ -335,6 +347,7 @@ module.exports = {
   joinRoom,
   assignRandomRoles,
   setNickname,
+  setReady,
   canStartGame,
   removePlayer,
   findRoomAndPlayerBySocket,

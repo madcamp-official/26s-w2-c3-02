@@ -255,9 +255,17 @@ func set_player_nickname(player_id: String, nickname: String) -> void:
 		return # 실제 서버에서는 자기 자신의 닉네임만 바꿀 수 있다.
 	_send("player:setNickname", {"nickname": nickname}, GameData.room_id)
 
+func set_player_ready(ready: bool) -> void:
+	_send("player:setReady", {"ready": ready}, GameData.room_id)
+
 func can_start_game() -> bool:
 	var player_count := GameData.players.size()
-	return player_count >= 2 and player_count <= MVP_PLAYER_LIMIT
+	if player_count < 2 or player_count > MVP_PLAYER_LIMIT:
+		return false
+	for player in GameData.players:
+		if not bool(player.get("ready", false)):
+			return false
+	return true
 
 func lobby_status_text() -> String:
 	var player_count := GameData.players.size()

@@ -16,7 +16,7 @@ var target_score: int = 5
 var winner = null # "duck" | "tagger" | null
 var end_reason: String = ""
 var menu_entry_view: String = "menu"
-var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
+var players: Array = [] # [{playerId, nickname, team, character, ready, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
 var rescue_progress: float = 0.0   # 0.0 ~ 1.0, 구출 진행률
 var active_rescuer_id: String = "" # 현재 탈옥 시도 중인 플레이어 id
@@ -49,6 +49,7 @@ func register_local_player(team: String, character: String, nickname: String = "
 		"position": {"x": 0.0, "y": 0.0, "z": 0.0},
 		"rotationY": 0.0,
 		"state": "idle",
+		"ready": false,
 		"carryingDucklingId": null,
 		"jailedUntil": null,
 	})

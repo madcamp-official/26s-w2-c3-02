@@ -632,6 +632,33 @@ func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
 	return style
 
 
+func _rounded_button_style(bg: Color, border: Color, bottom_width: int = 4) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = bottom_width
+	style.border_color = border
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_right = 10
+	style.corner_radius_bottom_left = 10
+	return style
+
+
+func _apply_ready_button_style(button: Button, is_ready: bool) -> void:
+	button.add_theme_stylebox_override("normal", _rounded_button_style(Color(0.45098, 0.670588, 0.164706, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0)))
+	button.add_theme_stylebox_override("hover", _rounded_button_style(Color(0.537255, 0.760784, 0.223529, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0)))
+	button.add_theme_stylebox_override("pressed", _rounded_button_style(Color(0.243137, 0.360784, 0.117647, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0), 2))
+	button.add_theme_stylebox_override("disabled", _rounded_button_style(Color(0.110, 0.145, 0.180, 0.72), Color(0.220, 0.310, 0.390, 0.82), 2))
+	var text_color := Color(0.76, 0.82, 0.88, 1.0) if is_ready else Color.WHITE
+	button.add_theme_color_override("font_color", text_color)
+	button.add_theme_color_override("font_disabled_color", text_color)
+	button.add_theme_color_override("font_outline_color", Color(0.0156863, 0.0392157, 0.0784314, 1))
+	button.add_theme_constant_override("outline_size", 3)
+
+
 func _make_room_row(room: Dictionary) -> Control:
 	var room_id: String = str(room.get("room_id", "----"))
 	var room_name: String = str(room.get("room_name", room.get("host_nickname", "-")))
@@ -836,11 +863,12 @@ func _update_player_row(row: Control, player: Dictionary) -> void:
 	var name_input := row.get_child(1) as LineEdit
 	if name_input == null:
 		return
-	if name_input.editable and (name_input.has_focus() or name_input.has_ime_text()):
-		return # 편집 중인 입력창은 서버 값으로 덮어쓰지 않는다(캐럿/포커스 보존).
-	var server_text := str(player.get("nickname", "Player"))
-	if name_input.text != server_text:
-		name_input.text = server_text
+	var is_editing_name := name_input.editable and (name_input.has_focus() or name_input.has_ime_text())
+	if not is_editing_name:
+		var server_text := str(player.get("nickname", "Player"))
+		if name_input.text != server_text:
+			name_input.text = server_text
+	_update_ready_button(row, player)
 
 
 func _make_player_row(player: Dictionary) -> Control:
@@ -867,13 +895,46 @@ func _make_player_row(player: Dictionary) -> Control:
 	name_input.text_changed.connect(_on_lobby_name_input_text_changed.bind(name_input, player_id))
 	row.add_child(name_input)
 
+	var ready_button: Button = Button.new()
+	ready_button.custom_minimum_size = Vector2(132, 42)
+	ready_button.toggle_mode = true
+	ready_button.add_theme_font_size_override("font_size", 22)
+	ready_button.pressed.connect(_on_lobby_ready_button_pressed.bind(player_id))
+	row.add_child(ready_button)
+	_update_ready_button(row, player)
+
 	return row
+
+
+func _update_ready_button(row: Control, player: Dictionary) -> void:
+	var ready_button := row.get_child(2) as Button
+	if ready_button == null:
+		return
+	var player_id: String = str(player.get("playerId", ""))
+	var is_local := player_id == GameData.local_player_id
+	var is_ready := bool(player.get("ready", false))
+	ready_button.disabled = not is_local
+	ready_button.set_pressed_no_signal(is_ready)
+	if is_ready:
+		ready_button.text = "준비 완료"
+	else:
+		ready_button.text = "준비하기" if is_local else "준비 전"
+	_apply_ready_button_style(ready_button, is_ready)
 
 
 func _on_lobby_name_input_text_changed(new_text: String, input: LineEdit, player_id: String) -> void:
 	if input.get_meta("normalizing", false):
 		return
 	MockServer.set_player_nickname(player_id, new_text)
+
+
+func _on_lobby_ready_button_pressed(player_id: String) -> void:
+	if player_id != GameData.local_player_id:
+		return
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			MockServer.set_player_ready(not bool(player.get("ready", false)))
+			return
 
 
 func _commit_lobby_name_inputs() -> void:
@@ -896,7 +957,10 @@ func _on_start_game_button_pressed() -> void:
 	await _commit_lobby_name_inputs()
 
 	if not MockServer.can_start_game():
-		_show_alert("최소 2명이 필요합니다.")
+		if GameData.players.size() < 2:
+			_show_alert("최소 2명이 필요합니다.")
+		else:
+			_show_alert("모든 플레이어가 준비 완료를 눌러야 합니다.")
 		return
 	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
 	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).

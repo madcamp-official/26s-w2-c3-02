@@ -89,6 +89,13 @@ function handlePlayerSetNickname(ws, msg) {
   gameLoop.broadcastRoomState(room);
 }
 
+function handlePlayerSetReady(ws, msg) {
+  const { room, player } = requireRoomAndPlayer(ws);
+  if (!room || !player) return;
+  rooms.setReady(room, player.playerId, !!(msg.payload || {}).ready);
+  gameLoop.broadcastRoomState(room);
+}
+
 function handleGameStart(ws, msg) {
   const { room, player } = requireRoomAndPlayer(ws);
   if (!room || !player) {
@@ -165,6 +172,7 @@ const HANDLERS = {
   'room:join': handleRoomJoin,
   'room:leave': handleRoomLeave,
   'player:setNickname': handlePlayerSetNickname,
+  'player:setReady': handlePlayerSetReady,
   'game:start': handleGameStart,
   'player:input': handlePlayerInput,
   'player:dash': handlePlayerDash,
