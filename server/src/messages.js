@@ -145,6 +145,20 @@ function handleDucklingDeliver(ws, msg) {
   gameLoop.deliverDuckling(room, d);
 }
 
+function handleGameForceEnd(ws, msg) {
+  const { room, player } = requireRoomAndPlayer(ws);
+  if (!room || !player) return;
+  gameLoop.endGame(room, 'tagger', 'debug_force_end');
+}
+
+// 클라이언트가 몇 초 안에 "서버와 살아있는지"를 스스로 판단하려면 유휴 상태(로비 등, 서버가
+// 먼저 보낼 브로드캐스트가 없는 상황)에서도 주기적으로 왕복할 메시지가 필요하다. WebSocket
+// 프로토콜 레벨 ping/pong은 Godot WebSocketPeer의 GDScript API로 직접 보낼 수 없어서,
+// 애플리케이션 레벨로 별도 만든다 — 받는 즉시 그대로 돌려주기만 하면 된다.
+function handlePing(ws, msg) {
+  rooms.sendTo(ws, { type: 'pong', requestId: msg.requestId || null, payload: {} });
+}
+
 const HANDLERS = {
   'room:create': handleRoomCreate,
   'room:list': handleRoomList,
@@ -156,6 +170,8 @@ const HANDLERS = {
   'player:dash': handlePlayerDash,
   'game:returnToLobby': handleGameReturnToLobby,
   'duckling:deliver': handleDucklingDeliver,
+  'game:forceEnd': handleGameForceEnd,
+  'ping': handlePing,
 };
 
 function handleMessage(ws, raw) {

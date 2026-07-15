@@ -424,9 +424,28 @@ func _refresh_rules_card() -> void:
 func _init_inventory_selection() -> void:
 	for role in SKINS_BY_ROLE.keys():
 		var skins: Array = SKINS_BY_ROLE[role]
-		if not skins.is_empty():
-			_selected_skin_by_role[role] = skins[0]["id"]
-			_apply_equipped_character(role, str(skins[0]["character"]))
+		if skins.is_empty():
+			continue
+		# GameData.local_duck_character/local_tagger_character는 오토로드라 씬이 바뀌어도
+		# 값이 유지된다. 여기서 무조건 skins[0](기본값)으로 되돌리면 한 판 끝나고 메뉴로
+		# 돌아왔을 때(_ready() 재실행) 이전에 고른 스킨이 초기화된 것처럼 보이므로, GameData에
+		# 이미 남아있는 값과 일치하는 스킨이 있으면 그걸 그대로 선택된 상태로 유지한다.
+		var current_character := _current_equipped_character(role)
+		var matched_skin: Dictionary = {}
+		for skin in skins:
+			if str(skin["character"]) == current_character:
+				matched_skin = skin
+				break
+		if matched_skin.is_empty():
+			matched_skin = skins[0]
+		_selected_skin_by_role[role] = matched_skin["id"]
+		_apply_equipped_character(role, str(matched_skin["character"]))
+
+
+func _current_equipped_character(role: InventoryRole) -> String:
+	if role == InventoryRole.DUCK:
+		return GameData.local_duck_character
+	return GameData.local_tagger_character
 
 
 func _on_inventory_duck_tab_button_pressed() -> void:
@@ -619,6 +638,11 @@ func _make_room_row(room: Dictionary) -> Control:
 	var player_count: int = int(room.get("player_count", 0))
 	var is_full: bool = player_count >= MockServer.MVP_PLAYER_LIMIT
 	var is_private := bool(room.get("is_private", false))
+	var phase := str(room.get("phase", "lobby"))
+	var is_in_progress := phase != "lobby"
+	# 꽉 찬 방과 마찬가지로 이미 시작된 방도 목록엔 보여주되 입장은 막는다(누르면 서버가
+	# GAME_ALREADY_STARTED로 거부하는 것과 동일한 기준) — 왼쪽 점 색으로 구분한다.
+	var is_joinable := not is_full and not is_in_progress
 
 	var row: Button = Button.new()
 	row.custom_minimum_size = Vector2(0, 54)
@@ -648,7 +672,7 @@ func _make_room_row(room: Dictionary) -> Control:
 	dot_style.corner_radius_top_right = 7
 	dot_style.corner_radius_bottom_right = 7
 	dot_style.corner_radius_bottom_left = 7
-	dot_style.bg_color = Color(0.85, 0.25, 0.25) if is_full else Color(0.45, 0.8, 0.3)
+	dot_style.bg_color = Color(0.85, 0.25, 0.25) if not is_joinable else Color(0.45, 0.8, 0.3)
 	dot.add_theme_stylebox_override("panel", dot_style)
 	content.add_child(dot)
 
@@ -674,6 +698,16 @@ func _make_room_row(room: Dictionary) -> Control:
 		lock_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lock_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		room_name_row.add_child(lock_icon)
+
+	if is_in_progress:
+		# 꽉 찬 방(카운트로 이미 구분됨)과 달리, 이미 시작된 방은 빨간 점만으로는 "왜 못
+		# 들어가는지" 구분이 안 되므로 짧은 상태 문구를 덧붙인다.
+		var status_label: Label = Label.new()
+		status_label.text = "게임중"
+		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		status_label.add_theme_font_size_override("font_size", 18)
+		status_label.add_theme_color_override("font_color", Color(0.85, 0.45, 0.45, 1))
+		room_name_row.add_child(status_label)
 
 	var count_label: Label = Label.new()
 	count_label.text = "%d/%d" % [player_count, MockServer.MVP_PLAYER_LIMIT]

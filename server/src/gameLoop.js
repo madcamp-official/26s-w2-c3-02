@@ -262,6 +262,12 @@ function updateDucklingWander(room, delta) {
 function checkPickup(room) {
   for (const player of room.players.values()) {
     if (player.team !== 'duck') continue;
+    // 감옥 텔레포트 직후 클라이언트가 아직 갇힌 걸 모른 채 보낸 예전 player:input이
+    // 뒤늦게 도착해 player.position을 잡힌 지점 근처로 되돌려놓는 레이스 컨디션이 있다
+    // (handlePlayerInput은 jailed 여부와 무관하게 위치를 그대로 반영함). 그 순간 방금
+    // releaseDucklings()로 흩어놓은 새끼오리가 바로 옆에 있어 다시 주워지던 문제라,
+    // 위치가 무엇이든 갇힌 플레이어는 애초에 주울 수 없게 막는다.
+    if (player.state === 'jailed') continue;
     for (const d of room.ducklings.values()) {
       if (d.state !== 'spawned') continue;
       const dist = Math.hypot(player.position.x - d.position.x, player.position.z - d.position.z);
