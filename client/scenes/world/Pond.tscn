@@ -128,7 +128,7 @@ transform = Transform3D(5.9273, 0, 1.2124, 0, 6.05, 0, -1.2124, 0, 5.9273, 69.34
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock2" unique_id=1434890866 instance=ExtResource("RockAsset9")]
-transform = Transform3D(2.0408, 0, 0, 0, 2.0408, 0, 0, 0, 2.0408, -0.9482689, 0, -0.47546434)
+transform = Transform3D(2.0408, 0, 0, 0, 2.0408, 0, 0, 0, 2.0408, -0.9482689, -0.28720477, -0.47546434)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
@@ -222,7 +222,7 @@ transform = Transform3D(4.8903, 0, 1.3857, 0, 5.0828, 0, -1.3857, 0, 4.8903, 91.
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock11" unique_id=122633053 instance=ExtResource("RockAsset4")]
-transform = Transform3D(0.885, 0, 0, 0, 0.885, 0, 0, 0, 0.885, 0, 0, 0)
+transform = Transform3D(0.885, 0, -2.9802322e-08, 0, 0.885, 0, 2.9802322e-08, 0, 0.885, -1.8511734, -0.3097965, -0.7811315)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
