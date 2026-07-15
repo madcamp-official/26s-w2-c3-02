@@ -444,44 +444,6 @@ vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 
-[node name="EndGameButton" type="Button" parent="Root"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -168.0
-offset_top = -24.0
-offset_right = -24.0
-offset_bottom = 24.0
-grow_horizontal = 0
-grow_vertical = 2
-text = "디버그 OFF"
-
-[node name="DebugPanel" type="PanelContainer" parent="Root"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -344.0
-offset_top = 88.0
-offset_right = -24.0
-offset_bottom = 356.0
-grow_horizontal = 0
-
-[node name="VBox" type="VBoxContainer" parent="Root/DebugPanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="DebugSummaryLabel" type="Label" parent="Root/DebugPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "phase: playing"
-
 [node name="DashCooldownIndicator" type="TextureProgressBar" parent="Root"]
 script = ExtResource("7")
 layout_mode = 1
@@ -672,4 +634,3 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[connection signal="pressed" from="Root/EndGameButton" to="." method="_on_end_game_button_pressed"]

@@ -226,14 +226,13 @@ func set_player_nickname(player_id: String, nickname: String) -> void:
 	_send("player:setNickname", {"nickname": nickname}, GameData.room_id)
 
 func can_start_game() -> bool:
-	# 임시 테스트 모드: UI/게임 로직 확인을 쉽게 하려고 1명이어도 시작을 허용한다.
 	var player_count := GameData.players.size()
-	return player_count >= 1 and player_count <= MVP_PLAYER_LIMIT
+	return player_count >= 2 and player_count <= MVP_PLAYER_LIMIT
 
 func lobby_status_text() -> String:
 	var player_count := GameData.players.size()
 	if player_count <= 1:
-		return "테스트로 시작 가능"
+		return "최소 2명이 필요합니다."
 	return "경찰 1명 / 오리 %d명" % (player_count - 1)
 
 func local_player_team() -> String:
@@ -267,9 +266,6 @@ func start_game() -> bool:
 func return_to_lobby() -> void:
 	GameData.menu_entry_view = "lobby"
 	_send("game:returnToLobby", {}, GameData.room_id)
-
-func force_end_game() -> void:
-	_send("game:forceEnd", {}, GameData.room_id)
 
 func leave_room() -> void:
 	_send("room:leave", {}, GameData.room_id)

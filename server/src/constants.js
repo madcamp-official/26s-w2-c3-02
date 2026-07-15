@@ -4,6 +4,7 @@
 // 판정 반경 등)과 어긋나면 안 되므로 값을 임의로 바꾸지 않는다.
 
 const MAX_PLAYERS = 5;
+const MIN_PLAYERS = 2;
 const TAGGER_COUNT = 1;
 const DUCK_COUNT_MIN = 1;
 const DUCK_COUNT_MAX = 4;
@@ -102,6 +103,7 @@ const POND_OBSTACLES = [
 
 module.exports = {
   MAX_PLAYERS,
+  MIN_PLAYERS,
   TAGGER_COUNT,
   DUCK_COUNT_MIN,
   DUCK_COUNT_MAX,

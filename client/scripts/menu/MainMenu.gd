@@ -1,6 +1,6 @@
 extends Control
 
-enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
+enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS }
 
 # Submit handlers apply pending IME composition before reading LineEdit.text.
 @onready var play_panel: PanelContainer = %PlayPanel
@@ -15,7 +15,6 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var rules_card_title_label: Label = %RulesCardTitleLabel
 @onready var rules_card_text_label: RichTextLabel = %RulesCardTextLabel
 @onready var settings_panel: PanelContainer = %SettingsPanel
-@onready var login_panel: PanelContainer = %LoginPanel
 @onready var room_list: GridContainer = %RoomList
 @onready var join_details: VBoxContainer = %JoinDetails
 @onready var selected_room_label: Label = %SelectedRoomLabel
@@ -359,7 +358,6 @@ func _set_content_view(view: ContentView) -> void:
 	inventory_panel.visible = view == ContentView.INVENTORY
 	rules_panel.visible = view == ContentView.RULES
 	settings_panel.visible = view == ContentView.SETTINGS
-	login_panel.visible = view == ContentView.LOGIN
 	if view == ContentView.PLAY:
 		_clear_selected_room()
 		_refresh_room_list()
@@ -582,10 +580,6 @@ func _on_settings_nav_button_pressed() -> void:
 	_set_content_view(ContentView.SETTINGS)
 
 
-func _on_login_button_pressed() -> void:
-	_set_content_view(ContentView.LOGIN)
-
-
 func _refresh_room_list() -> void:
 	if not is_instance_valid(room_list):
 		return
@@ -762,6 +756,10 @@ func _refresh_lobby() -> void:
 	# 애초에 호스트가 아니면 버튼 자체를 숨겨서 왜 안 되는지 헷갈리지 않게 한다.
 	start_game_button.visible = GameData.is_host
 	lobby_status_label.text = MockServer.lobby_status_text()
+	if GameData.players.size() <= 1:
+		lobby_status_label.add_theme_color_override("font_color", Color(1.0, 0.33, 0.33, 1.0))
+	else:
+		lobby_status_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1.0, 1.0))
 	if GameData.is_host:
 		start_game_button.disabled = not MockServer.can_start_game()
 
@@ -864,7 +862,7 @@ func _on_start_game_button_pressed() -> void:
 	await _commit_lobby_name_inputs()
 
 	if not MockServer.can_start_game():
-		_show_alert("1~%d명이면 테스트 게임을 시작할 수 있습니다." % MockServer.MVP_PLAYER_LIMIT)
+		_show_alert("최소 2명이 필요합니다.")
 		return
 	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
 	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).

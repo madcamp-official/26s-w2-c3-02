@@ -18,7 +18,6 @@ var end_reason: String = ""
 var menu_entry_view: String = "menu"
 var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
-var debug_mode_enabled: bool = false
 var rescue_progress: float = 0.0   # 0.0 ~ 1.0, 구출 진행률
 var active_rescuer_id: String = "" # 현재 탈옥 시도 중인 플레이어 id
 var dash_cooldown_remaining: float = 0.0 # 경찰(악어) 대시 쿨타임 잔여 시간(초)
@@ -32,7 +31,6 @@ var mobile_dash_requested: bool = false
 signal room_state_changed
 signal game_state_changed
 signal game_event(event: String, data: Dictionary)
-signal debug_mode_changed(enabled: bool)
 signal action_error(code: String, message: String) # 요청-응답 상관관계가 없는(fire-and-forget) 액션이 서버에서 거부됐을 때
 
 func register_local_player(team: String, character: String, nickname: String = "") -> void:
@@ -64,12 +62,6 @@ func update_player_transform(player_id: String, pos: Vector3, rotation_y: float)
 			p["position"] = {"x": pos.x, "y": pos.y, "z": pos.z}
 			p["rotationY"] = rotation_y
 			return
-
-func set_debug_mode(enabled: bool) -> void:
-	if debug_mode_enabled == enabled:
-		return
-	debug_mode_enabled = enabled
-	debug_mode_changed.emit(debug_mode_enabled)
 
 func request_mobile_dash() -> void:
 	mobile_dash_requested = true

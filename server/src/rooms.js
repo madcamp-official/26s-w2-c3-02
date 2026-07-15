@@ -228,10 +228,7 @@ function assignRandomRoles(room) {
     const j = Math.floor(Math.random() * (i + 1));
     [players[i], players[j]] = [players[j], players[i]];
   }
-  // 1인 디버그 모드에서는 TAGGER_COUNT(1)가 인원수(1)와 같아 슬라이스 방식이 항상
-  // 그 한 명을 경찰로 고정시켜버린다. 이 경우엔 50% 확률로 아예 경찰을 안 뽑아
-  // 오리/경찰이 랜덤으로 나오게 한다.
-  const taggerCount = players.length <= C.TAGGER_COUNT && Math.random() < 0.5 ? 0 : C.TAGGER_COUNT;
+  const taggerCount = Math.min(C.TAGGER_COUNT, Math.max(0, players.length - 1));
   const taggerIds = new Set(players.slice(0, taggerCount).map((p) => p.playerId));
   for (const p of players) {
     if (taggerIds.has(p.playerId)) {
@@ -253,8 +250,7 @@ function setNickname(room, playerId, nickname) {
 // 역할은 게임 시작 시 무작위로 배정되므로, 시작 조건은 팀 구성이 아니라 인원수로만 판단한다.
 function canStartGame(room) {
   const count = room.players.size;
-  // Temporary solo-test mode: allow starting with one player while UI/gameplay is being tuned.
-  return count >= 1 && count <= C.MAX_PLAYERS;
+  return count >= C.MIN_PLAYERS && count <= C.MAX_PLAYERS;
 }
 
 function removePlayer(room, playerId) {

@@ -145,12 +145,6 @@ function handleDucklingDeliver(ws, msg) {
   gameLoop.deliverDuckling(room, d);
 }
 
-function handleGameForceEnd(ws, msg) {
-  const { room, player } = requireRoomAndPlayer(ws);
-  if (!room || !player) return;
-  gameLoop.endGame(room, 'tagger', 'debug_force_end');
-}
-
 const HANDLERS = {
   'room:create': handleRoomCreate,
   'room:list': handleRoomList,
@@ -162,7 +156,6 @@ const HANDLERS = {
   'player:dash': handlePlayerDash,
   'game:returnToLobby': handleGameReturnToLobby,
   'duckling:deliver': handleDucklingDeliver,
-  'game:forceEnd': handleGameForceEnd,
 };
 
 function handleMessage(ws, raw) {

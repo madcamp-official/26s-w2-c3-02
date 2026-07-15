@@ -44,9 +44,6 @@ const MobileControlsScript := preload("res://scripts/hud/MobileControls.gd")
 @onready var jail_photo: TextureRect = %JailPhoto
 @onready var nest_photo: TextureRect = %NestPhoto
 @onready var nest_2_photo: TextureRect = %Nest2Photo
-@onready var debug_mode_button: Button = %EndGameButton
-@onready var debug_panel: PanelContainer = %DebugPanel
-@onready var debug_summary_label: Label = %DebugSummaryLabel
 @onready var settings_button: TextureButton = %SettingsButton
 @onready var settings_overlay: Control = %SettingsOverlay
 @onready var settings_close_button: Button = %SettingsCloseButton
@@ -75,8 +72,6 @@ func _ready() -> void:
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
 	_apply_safe_area_margins()
-	debug_mode_button.text = "종료 테스트"
-	debug_panel.visible = false
 	_refresh()
 	_update_direction_indicators()
 
@@ -107,8 +102,6 @@ func _exit_tree() -> void:
 		GameData.game_state_changed.disconnect(_refresh)
 	if GameData.game_event.is_connected(_on_game_event):
 		GameData.game_event.disconnect(_on_game_event)
-	if GameData.debug_mode_changed.is_connected(_on_debug_mode_changed):
-		GameData.debug_mode_changed.disconnect(_on_debug_mode_changed)
 
 
 func _init_settings_overlay() -> void:
@@ -220,7 +213,6 @@ func _refresh() -> void:
 	score_label.text = "모은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
 	_refresh_countdown()
 	_refresh_player_list()
-	_refresh_debug_summary()
 
 
 func _refresh_countdown() -> void:
@@ -277,19 +269,6 @@ func _local_team() -> String:
 		if str(player.get("playerId", "")) == GameData.local_player_id:
 			return str(player.get("team", "duck"))
 	return "duck"
-
-
-func _on_end_game_button_pressed() -> void:
-	MockServer.force_end_game()
-
-
-func _on_debug_mode_changed(enabled: bool) -> void:
-	debug_panel.visible = enabled
-	if enabled:
-		debug_mode_button.text = "디버그 ON"
-	else:
-		debug_mode_button.text = "디버그 OFF"
-	_refresh_debug_summary()
 
 
 func _refresh_player_list() -> void:
@@ -472,30 +451,6 @@ func _apply_game_text_style(label: Label, font_size: int, color: Color, outline_
 	label.add_theme_color_override("font_shadow_color", Color(0.04, 0.05, 0.06, 0.92))
 	label.add_theme_constant_override("shadow_offset_x", 0)
 	label.add_theme_constant_override("shadow_offset_y", shadow_offset_y)
-
-
-func _refresh_debug_summary() -> void:
-	if not is_instance_valid(debug_summary_label):
-		return
-
-	debug_summary_label.text = "phase: %s\nroom: %s\nscore: %d / %d\ntime: %d\nplayers: %d\nducklings: %d\njailed: %d" % [
-		GameData.phase,
-		GameData.room_id,
-		GameData.score,
-		GameData.target_score,
-		GameData.remaining_seconds,
-		GameData.players.size(),
-		GameData.ducklings.size(),
-		_jailed_duck_count(),
-	]
-
-
-func _jailed_duck_count() -> int:
-	var count := 0
-	for player in GameData.players:
-		if str(player.get("team", "")) == "duck" and str(player.get("state", "")) == "jailed":
-			count += 1
-	return count
 
 
 func _event_message(event: String, data: Dictionary) -> String:
