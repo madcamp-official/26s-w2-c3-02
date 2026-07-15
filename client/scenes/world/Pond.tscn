@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://cad2scixxcyq2" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_008.fbx" id="14"]
 [ext_resource type="PackedScene" uid="uid://bdlc8orek4x0a" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_009.fbx" id="14_d120r"]
 [ext_resource type="PackedScene" uid="uid://md3hjiq1gq13" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_012.fbx" id="15"]
+[ext_resource type="Script" uid="uid://c5j360jgm13pk" path="res://scripts/world/boundary_rocks.gd" id="BoundaryRocksScript"]
 [ext_resource type="PackedScene" uid="uid://cv2ddbvv7pflv" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_003.fbx" id="BushTemp003"]
 [ext_resource type="PackedScene" uid="uid://ck2liu7qhxpd" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_006.fbx" id="BushTemp006"]
 [ext_resource type="PackedScene" uid="uid://ca1hscynp15ex" path="res://assets/Bush_temp_climate/Fbx/Bush_temp_climate_007.fbx" id="BushTemp007"]
@@ -25,7 +26,6 @@
 [ext_resource type="PackedScene" uid="uid://dy3w1f407m641" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_003.fbx" id="RockAsset10"]
 [ext_resource type="PackedScene" uid="uid://ie3osf0kk8hm" path="res://assets/rock_fbx/Low_Poly_Cuboid_Rock_007.fbx" id="RockAsset11"]
 [ext_resource type="Script" uid="uid://4nsyuhgossgv" path="res://scripts/world/xz_hull_collision.gd" id="RockCollision"]
-[ext_resource type="Script" path="res://scripts/world/boundary_rocks.gd" id="BoundaryRocksScript"]
 
 [sub_resource type="Environment" id="Environment_world"]
 background_mode = 1
@@ -103,7 +103,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -104.57, 2, -2.09)
 [node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest" unique_id=334475947]
 shape = SubResource("Shape_wall_ew")
 
-[node name="BoundaryRocks" type="Node3D" parent="."]
+[node name="BoundaryRocks" type="Node3D" parent="." unique_id=426645746]
 script = ExtResource("BoundaryRocksScript")
 
 [node name="Nest" parent="." unique_id=830184236 instance=ExtResource("2")]
@@ -139,7 +139,7 @@ transform = Transform3D(-9.3487, 0, 2.7152, 0, 9.7351, 0, -2.7152, 0, -9.3487, 8
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock3" unique_id=939249940 instance=ExtResource("RockAsset11")]
-transform = Transform3D(0.7663, 0, 1.4901161e-08, 0, 0.7663, 0, -1.4901161e-08, 0, 0.7663, 3.4607038, -0.26130843, 10.33651)
+transform = Transform3D(0.7663, 0, 5.9604645e-08, 0, 0.7663, 0, -5.9604645e-08, 0, 0.7663, 4.925926, -0.26130843, 11.666607)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
@@ -148,11 +148,6 @@ custom_material = SubResource("Mat_Rock")
 [node name="Rock4" type="StaticBody3D" parent="." unique_id=1561346730]
 transform = Transform3D(8.2234, 0, 0.7227, 0, 8.255, 0, -0.7227, 0, 8.2234, 61.05, 2.39, -83.87)
 script = ExtResource("RockCollision")
-
-[node name="Model" parent="Rock4" unique_id=1151224059 instance=ExtResource("RockAsset11")]
-transform = Transform3D(0.7663, 0, 7.450581e-09, 0, 0.76629996, 0, -7.450581e-09, 0, 0.7663, 0, -0.3051798, 0)
-script = ExtResource("12")
-custom_material = SubResource("Mat_Rock")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Rock4" unique_id=329717673]
 
@@ -194,7 +189,7 @@ transform = Transform3D(-5.3368, 0, -3.6036, 0, 6.4395, 0, 3.6036, 0, -5.3368, 9
 script = ExtResource("RockCollision")
 
 [node name="Model" parent="Rock8" unique_id=1151218655 instance=ExtResource("RockAsset6")]
-transform = Transform3D(0.39449996, 0, -2.9802322e-08, 0, 0.39450002, 0, 2.9802322e-08, 0, 0.39449996, 0, -0.22315492, 0)
+transform = Transform3D(0.39449993, 0, -2.9802322e-08, 0, 0.39450005, 0, 2.9802322e-08, 0, 0.39449993, 0.18084335, -0.22315493, 2.2655897)
 script = ExtResource("12")
 custom_material = SubResource("Mat_Rock")
 
