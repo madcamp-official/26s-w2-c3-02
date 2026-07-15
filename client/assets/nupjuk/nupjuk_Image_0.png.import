@@ -2,15 +2,12 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://i7f518a7hhww"
+uid="uid://cqkiwvyfrm2r3"
 path.s3tc="res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.s3tc.ctex"
 path.etc2="res://.godot/imported/nupjuk_Image_0.png-9756e9fb66005c4fc1788cf66be0a5ea.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
-}
-generator_parameters={
-"md5": "201c1bcdc0151b59cecba72cf6b31d23"
 }
 
 [deps]
