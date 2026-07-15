@@ -233,7 +233,7 @@ theme_override_constants/separation = 14
 [node name="PlayButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 67)
+custom_minimum_size = Vector2(0, 88)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
 alignment = 1
@@ -250,11 +250,11 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="InventoryButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 67)
+custom_minimum_size = Vector2(0, 88)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
 alignment = 1
-text = "인벤토리"
+text = "스킨"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
@@ -267,7 +267,7 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="RulesButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 67)
+custom_minimum_size = Vector2(0, 88)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
 alignment = 1
@@ -288,28 +288,11 @@ theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_a
 [node name="SettingsNavButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(0, 67)
+custom_minimum_size = Vector2(0, 88)
 toggle_mode = true
 button_group = SubResource("ButtonGroup_sidebar")
 alignment = 1
 text = "설정"
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
-theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 28
-theme_override_styles/normal = SubResource("StyleBoxFlat_sidebar_button")
-theme_override_styles/hover = SubResource("StyleBoxFlat_sidebar_button_hover")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_sidebar_button_active")
-theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_sidebar_button_active")
-
-[node name="LoginButton" type="Button" parent="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(0, 67)
-toggle_mode = true
-button_group = SubResource("ButtonGroup_sidebar")
-alignment = 1
-text = "로그인"
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
 theme_override_constants/outline_size = 3
@@ -528,7 +511,7 @@ theme_override_constants/separation = 18
 
 [node name="InventoryTitleLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/InventoryPanel/Content"]
 layout_mode = 2
-text = "인벤토리"
+text = "스킨"
 horizontal_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0.0156863, 0.0392157, 0.0784314, 1)
@@ -717,6 +700,7 @@ theme_override_font_sizes/font_size = 28
 [node name="BgmVolumeSlider" type="HSlider" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/SettingsPanel/Content/BgmVolumeRow"]
 unique_name_in_owner = true
 layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
 size_flags_horizontal = 3
 min_value = 0.0
 max_value = 100.0
@@ -761,29 +745,6 @@ text = "85%"
 vertical_alignment = 1
 theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
 theme_override_font_sizes/font_size = 26
-
-[node name="LoginPanel" type="PanelContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
-
-[node name="Content" type="VBoxContainer" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/LoginPanel"]
-layout_mode = 2
-
-[node name="PlaceholderLabel" type="Label" parent="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/LoginPanel/Content"]
-layout_mode = 2
-text = "로그인 기능은 준비 중입니다."
-horizontal_alignment = 1
-vertical_alignment = 1
-size_flags_vertical = 3
-theme_override_colors/font_color = Color(0.941176, 0.972549, 1, 1)
-theme_override_font_sizes/font_size = 28
 
 [node name="LobbyOverlay" type="Control" parent="."]
 unique_name_in_owner = true
@@ -1133,7 +1094,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 [connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons/InventoryButton" to="." method="_on_inventory_button_pressed"]
 [connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons/RulesButton" to="." method="_on_rules_button_pressed"]
 [connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons/SettingsNavButton" to="." method="_on_settings_nav_button_pressed"]
-[connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/LeftColumn/SidebarButtons/LoginButton" to="." method="_on_login_button_pressed"]
 [connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/JoinCreateColumn/JoinDetails/JoinRoomButton" to="." method="_on_join_room_button_pressed"]
 [connection signal="pressed" from="MarginContainer/RootLayout/BodyRow/RightColumn/ContentArea/PlayPanel/Content/PlayBody/RoomListSection/RoomListHeader/CreateRoomButton" to="." method="_on_create_room_button_pressed"]
 [connection signal="pressed" from="LobbyOverlay/CenterContainer/LobbyPanel/Content/LobbyButtons/BackButton" to="." method="_on_leave_button_pressed"]

@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="PackedScene" path="res://assets/island_1/island.glb" id="1"]
+[ext_resource type="PackedScene" path="res://assets/island_1/island_modified.glb" id="1"]
 [ext_resource type="Script" path="res://scripts/world/jail_island.gd" id="2"]
 
 [node name="JailIsland" type="Node3D"]

@@ -30,6 +30,11 @@ const STEP_CHECK_DISTANCE := 2.0
 # 실측 결과 섬의 실제 해안선(마른 땅의 마지막 표면)은 y≈0.3, 물 표면은 y=0.0
 # (오리 원점 = 발 높이 기준). 그 사이에서 물에 거의 닿았을 때만 반응하도록 0.1로 설정.
 const JAIL_WATER_MARGIN_Y := 0.3
+# 필드 전역에서 "맵 밖으로 빠짐"만 잡는 안전망용 임계값. 저수심 구간을 헤엄칠 때도
+# global_position.y가 물 표면(0.0) 근처까지 자연스럽게 내려갈 수 있으므로, JAIL_WATER_MARGIN_Y
+# 같은 얕은 값을 재사용하면 정상 수영 중에도 오탐이 난다. 실제 지형 최저 높이보다 확실히
+# 낮은 값으로 잡아, 진짜로 바닥을 뚫고 떨어졌을 때만 반응하게 한다.
+const FALL_RECOVERY_Y := -1.0
 
 const CHARACTER_CONFIG := {
 	"duck": {
@@ -72,14 +77,26 @@ const CHARACTER_CONFIG := {
 		"model": "res://assets/aligator/aligator.glb",
 		"model_pos": Vector3(0, 1.684, 0),
 		"model_scale": 6.0,
-		"collision_size": Vector3(4.0, 3.36, 12.0),
-		"collision_pos": Vector3(0, 1.68, 0),
+		"collision_size": Vector3(3.0, 3.0, 12.0),
+		"collision_pos": Vector3(0, 1.5, 0), # 바닥이 y=0에 닿도록 size.y/2로 재계산
 		# 실측 결과 model_pos.y=1.684는 모델 바닥이 정확히 수면(y=0)에 딱 맞아 전혀 잠기지
 		# 않았음(전신 높이 약 3.37). 물(연못 바닥)을 밟고 있을 때만 이만큼 모델을 내려서
 		# 다리와 몸통 아랫부분이 잠기게 하고, 섬(땅) 위에서는 원래 높이(발 기준)를 유지한다.
 		# (0.5는 발끝만 잠겨서 1.1로 높여 몸통 아랫부분까지 잠기게 조정.)
 		"water_submerge_depth": 1.7,
 		# 악어는 오리보다 몸집이 훨씬 크므로(model_scale 2배), 물결/포말 효과도 그만큼 크게 보이도록.
+		"water_effect_scale": 1.8,
+	},
+	"shark": {
+		"model": "res://assets/shark/shark.glb",
+		"model_pos": Vector3(0, 1.684, 0),
+		"model_scale": 1.8,
+		# 실측한 shark.glb 자체 AABB(약 4.26 x 4.56 x 11.93)는 등지느러미까지 포함돼 악어보다
+		# 판정 범위가 크게 느껴져서, 대신 aligator와 완전히 동일한 판정 박스를 그대로 쓴다
+		# (몸통 길이/폭이 비슷한 포식자 캐릭터라 게임플레이상 같은 판정이어도 위화감이 적다).
+		"collision_size": Vector3(3.0, 3.0, 12.0),
+		"collision_pos": Vector3(0, 1.5, 0), # 바닥이 y=0에 닿도록 size.y/2로 재계산
+		"water_submerge_depth": 1.7,
 		"water_effect_scale": 1.8,
 	},
 }
@@ -143,7 +160,7 @@ func _ready() -> void:
 	if controlled_player_id == "":
 		if character in DUCK_CHARACTERS:
 			character = GameData.local_duck_character
-		elif character == "aligator":
+		else:
 			character = GameData.local_tagger_character
 		controlled_player_id = GameData.local_player_id
 	else:
@@ -302,12 +319,22 @@ func _physics_process(delta: float) -> void:
 		_move_inside_jail(delta)
 		return
 
-	if character == "aligator":
+	if character not in DUCK_CHARACTERS:
 		_update_dash(delta)
 
 	_apply_free_movement(delta)
 	_apply_step_up()
+	var prev_pos := global_position
 	move_and_slide()
+
+	# 대시처럼 빠른 이동이 지형 이음매(연못 바닥 메쉬 조각 사이 틈, 섬 콜리전 경계 등)를
+	# 스치면 한두 프레임 is_on_floor()가 false가 되면서 중력이 붙어 맵 밖으로 떨어질 수
+	# 있다. 정상 수영 중과 구분하기 위해 실제 지형보다 훨씬 낮은 FALL_RECOVERY_Y를 기준으로
+	# 삼는다.
+	if global_position.y <= FALL_RECOVERY_Y:
+		global_position = prev_pos
+		velocity = Vector3.ZERO
+
 	_update_water_submersion(delta)
 	_update_local_transform_if_needed()
 
@@ -473,7 +500,8 @@ func _update_dash(delta: float) -> void:
 		dash_cooldown_remaining = max(0.0, dash_cooldown_remaining - delta)
 
 	var action_suffix := "_arrow" if control_scheme == "arrows" else ""
-	if not dash_active and dash_cooldown_remaining <= 0.0 and Input.is_action_just_pressed("dash" + action_suffix):
+	var mobile_dash_requested := controlled_player_id == GameData.local_player_id and GameData.consume_mobile_dash_request()
+	if not dash_active and dash_cooldown_remaining <= 0.0 and (Input.is_action_just_pressed("dash" + action_suffix) or mobile_dash_requested):
 		AudioManager.play_sfx("dash")
 		dash_active = true
 		_dash_time_left = DASH_DURATION
@@ -519,6 +547,9 @@ func _input_direction() -> Vector3:
 		input_dir.x -= 1.0
 	if Input.is_action_pressed("move_right" + action_suffix):
 		input_dir.x += 1.0
+	if controlled_player_id == GameData.local_player_id:
+		input_dir.x += GameData.mobile_move_input.x
+		input_dir.z += GameData.mobile_move_input.y
 	return input_dir.normalized()
 
 

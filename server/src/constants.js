@@ -4,12 +4,13 @@
 // 판정 반경 등)과 어긋나면 안 되므로 값을 임의로 바꾸지 않는다.
 
 const MAX_PLAYERS = 5;
+const MIN_PLAYERS = 2;
 const TAGGER_COUNT = 1;
 const DUCK_COUNT_MIN = 1;
 const DUCK_COUNT_MAX = 4;
 
 const GAME_DURATION_SECONDS = 180;
-const TARGET_SCORE = 5; // 로비(게임 시작 전) 표시용 기본값. 실제 목표점수는 게임 시작 시 (오리 인원 * 10)으로 덮어써진다.
+const TARGET_SCORE = 5; // 로비(게임 시작 전) 표시용 기본값. 실제 목표점수는 게임 시작 시 (오리 인원 * 8)으로 덮어써진다.
 const COUNTDOWN_SECONDS = 10;
 const MAX_DUCKLINGS_ON_MAP = 10; // 게임 시작 시 스폰 개수이자, 배달로 줄어들 때마다 다시 채우는 상한
 
@@ -18,6 +19,7 @@ const RESCUE_RADIUS = 11.0;
 const RESCUE_DURATION = 3.0;
 const ALL_JAILED_END_DELAY = 0.2;
 const JAIL_RELEASE_RADIUS = 16.0;
+const GAME_START_SPAWN_RADIUS = 16.0;
 const JAIL_POSITION = { x: 0, y: 6.7, z: 0 };
 
 const PICKUP_DISTANCE = 2.4;
@@ -102,6 +104,7 @@ const POND_OBSTACLES = [
 
 module.exports = {
   MAX_PLAYERS,
+  MIN_PLAYERS,
   TAGGER_COUNT,
   DUCK_COUNT_MIN,
   DUCK_COUNT_MAX,
@@ -114,6 +117,7 @@ module.exports = {
   RESCUE_DURATION,
   ALL_JAILED_END_DELAY,
   JAIL_RELEASE_RADIUS,
+  GAME_START_SPAWN_RADIUS,
   JAIL_POSITION,
   PICKUP_DISTANCE,
   DELIVER_DISTANCE,

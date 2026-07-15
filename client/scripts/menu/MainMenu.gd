@@ -1,6 +1,6 @@
 extends Control
 
-enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
+enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS }
 
 # Submit handlers apply pending IME composition before reading LineEdit.text.
 @onready var play_panel: PanelContainer = %PlayPanel
@@ -15,7 +15,6 @@ enum ContentView { NONE, PLAY, INVENTORY, RULES, SETTINGS, LOGIN }
 @onready var rules_card_title_label: Label = %RulesCardTitleLabel
 @onready var rules_card_text_label: RichTextLabel = %RulesCardTextLabel
 @onready var settings_panel: PanelContainer = %SettingsPanel
-@onready var login_panel: PanelContainer = %LoginPanel
 @onready var room_list: GridContainer = %RoomList
 @onready var join_details: VBoxContainer = %JoinDetails
 @onready var selected_room_label: Label = %SelectedRoomLabel
@@ -54,7 +53,7 @@ const RULES_CARDS: Array[Dictionary] = [
 	{
 		"title": "경찰 팀\n",
 		"color": Color(1, 0.55, 0.5, 1),
-		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n<대시>: Space 키로 바라보는 방향으로 돌진한다\n\n목표\n대시로 오리를 잡아 감옥으로 보낸다\n\n승리 조건\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, 오리를 전부 감옥에 가두면 승리한다.",
+		"body": "<조작>\n이동: WASD 또는 조이스틱을 사용한다\n<대시>: Space 키로 바라보는 방향으로 돌진한다\n\n목표\n대시로 오리를 잡아 감옥으로 보낸다\n\n승리 조건\n시간이 끝날 때까지 오리 팀의 목표 달성을 막거나, (오리팀 2명 이상) 오리를 전부 감옥에 가두면 승리한다.",
 	},
 ]
 
@@ -62,11 +61,13 @@ enum InventoryRole { DUCK, TAGGER }
 
 const SKIN_PREVIEW_SCENE := preload("res://scenes/menu/SkinPreview3D.tscn")
 
-const SKINS_BY_ROLE: Dictionary = {
+# load()로 채우는 항목(shark)이 있어 const가 아닌 var로 선언한다 — const는 컴파일 시점
+# 상수만 허용하고, load()는 런타임에 평가되는 함수라 const 초기화식에 쓸 수 없다.
+var SKINS_BY_ROLE: Dictionary = {
 	InventoryRole.DUCK: [
 		{
 			"id": "duck_default",
-			"name": "기본",
+			"name": "카이스트 오리",
 			"character": "duck",
 			"model": preload("res://assets/duck/duck.glb"),
 			"model_position": Vector3(0, 0.622, 0),
@@ -95,12 +96,27 @@ const SKINS_BY_ROLE: Dictionary = {
 	InventoryRole.TAGGER: [
 		{
 			"id": "tagger_default",
-			"name": "기본",
+			"name": "악어",
 			"character": "aligator",
 			"model": preload("res://assets/aligator/aligator.glb"),
 			"model_position": Vector3(0, 0.684, 0),
 			"model_rotation_degrees": Vector3(0, 180, 0),
 			"model_scale": Vector3(1.4, 1.4, 1.4),
+		},
+		{
+			"id": "shark",
+			"name": "상어",
+			"character": "shark",
+			# 새로 추가된 에셋이라 아직 .import가 없을 수 있다. preload()는 컴파일 시점에
+			# 리졸브해야 해서 임포트가 안 된 리소스를 가리키면 이 스크립트 전체가 파싱
+			# 실패해 홈 화면 버튼이 전부 죽어버린다(실제로 겪음) — load()로 런타임에
+			# 지연 로드해 그런 실패가 스크립트를 통째로 깨뜨리지 않게 한다.
+			"model": load("res://assets/shark/shark.glb"),
+			# TODO: 실측 미완료 — tagger_default 값을 초기값으로 사용. 인벤토리 미리보기에서
+			# 실제 모델을 보고 위치/스케일을 조정해야 한다.
+			"model_position": Vector3(0, 0.684, 0),
+			"model_rotation_degrees": Vector3(0, 180, 0),
+			"model_scale": Vector3(0.6, 0.6, 0.6),
 		},
 	],
 }
@@ -209,8 +225,9 @@ func _on_create_room_confirm_button_pressed() -> void:
 		_show_alert("방 이름은 10자 이내로 입력해주세요.")
 		return
 	var duck_skin := get_selected_duck_skin()
+	var tagger_skin := get_selected_tagger_skin()
 	var is_private := create_room_private_button.button_pressed
-	var result: Dictionary = await MockServer.create_room(nickname, room_name, duck_skin, is_private)
+	var result: Dictionary = await MockServer.create_room(nickname, room_name, duck_skin, is_private, tagger_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방을 만들 수 없습니다.")))
 		return
@@ -232,7 +249,8 @@ func _on_join_room_button_pressed() -> void:
 		_show_alert("닉네임은 10자 이내로 입력해주세요.")
 		return
 	var duck_skin := get_selected_duck_skin()
-	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin)
+	var tagger_skin := get_selected_tagger_skin()
+	var result: Dictionary = await MockServer.join_room(nickname, str(_selected_room.get("room_id", "")), room_code_input.text, duck_skin, tagger_skin)
 	if result.get("ok", false) != true:
 		_show_alert(str(result.get("message", "방에 입장할 수 없습니다.")))
 		return
@@ -340,7 +358,6 @@ func _set_content_view(view: ContentView) -> void:
 	inventory_panel.visible = view == ContentView.INVENTORY
 	rules_panel.visible = view == ContentView.RULES
 	settings_panel.visible = view == ContentView.SETTINGS
-	login_panel.visible = view == ContentView.LOGIN
 	if view == ContentView.PLAY:
 		_clear_selected_room()
 		_refresh_room_list()
@@ -407,9 +424,28 @@ func _refresh_rules_card() -> void:
 func _init_inventory_selection() -> void:
 	for role in SKINS_BY_ROLE.keys():
 		var skins: Array = SKINS_BY_ROLE[role]
-		if not skins.is_empty():
-			_selected_skin_by_role[role] = skins[0]["id"]
-			_apply_equipped_character(role, str(skins[0]["character"]))
+		if skins.is_empty():
+			continue
+		# GameData.local_duck_character/local_tagger_character는 오토로드라 씬이 바뀌어도
+		# 값이 유지된다. 여기서 무조건 skins[0](기본값)으로 되돌리면 한 판 끝나고 메뉴로
+		# 돌아왔을 때(_ready() 재실행) 이전에 고른 스킨이 초기화된 것처럼 보이므로, GameData에
+		# 이미 남아있는 값과 일치하는 스킨이 있으면 그걸 그대로 선택된 상태로 유지한다.
+		var current_character := _current_equipped_character(role)
+		var matched_skin: Dictionary = {}
+		for skin in skins:
+			if str(skin["character"]) == current_character:
+				matched_skin = skin
+				break
+		if matched_skin.is_empty():
+			matched_skin = skins[0]
+		_selected_skin_by_role[role] = matched_skin["id"]
+		_apply_equipped_character(role, str(matched_skin["character"]))
+
+
+func _current_equipped_character(role: InventoryRole) -> String:
+	if role == InventoryRole.DUCK:
+		return GameData.local_duck_character
+	return GameData.local_tagger_character
 
 
 func _on_inventory_duck_tab_button_pressed() -> void:
@@ -446,7 +482,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	box.flat = true
 	box.text = ""
 	box.focus_mode = Control.FOCUS_NONE
-	box.custom_minimum_size = Vector2(110, 134)
+	box.custom_minimum_size = Vector2(160, 194)
 	box.pressed.connect(_on_skin_box_pressed.bind(role, str(skin["id"]), str(skin["character"])))
 
 	var content: VBoxContainer = VBoxContainer.new()
@@ -456,7 +492,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var preview_stack: PanelContainer = PanelContainer.new()
-	preview_stack.custom_minimum_size = Vector2(110, 110)
+	preview_stack.custom_minimum_size = Vector2(160, 160)
 	preview_stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	preview_stack.add_theme_stylebox_override("panel", _skin_preview_box_style())
 	content.add_child(preview_stack)
@@ -469,7 +505,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	var viewport: SubViewport = SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.transparent_bg = true
-	viewport.size = Vector2i(110, 110)
+	viewport.size = Vector2i(160, 160)
 	viewport_container.add_child(viewport)
 
 	var preview: Node3D = SKIN_PREVIEW_SCENE.instantiate()
@@ -485,7 +521,7 @@ func _make_skin_box(skin: Dictionary, role: InventoryRole, is_selected: bool) ->
 	var name_label: Label = Label.new()
 	name_label.text = str(skin.get("name", ""))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 14)
+	name_label.add_theme_font_size_override("font_size", 24)
 	name_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1, 1))
 	content.add_child(name_label)
 
@@ -500,17 +536,17 @@ func _make_check_badge(is_selected: bool) -> Control:
 	var badge: Panel = Panel.new()
 	badge.anchor_left = 1.0
 	badge.anchor_right = 1.0
-	badge.offset_left = -20.0
-	badge.offset_right = -4.0
-	badge.offset_top = 4.0
-	badge.offset_bottom = 20.0
+	badge.offset_left = -29.0
+	badge.offset_right = -6.0
+	badge.offset_top = 6.0
+	badge.offset_bottom = 29.0
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var badge_style := StyleBoxFlat.new()
 	badge_style.bg_color = Color(0.45098, 0.670588, 0.164706, 1)
-	badge_style.corner_radius_top_left = 8
-	badge_style.corner_radius_top_right = 8
-	badge_style.corner_radius_bottom_right = 8
-	badge_style.corner_radius_bottom_left = 8
+	badge_style.corner_radius_top_left = 11
+	badge_style.corner_radius_top_right = 11
+	badge_style.corner_radius_bottom_right = 11
+	badge_style.corner_radius_bottom_left = 11
 	badge.add_theme_stylebox_override("panel", badge_style)
 	anchor.add_child(badge)
 
@@ -518,7 +554,7 @@ func _make_check_badge(is_selected: bool) -> Control:
 	check_label.text = "V"
 	check_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	check_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	check_label.add_theme_font_size_override("font_size", 11)
+	check_label.add_theme_font_size_override("font_size", 15)
 	check_label.add_theme_color_override("font_color", Color.WHITE)
 	check_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	check_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -563,10 +599,6 @@ func _on_settings_nav_button_pressed() -> void:
 	_set_content_view(ContentView.SETTINGS)
 
 
-func _on_login_button_pressed() -> void:
-	_set_content_view(ContentView.LOGIN)
-
-
 func _refresh_room_list() -> void:
 	if not is_instance_valid(room_list):
 		return
@@ -600,12 +632,44 @@ func _room_card_style(bg: Color, border: Color) -> StyleBoxFlat:
 	return style
 
 
+func _rounded_button_style(bg: Color, border: Color, bottom_width: int = 4) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg
+	style.border_width_left = 2
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = bottom_width
+	style.border_color = border
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_right = 10
+	style.corner_radius_bottom_left = 10
+	return style
+
+
+func _apply_ready_button_style(button: Button, is_ready: bool) -> void:
+	button.add_theme_stylebox_override("normal", _rounded_button_style(Color(0.45098, 0.670588, 0.164706, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0)))
+	button.add_theme_stylebox_override("hover", _rounded_button_style(Color(0.537255, 0.760784, 0.223529, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0)))
+	button.add_theme_stylebox_override("pressed", _rounded_button_style(Color(0.243137, 0.360784, 0.117647, 1.0), Color(0.188235, 0.345098, 0.0784314, 1.0), 2))
+	button.add_theme_stylebox_override("disabled", _rounded_button_style(Color(0.110, 0.145, 0.180, 0.72), Color(0.220, 0.310, 0.390, 0.82), 2))
+	var text_color := Color(0.76, 0.82, 0.88, 1.0) if is_ready else Color.WHITE
+	button.add_theme_color_override("font_color", text_color)
+	button.add_theme_color_override("font_disabled_color", text_color)
+	button.add_theme_color_override("font_outline_color", Color(0.0156863, 0.0392157, 0.0784314, 1))
+	button.add_theme_constant_override("outline_size", 3)
+
+
 func _make_room_row(room: Dictionary) -> Control:
 	var room_id: String = str(room.get("room_id", "----"))
 	var room_name: String = str(room.get("room_name", room.get("host_nickname", "-")))
 	var player_count: int = int(room.get("player_count", 0))
 	var is_full: bool = player_count >= MockServer.MVP_PLAYER_LIMIT
 	var is_private := bool(room.get("is_private", false))
+	var phase := str(room.get("phase", "lobby"))
+	var is_in_progress := phase != "lobby"
+	# 꽉 찬 방과 마찬가지로 이미 시작된 방도 목록엔 보여주되 입장은 막는다(누르면 서버가
+	# GAME_ALREADY_STARTED로 거부하는 것과 동일한 기준) — 왼쪽 점 색으로 구분한다.
+	var is_joinable := not is_full and not is_in_progress
 
 	var row: Button = Button.new()
 	row.custom_minimum_size = Vector2(0, 54)
@@ -635,7 +699,7 @@ func _make_room_row(room: Dictionary) -> Control:
 	dot_style.corner_radius_top_right = 7
 	dot_style.corner_radius_bottom_right = 7
 	dot_style.corner_radius_bottom_left = 7
-	dot_style.bg_color = Color(0.85, 0.25, 0.25) if is_full else Color(0.45, 0.8, 0.3)
+	dot_style.bg_color = Color(0.85, 0.25, 0.25) if not is_joinable else Color(0.45, 0.8, 0.3)
 	dot.add_theme_stylebox_override("panel", dot_style)
 	content.add_child(dot)
 
@@ -661,6 +725,16 @@ func _make_room_row(room: Dictionary) -> Control:
 		lock_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lock_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		room_name_row.add_child(lock_icon)
+
+	if is_in_progress:
+		# 꽉 찬 방(카운트로 이미 구분됨)과 달리, 이미 시작된 방은 빨간 점만으로는 "왜 못
+		# 들어가는지" 구분이 안 되므로 짧은 상태 문구를 덧붙인다.
+		var status_label: Label = Label.new()
+		status_label.text = "게임중"
+		status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		status_label.add_theme_font_size_override("font_size", 18)
+		status_label.add_theme_color_override("font_color", Color(0.85, 0.45, 0.45, 1))
+		room_name_row.add_child(status_label)
 
 	var count_label: Label = Label.new()
 	count_label.text = "%d/%d" % [player_count, MockServer.MVP_PLAYER_LIMIT]
@@ -743,15 +817,58 @@ func _refresh_lobby() -> void:
 	# 애초에 호스트가 아니면 버튼 자체를 숨겨서 왜 안 되는지 헷갈리지 않게 한다.
 	start_game_button.visible = GameData.is_host
 	lobby_status_label.text = MockServer.lobby_status_text()
+	if GameData.players.size() <= 1:
+		lobby_status_label.add_theme_color_override("font_color", Color(1.0, 0.33, 0.33, 1.0))
+	else:
+		lobby_status_label.add_theme_color_override("font_color", Color(0.941176, 0.972549, 1.0, 1.0))
 	if GameData.is_host:
 		start_game_button.disabled = not MockServer.can_start_game()
 
-	for child in players_list.get_children():
-		players_list.remove_child(child)
-		child.queue_free()
+	_sync_players_list()
 
-	for player in GameData.players:
-		players_list.add_child(_make_player_row(player))
+
+# 예전엔 매번 리스트를 통째로 지우고 새로 만들었는데, 로컬 플레이어가 자기 닉네임을
+# 입력하는 도중에도 (매 키 입력마다 서버로 setNickname을 보내고 그 브로드캐스트가
+# 다시 도착해) game:state가 갱신될 때마다 입력 중이던 LineEdit이 파괴되고 새 노드로
+# 교체돼 포커스/캐럿이 날아갔다 — 그래서 한 글자 입력하면 포커스가 풀려서 다시
+# 클릭해야만 다음 글자가 입력되는 것처럼 보였다. playerId 기준으로 기존 행을
+# 재사용하고, 지금 포커스가 있는(편집 중인) 입력창의 텍스트는 서버 값으로 덮어쓰지
+# 않는다.
+func _sync_players_list() -> void:
+	var existing_rows := {}
+	for child in players_list.get_children():
+		existing_rows[str(child.get_meta("player_id", ""))] = child
+
+	var seen_ids := {}
+	for i in range(GameData.players.size()):
+		var player: Dictionary = GameData.players[i]
+		var player_id: String = str(player.get("playerId", ""))
+		seen_ids[player_id] = true
+		var row: Control = existing_rows.get(player_id)
+		if row == null:
+			row = _make_player_row(player)
+			players_list.add_child(row)
+		else:
+			_update_player_row(row, player)
+		players_list.move_child(row, i)
+
+	for player_id in existing_rows:
+		if not seen_ids.has(player_id):
+			var row: Control = existing_rows[player_id]
+			players_list.remove_child(row)
+			row.queue_free()
+
+
+func _update_player_row(row: Control, player: Dictionary) -> void:
+	var name_input := row.get_child(1) as LineEdit
+	if name_input == null:
+		return
+	var is_editing_name := name_input.editable and (name_input.has_focus() or name_input.has_ime_text())
+	if not is_editing_name:
+		var server_text := str(player.get("nickname", "Player"))
+		if name_input.text != server_text:
+			name_input.text = server_text
+	_update_ready_button(row, player)
 
 
 func _make_player_row(player: Dictionary) -> Control:
@@ -760,6 +877,7 @@ func _make_player_row(player: Dictionary) -> Control:
 	row.add_theme_constant_override("separation", 12)
 
 	var player_id: String = str(player.get("playerId", ""))
+	row.set_meta("player_id", player_id)
 	var is_local := player_id == GameData.local_player_id
 	var role_label: Label = Label.new()
 	role_label.custom_minimum_size = Vector2(68, 0)
@@ -777,13 +895,46 @@ func _make_player_row(player: Dictionary) -> Control:
 	name_input.text_changed.connect(_on_lobby_name_input_text_changed.bind(name_input, player_id))
 	row.add_child(name_input)
 
+	var ready_button: Button = Button.new()
+	ready_button.custom_minimum_size = Vector2(132, 42)
+	ready_button.toggle_mode = true
+	ready_button.add_theme_font_size_override("font_size", 22)
+	ready_button.pressed.connect(_on_lobby_ready_button_pressed.bind(player_id))
+	row.add_child(ready_button)
+	_update_ready_button(row, player)
+
 	return row
+
+
+func _update_ready_button(row: Control, player: Dictionary) -> void:
+	var ready_button := row.get_child(2) as Button
+	if ready_button == null:
+		return
+	var player_id: String = str(player.get("playerId", ""))
+	var is_local := player_id == GameData.local_player_id
+	var is_ready := bool(player.get("ready", false))
+	ready_button.disabled = not is_local
+	ready_button.set_pressed_no_signal(is_ready)
+	if is_ready:
+		ready_button.text = "준비 완료"
+	else:
+		ready_button.text = "준비하기" if is_local else "준비 전"
+	_apply_ready_button_style(ready_button, is_ready)
 
 
 func _on_lobby_name_input_text_changed(new_text: String, input: LineEdit, player_id: String) -> void:
 	if input.get_meta("normalizing", false):
 		return
 	MockServer.set_player_nickname(player_id, new_text)
+
+
+func _on_lobby_ready_button_pressed(player_id: String) -> void:
+	if player_id != GameData.local_player_id:
+		return
+	for player in GameData.players:
+		if str(player.get("playerId", "")) == player_id:
+			MockServer.set_player_ready(not bool(player.get("ready", false)))
+			return
 
 
 func _commit_lobby_name_inputs() -> void:
@@ -806,7 +957,10 @@ func _on_start_game_button_pressed() -> void:
 	await _commit_lobby_name_inputs()
 
 	if not MockServer.can_start_game():
-		_show_alert("1~%d명이면 테스트 게임을 시작할 수 있습니다." % MockServer.MVP_PLAYER_LIMIT)
+		if GameData.players.size() < 2:
+			_show_alert("최소 2명이 필요합니다.")
+		else:
+			_show_alert("모든 플레이어가 준비 완료를 눌러야 합니다.")
 		return
 	# 실제 인게임 이동은 서버가 game:start를 승인해 phase가 countdown으로 바뀐 뒤
 	# _on_game_state_changed_for_lobby()에서 반응적으로 일어난다(호스트/참가자 공통).
@@ -830,4 +984,11 @@ func get_selected_duck_skin() -> String:
 	var skin_id: String = str(_selected_skin_by_role.get(InventoryRole.DUCK, "duck_default"))
 	if skin_id == "duck_default":
 		return "duck"
+	return skin_id
+
+
+func get_selected_tagger_skin() -> String:
+	var skin_id: String = str(_selected_skin_by_role.get(InventoryRole.TAGGER, "tagger_default"))
+	if skin_id == "tagger_default":
+		return "aligator"
 	return skin_id

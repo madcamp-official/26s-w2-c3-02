@@ -64,12 +64,6 @@ function broadcastEvent(room, event, data) {
 
 // ── 스폰 위치 ────────────────────────────────────────────────────────────────
 
-function randomPlayerSpawnPosition() {
-  const angle = randRange(0, Math.PI * 2);
-  const distance = randRange(24.0, 58.0);
-  return { x: Math.cos(angle) * distance, y: 0.0, z: Math.sin(angle) * distance };
-}
-
 function countdownPositionForIndex(index) {
   const offsets = [
     { x: -4.0, y: 0.0, z: 0.0 },
@@ -91,10 +85,25 @@ function placePlayersInCountdown(room) {
 }
 
 function placePlayersAtRoleSpawns(room) {
-  for (const player of room.players.values()) {
+  const players = Array.from(room.players.values());
+  if (players.length === 0) return;
+
+  const angleStep = (Math.PI * 2) / players.length;
+  const startAngle = randRange(0, Math.PI * 2);
+  const maxJitter = Math.min(Math.PI / 18, angleStep * 0.15);
+
+  for (let i = 0; i < players.length; i++) {
+    const player = players[i];
+    const angle = startAngle + angleStep * i + randRange(-maxJitter, maxJitter);
+    const outwardX = Math.cos(angle);
+    const outwardZ = Math.sin(angle);
     player.state = 'idle';
-    player.position = randomPlayerSpawnPosition();
-    player.rotationY = randRange(-Math.PI, Math.PI);
+    player.position = {
+      x: C.JAIL_POSITION.x + outwardX * C.GAME_START_SPAWN_RADIUS,
+      y: 0.0,
+      z: C.JAIL_POSITION.z + outwardZ * C.GAME_START_SPAWN_RADIUS,
+    };
+    player.rotationY = Math.atan2(-outwardX, -outwardZ);
   }
 }
 
@@ -137,7 +146,7 @@ function startGame(room) {
   if (!rooms.canStartGame(room)) return false;
 
   rooms.assignRandomRoles(room);
-  room.targetScore = rooms.countTeam(room, 'duck') * 7;
+  room.targetScore = rooms.countTeam(room, 'duck') * 8;
 
   room.broadcastTimer = 0;
   room.secondTimer = 0;
@@ -176,8 +185,8 @@ function beginPlaying(room) {
   room.phase = 'playing';
   room.countdownSeconds = 0;
   placePlayersAtRoleSpawns(room);
-  broadcastEvent(room, 'game_started', {});
   broadcastGameState(room);
+  broadcastEvent(room, 'game_started', {});
 }
 
 function tickCountdown(room, delta) {
@@ -217,7 +226,6 @@ function returnToLobby(room) {
   room.deliveryBatches.clear();
   room.wanderState.clear();
   room.carryQueues.clear();
-  room.deliveringSettle.clear();
   room.activeDashes.clear();
   resetRescue(room);
 
@@ -225,7 +233,8 @@ function returnToLobby(room) {
     player.state = 'idle';
     player.jailRemaining = null;
     player.deliveredDucklings = 0;
-    player.position = rooms.spawnPositionForCharacter(player.character);
+    player.ready = false;
+    player.position = rooms.spawnPositionForTeam(player.team);
   }
 
   broadcastRoomState(room);
@@ -263,6 +272,12 @@ function updateDucklingWander(room, delta) {
 function checkPickup(room) {
   for (const player of room.players.values()) {
     if (player.team !== 'duck') continue;
+    // 감옥 텔레포트 직후 클라이언트가 아직 갇힌 걸 모른 채 보낸 예전 player:input이
+    // 뒤늦게 도착해 player.position을 잡힌 지점 근처로 되돌려놓는 레이스 컨디션이 있다
+    // (handlePlayerInput은 jailed 여부와 무관하게 위치를 그대로 반영함). 그 순간 방금
+    // releaseDucklings()로 흩어놓은 새끼오리가 바로 옆에 있어 다시 주워지던 문제라,
+    // 위치가 무엇이든 갇힌 플레이어는 애초에 주울 수 없게 막는다.
+    if (player.state === 'jailed') continue;
     for (const d of room.ducklings.values()) {
       if (d.state !== 'spawned') continue;
       const dist = Math.hypot(player.position.x - d.position.x, player.position.z - d.position.z);

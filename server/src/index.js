@@ -13,7 +13,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
 // Docker 이미지에는 Godot Web export 결과물(web/)을 서버 코드와 함께 담아, 정적 파일과
 // WebSocket을 같은 origin/포트에서 서빙한다(별도 CORS/wss 설정 없이 동작하게 하기 위함).
 const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, '../../web'));
-const INDEX_FILE = process.env.PUBLIC_INDEX || 'pol_duck.html';
+const INDEX_FILE = process.env.PUBLIC_INDEX || 'index.html';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',

@@ -17,6 +17,14 @@ const INPUT_SEND_INTERVAL := 1.0 / 30.0 # player:input 전송 주기(초)
 const RECONNECT_INTERVAL := 2.0
 const REQUEST_TIMEOUT_SECONDS := 8.0 # 연결이 끊긴 채로 요청이 걸려 있을 때 무한 대기하지 않도록
 
+# 로비처럼 서버가 먼저 보낼 브로드캐스트가 없는 상황에서는 연결이 조용히 끊겨도(와이파이
+# 드롭 등) get_ready_state()가 한참 동안 STATE_OPEN인 채로 남아있을 수 있다(TCP 자체의
+# 끊김 감지는 OS 기본값이 수십 분 단위). 그래서 애플리케이션 레벨로 주기적인 ping을 보내고,
+# CONNECTION_TIMEOUT_SECONDS 동안 서버로부터 아무 응답도 못 받으면 죽은 연결로 간주해 직접
+# 끊고 재연결한다.
+const PING_INTERVAL := 2.0
+const CONNECTION_TIMEOUT_SECONDS := 5.0
+
 signal _response_received(request_id: String, result: Dictionary)
 
 var _peer := WebSocketPeer.new()
@@ -25,8 +33,12 @@ var _awaited_request_ids: Dictionary = {} # request_id -> true, _send_and_await�
 
 var _pending_position := Vector3.ZERO
 var _pending_rotation_y := 0.0
+var _pending_phase := ""
 var _has_pending_input := false
 var _input_send_timer := 0.0
+
+var _ping_timer := 0.0
+var _time_since_last_receive := 0.0
 
 func _ready() -> void:
 	_peer.connect_to_url(SERVER_URL)
@@ -37,13 +49,31 @@ func _process(delta: float) -> void:
 	if state == WebSocketPeer.STATE_OPEN:
 		while _peer.get_available_packet_count() > 0:
 			_handle_packet(_peer.get_packet())
+			_time_since_last_receive = 0.0
 		_flush_pending_input(delta)
+		_check_connection_alive(delta)
 	elif state == WebSocketPeer.STATE_CLOSED:
+		_time_since_last_receive = 0.0
+		_ping_timer = 0.0
 		_reconnect_timer += delta
 		if _reconnect_timer >= RECONNECT_INTERVAL:
 			_reconnect_timer = 0.0
 			_peer = WebSocketPeer.new()
 			_peer.connect_to_url(SERVER_URL)
+
+func _check_connection_alive(delta: float) -> void:
+	_ping_timer += delta
+	if _ping_timer >= PING_INTERVAL:
+		_ping_timer = 0.0
+		_send("ping", {})
+
+	_time_since_last_receive += delta
+	if _time_since_last_receive >= CONNECTION_TIMEOUT_SECONDS:
+		# 서버가 조용히 사라진 경우(정상 종료 프레임 없이): get_ready_state()가 스스로
+		# STATE_CLOSED로 바뀌길 기다리지 않고 직접 끊어서, 다음 프레임부터 위 STATE_CLOSED
+		# 분기의 재연결 루프가 바로 돌기 시작하게 한다.
+		_time_since_last_receive = 0.0
+		_peer.close()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 저수준 송수신
@@ -173,18 +203,20 @@ func _flush_pending_input(delta: float) -> void:
 	_send("player:input", {
 		"position": {"x": _pending_position.x, "y": _pending_position.y, "z": _pending_position.z},
 		"rotationY": _pending_rotation_y,
+		"phase": _pending_phase,
 	}, GameData.room_id)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 방/로비
 # ──────────────────────────────────────────────────────────────────────────────
 
-func create_room(nickname: String, room_name: String = "", character_skin: String = "duck", is_private: bool = false) -> Dictionary:
+func create_room(nickname: String, room_name: String = "", character_skin: String = "duck", is_private: bool = false, tagger_skin: String = "aligator") -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:create", {
 		"nickname": nickname,
 		"roomName": room_name,
 		"isPrivate": is_private,
 		"characterSkin": character_skin,
+		"taggerSkin": tagger_skin,
 	})
 	if not result.get("ok", false):
 		return {"ok": false, "message": result.get("message", "방을 만들 수 없습니다.")}
@@ -192,11 +224,12 @@ func create_room(nickname: String, room_name: String = "", character_skin: Strin
 	GameData.menu_entry_view = "lobby"
 	return {"ok": true}
 
-func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck") -> Dictionary:
+func join_room(nickname: String, room_id: String, join_code: String = "", character_skin: String = "duck", tagger_skin: String = "aligator") -> Dictionary:
 	var result: Dictionary = await _send_and_await("room:join", {
 		"nickname": nickname,
 		"joinCode": join_code,
 		"characterSkin": character_skin,
+		"taggerSkin": tagger_skin,
 	}, room_id)
 	if not result.get("ok", false):
 		return {"ok": false, "message": result.get("message", "방에 입장할 수 없습니다.")}
@@ -215,6 +248,7 @@ func list_rooms() -> Array:
 			"host_nickname": str(r.get("hostNickname", "")),
 			"player_count": int(r.get("playerCount", 0)),
 			"is_private": bool(r.get("isPrivate", false)),
+			"phase": str(r.get("phase", "lobby")),
 		})
 	return out
 
@@ -223,15 +257,22 @@ func set_player_nickname(player_id: String, nickname: String) -> void:
 		return # 실제 서버에서는 자기 자신의 닉네임만 바꿀 수 있다.
 	_send("player:setNickname", {"nickname": nickname}, GameData.room_id)
 
+func set_player_ready(ready: bool) -> void:
+	_send("player:setReady", {"ready": ready}, GameData.room_id)
+
 func can_start_game() -> bool:
-	# 임시 테스트 모드: UI/게임 로직 확인을 쉽게 하려고 1명이어도 시작을 허용한다.
 	var player_count := GameData.players.size()
-	return player_count >= 1 and player_count <= MVP_PLAYER_LIMIT
+	if player_count < 2 or player_count > MVP_PLAYER_LIMIT:
+		return false
+	for player in GameData.players:
+		if not bool(player.get("ready", false)):
+			return false
+	return true
 
 func lobby_status_text() -> String:
 	var player_count := GameData.players.size()
 	if player_count <= 1:
-		return "테스트로 시작 가능"
+		return "최소 2명이 필요합니다."
 	return "경찰 1명 / 오리 %d명" % (player_count - 1)
 
 func local_player_team() -> String:
@@ -265,9 +306,6 @@ func start_game() -> bool:
 func return_to_lobby() -> void:
 	GameData.menu_entry_view = "lobby"
 	_send("game:returnToLobby", {}, GameData.room_id)
-
-func force_end_game() -> void:
-	_send("game:forceEnd", {}, GameData.room_id)
 
 func leave_room() -> void:
 	_send("room:leave", {}, GameData.room_id)
@@ -304,4 +342,5 @@ func report_local_transform(pos: Vector3, rotation_y: float) -> void:
 	# INPUT_SEND_INTERVAL 주기로 스로틀링해 player:input으로 서버에 보고한다.
 	_pending_position = pos
 	_pending_rotation_y = rotation_y
+	_pending_phase = GameData.phase
 	_has_pending_input = true

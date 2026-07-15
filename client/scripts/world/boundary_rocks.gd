@@ -9,6 +9,10 @@ const EDGE_ROCKS_PER_SIDE := 55
 const EDGE_JITTER := 0.40
 const ROCK_SCALE := 5.5
 const RANDOM_SEED := 20260713
+# 220개(4면 x 55개)를 한 프레임에 다 인스턴스화하면 카운트다운 진입 시점에 스파이크가
+# 몰려 버벅임으로 보인다. 여러 프레임에 나눠 스폰하되, 이 시간 안에는 무조건 전부
+# 끝나도록 남은 시간 대비 남은 개수로 매 프레임 배치 크기를 다시 계산한다.
+const BOUNDARY_ROCK_SPAWN_DURATION := 1.0
 
 var _rock_scenes: Array[PackedScene] = []
 var _rock_material: StandardMaterial3D = null
@@ -16,7 +20,7 @@ var _rock_material: StandardMaterial3D = null
 func _ready() -> void:
 	_create_rock_material()
 	_load_rock_scenes()
-	_spawn_boundary_rocks()
+	_spawn_boundary_rocks_async()
 
 func _create_rock_material() -> void:
 	_rock_material = StandardMaterial3D.new()
@@ -28,7 +32,7 @@ func _load_rock_scenes() -> void:
 	if scene is PackedScene:
 		_rock_scenes.append(scene as PackedScene)
 
-func _spawn_boundary_rocks() -> void:
+func _spawn_boundary_rocks_async() -> void:
 	if _rock_scenes.is_empty():
 		return
 
@@ -37,11 +41,36 @@ func _spawn_boundary_rocks() -> void:
 	var edge := MAP_HALF_SIZE - EDGE_INSET
 	var spacing := (edge * 2.0) / float(EDGE_ROCKS_PER_SIDE)
 
+	var positions: Array[Vector3] = []
 	for side in 4:
 		for i in EDGE_ROCKS_PER_SIDE:
 			var t := -edge + spacing * (float(i) + 0.5)
-			var pos := _edge_position(side, t, edge, rng)
-			_spawn_rock(pos, rng)
+			positions.append(_edge_position(side, t, edge, rng))
+
+	var start_ms := Time.get_ticks_msec()
+	var total := positions.size()
+	var spawned := 0
+	while spawned < total:
+		var elapsed := (Time.get_ticks_msec() - start_ms) / 1000.0
+		var remaining_time := BOUNDARY_ROCK_SPAWN_DURATION - elapsed
+		var remaining_count := total - spawned
+		var batch_size: int
+		if remaining_time <= 0.0:
+			# 마감 시간을 넘었으면 프레임 분산을 포기하고 남은 걸 전부 이번 프레임에 끝낸다
+			# (버벅임보단 낫고, 3초 보장이 우선이다).
+			batch_size = remaining_count
+		else:
+			var estimated_frames_left: float = max(remaining_time * 60.0, 1.0)
+			batch_size = max(1, ceili(remaining_count / estimated_frames_left))
+
+		for _n in batch_size:
+			if spawned >= total:
+				break
+			_spawn_rock(positions[spawned], rng)
+			spawned += 1
+
+		if spawned < total:
+			await get_tree().process_frame
 
 func _edge_position(side: int, t: float, edge: float, rng: RandomNumberGenerator) -> Vector3:
 	var along_jitter := rng.randf_range(-EDGE_JITTER, EDGE_JITTER)

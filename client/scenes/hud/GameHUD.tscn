@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud/GameHUD.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/hud/RescueDonut.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/icons/arrow_icon.png" id="5_arrow"]
 [ext_resource type="Texture2D" path="res://assets/ui/icons/settings_icon.png" id="6_settings"]
 [ext_resource type="Texture2D" path="res://assets/space_bar/space_bar.png" id="8_space_bar"]
+[ext_resource type="Script" path="res://scripts/hud/MobileControls.gd" id="9_mobile_controls"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hud_panel"]
 bg_color = Color(0.0313726, 0.117647, 0.211765, 0.86)
@@ -444,44 +445,6 @@ vertical_alignment = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_font_sizes/font_size = 16
 
-[node name="EndGameButton" type="Button" parent="Root"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -168.0
-offset_top = -24.0
-offset_right = -24.0
-offset_bottom = 24.0
-grow_horizontal = 0
-grow_vertical = 2
-text = "디버그 OFF"
-
-[node name="DebugPanel" type="PanelContainer" parent="Root"]
-unique_name_in_owner = true
-visible = false
-layout_mode = 1
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -344.0
-offset_top = 88.0
-offset_right = -24.0
-offset_bottom = 356.0
-grow_horizontal = 0
-
-[node name="VBox" type="VBoxContainer" parent="Root/DebugPanel"]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="DebugSummaryLabel" type="Label" parent="Root/DebugPanel/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "phase: playing"
-
 [node name="DashCooldownIndicator" type="TextureProgressBar" parent="Root"]
 script = ExtResource("7")
 layout_mode = 1
@@ -532,6 +495,61 @@ visible = false
 theme_override_colors/font_outline_color = Color(0.04, 0.05, 0.06, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 18
+
+[node name="MobileControls" type="Control" parent="Root"]
+z_index = 100
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("9_mobile_controls")
+
+[node name="DashButton" type="Button" parent="Root/MobileControls"]
+visible = false
+z_index = 1
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -226.0
+offset_top = -226.0
+offset_right = -116.0
+offset_bottom = -116.0
+grow_horizontal = 0
+grow_vertical = 0
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 0
+focus_mode = 0
+text = "대시"
+
+[node name="DashCooldownRing" type="TextureProgressBar" parent="Root/MobileControls"]
+visible = false
+z_index = 2
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -226.0
+offset_top = -226.0
+offset_right = -116.0
+offset_bottom = -116.0
+grow_horizontal = 0
+grow_vertical = 0
+custom_minimum_size = Vector2(110, 110)
+mouse_filter = 2
+fill_mode = 4
+radial_fill_degrees = 360.0
+min_value = 0.0
+max_value = 1.0
+step = 0.0
+value = 1.0
 
 [node name="SettingsButton" type="TextureButton" parent="Root"]
 unique_name_in_owner = true
@@ -612,6 +630,7 @@ theme_override_font_sizes/font_size = 28
 [node name="HudBgmVolumeSlider" type="HSlider" parent="Root/SettingsOverlay/CenterContainer/Panel/Content/BgmVolumeRow"]
 unique_name_in_owner = true
 layout_mode = 2
+custom_minimum_size = Vector2(0, 64)
 size_flags_horizontal = 3
 min_value = 0.0
 max_value = 100.0
@@ -672,4 +691,3 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_green")
 theme_override_styles/hover = SubResource("StyleBoxFlat_green_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_button_pressed")
 
-[connection signal="pressed" from="Root/EndGameButton" to="." method="_on_end_game_button_pressed"]

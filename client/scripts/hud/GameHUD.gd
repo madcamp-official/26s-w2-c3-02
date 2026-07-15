@@ -9,10 +9,21 @@ const INDICATOR_MARGIN := 20.0
 const INDICATOR_SIZE := Vector2(180, 180)
 const INDICATOR_CENTER := Vector2(90, 90)
 const INDICATOR_SAFE_RADIUS := 96.0
+const SAFE_AREA_EXTRA_MARGIN := 4.0
+const TOP_BAR_BASE_LEFT := 24.0
+const TOP_BAR_BASE_TOP := 18.0
+const TOP_BAR_BASE_RIGHT := 24.0
+const TOP_BAR_HEIGHT := 78.0
+const PLAYER_LIST_BASE_LEFT := 24.0
+const PLAYER_LIST_WIDTH := 264.0
+const SETTINGS_BUTTON_BASE_RIGHT := 28.0
+const SETTINGS_BUTTON_BASE_BOTTOM := 28.0
+const SETTINGS_BUTTON_SIZE := 56.0
 const DUCK_ICON_PATH := "res://assets/ui/icons/duck_icon.png"
 const POLICE_ICON_PATH := "res://assets/ui/icons/police_icon.png"
 const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 
+@onready var top_bar: PanelContainer = $Root/TopBar
 @onready var timer_label: Label = %TimerLabel
 @onready var score_label: Label = %ScoreLabel
 @onready var event_toast: PanelContainer = %EventToast
@@ -21,6 +32,7 @@ const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 @onready var countdown_label: Label = %CountdownLabel
 @onready var objective_toast: PanelContainer = %ObjectiveToast
 @onready var objective_label: Label = %ObjectiveLabel
+@onready var player_list_panel: PanelContainer = %PlayerListPanel
 @onready var player_list_content: VBoxContainer = %PlayerListContent
 @onready var jail_direction_indicator: Control = %JailDirectionIndicator
 @onready var nest_direction_indicator: Control = %NestDirectionIndicator
@@ -31,9 +43,6 @@ const JAIL_ICON_PATH := "res://assets/ui/icons/jail_icon.png"
 @onready var jail_photo: TextureRect = %JailPhoto
 @onready var nest_photo: TextureRect = %NestPhoto
 @onready var nest_2_photo: TextureRect = %Nest2Photo
-@onready var debug_mode_button: Button = %EndGameButton
-@onready var debug_panel: PanelContainer = %DebugPanel
-@onready var debug_summary_label: Label = %DebugSummaryLabel
 @onready var settings_button: TextureButton = %SettingsButton
 @onready var settings_overlay: Control = %SettingsOverlay
 @onready var settings_close_button: Button = %SettingsCloseButton
@@ -54,12 +63,12 @@ var _settings_button_tween: Tween = null
 func _ready() -> void:
 	GameData.game_state_changed.connect(_refresh)
 	GameData.game_event.connect(_on_game_event)
+	get_viewport().size_changed.connect(_apply_safe_area_margins)
 	_init_settings_overlay()
 	_apply_direction_photo_masks()
 	_apply_direction_arrow_styles()
 	_apply_static_text_styles()
-	debug_mode_button.text = "종료 테스트"
-	debug_panel.visible = false
+	_apply_safe_area_margins()
 	_refresh()
 	_update_direction_indicators()
 
@@ -79,18 +88,17 @@ func _process(delta: float) -> void:
 
 
 func _exit_tree() -> void:
+	if get_viewport().size_changed.is_connected(_apply_safe_area_margins):
+		get_viewport().size_changed.disconnect(_apply_safe_area_margins)
 	if GameData.game_state_changed.is_connected(_refresh):
 		GameData.game_state_changed.disconnect(_refresh)
 	if GameData.game_event.is_connected(_on_game_event):
 		GameData.game_event.disconnect(_on_game_event)
-	if GameData.debug_mode_changed.is_connected(_on_debug_mode_changed):
-		GameData.debug_mode_changed.disconnect(_on_debug_mode_changed)
 
 
 func _init_settings_overlay() -> void:
 	settings_overlay.visible = false
 	_apply_settings_button_style()
-	_settings_button_rest_position = settings_button.position
 	settings_button.pressed.connect(_on_settings_button_pressed)
 	settings_button.mouse_entered.connect(_on_settings_button_mouse_entered)
 	settings_button.mouse_exited.connect(_on_settings_button_mouse_exited)
@@ -100,6 +108,53 @@ func _init_settings_overlay() -> void:
 	hud_bgm_volume_slider.set_value_no_signal(AudioManager.get_bgm_volume() * 100.0)
 	hud_sfx_volume_slider.set_value_no_signal(AudioManager.get_sfx_volume() * 100.0)
 	_refresh_hud_audio_volume_labels()
+
+
+func _apply_safe_area_margins() -> void:
+	var safe_margins := _safe_area_margins()
+	var left_margin: float = max(TOP_BAR_BASE_LEFT, safe_margins.x + SAFE_AREA_EXTRA_MARGIN)
+	var top_margin: float = max(TOP_BAR_BASE_TOP, safe_margins.y + SAFE_AREA_EXTRA_MARGIN)
+	var right_margin: float = max(TOP_BAR_BASE_RIGHT, safe_margins.z + SAFE_AREA_EXTRA_MARGIN)
+	var bottom_margin: float = max(SETTINGS_BUTTON_BASE_BOTTOM, safe_margins.w + SAFE_AREA_EXTRA_MARGIN)
+
+	top_bar.offset_left = left_margin
+	top_bar.offset_top = top_margin
+	top_bar.offset_right = -right_margin
+	top_bar.offset_bottom = top_margin + TOP_BAR_HEIGHT
+
+	player_list_panel.offset_left = max(PLAYER_LIST_BASE_LEFT, safe_margins.x + SAFE_AREA_EXTRA_MARGIN)
+	player_list_panel.offset_right = player_list_panel.offset_left + PLAYER_LIST_WIDTH
+
+	settings_button.offset_left = -right_margin - SETTINGS_BUTTON_SIZE
+	settings_button.offset_top = -bottom_margin - SETTINGS_BUTTON_SIZE
+	settings_button.offset_right = -right_margin
+	settings_button.offset_bottom = -bottom_margin
+	_settings_button_rest_position = settings_button.position
+
+
+func _safe_area_margins() -> Vector4:
+	if not _is_mobile_safe_area_target():
+		return Vector4.ZERO
+
+	var viewport_size := get_viewport().get_visible_rect().size
+	var screen_size := Vector2(DisplayServer.screen_get_size())
+	var safe_rect := DisplayServer.get_display_safe_area()
+	if safe_rect.size.x <= 0 or safe_rect.size.y <= 0:
+		return Vector4.ZERO
+
+	var scale := Vector2.ONE
+	if screen_size.x > 0.0 and screen_size.y > 0.0:
+		scale = Vector2(viewport_size.x / screen_size.x, viewport_size.y / screen_size.y)
+
+	var left := float(safe_rect.position.x) * scale.x
+	var top := float(safe_rect.position.y) * scale.y
+	var right: float = max(0.0, screen_size.x - float(safe_rect.position.x + safe_rect.size.x)) * scale.x
+	var bottom: float = max(0.0, screen_size.y - float(safe_rect.position.y + safe_rect.size.y)) * scale.y
+	return Vector4(left, top, right, bottom)
+
+
+func _is_mobile_safe_area_target() -> bool:
+	return OS.has_feature("android") or OS.has_feature("ios") or DisplayServer.is_touchscreen_available()
 
 
 func _refresh_hud_audio_volume_labels() -> void:
@@ -150,7 +205,6 @@ func _refresh() -> void:
 	score_label.text = "모은 새끼오리 %d/%d" % [GameData.score, GameData.target_score]
 	_refresh_countdown()
 	_refresh_player_list()
-	_refresh_debug_summary()
 
 
 func _refresh_countdown() -> void:
@@ -173,6 +227,7 @@ func _format_time(seconds: int) -> String:
 
 func _on_game_event(event: String, data: Dictionary) -> void:
 	if event == "game_ended":
+		_apply_game_end_event(data)
 		_hide_game_toasts()
 		SceneRouter.show_overlay("result")
 		return
@@ -185,6 +240,18 @@ func _on_game_event(event: String, data: Dictionary) -> void:
 		_show_event_toast(message)
 
 
+func _apply_game_end_event(data: Dictionary) -> void:
+	GameData.phase = "ended"
+	if data.has("winner"):
+		GameData.winner = data.get("winner")
+	if data.has("reason"):
+		GameData.end_reason = str(data.get("reason", ""))
+	if data.has("score"):
+		GameData.score = int(data.get("score", GameData.score))
+	if data.has("targetScore"):
+		GameData.target_score = int(data.get("targetScore", GameData.target_score))
+
+
 func _hide_game_toasts() -> void:
 	_toast_remaining = 0.0
 	_objective_remaining = 0.0
@@ -195,7 +262,7 @@ func _hide_game_toasts() -> void:
 func _show_objective_toast() -> void:
 	var team := _local_team()
 	if team == "tagger":
-		objective_label.text = "오리를 잡아 감옥에 보내세요."
+		objective_label.text = "대시로 오리를 잡아 감옥에 보내세요."
 	else:
 		objective_label.text = "새끼오리를 둥지로 데려가세요."
 	objective_toast.visible = true
@@ -207,19 +274,6 @@ func _local_team() -> String:
 		if str(player.get("playerId", "")) == GameData.local_player_id:
 			return str(player.get("team", "duck"))
 	return "duck"
-
-
-func _on_end_game_button_pressed() -> void:
-	MockServer.force_end_game()
-
-
-func _on_debug_mode_changed(enabled: bool) -> void:
-	debug_panel.visible = enabled
-	if enabled:
-		debug_mode_button.text = "디버그 ON"
-	else:
-		debug_mode_button.text = "디버그 OFF"
-	_refresh_debug_summary()
 
 
 func _refresh_player_list() -> void:
@@ -402,30 +456,6 @@ func _apply_game_text_style(label: Label, font_size: int, color: Color, outline_
 	label.add_theme_color_override("font_shadow_color", Color(0.04, 0.05, 0.06, 0.92))
 	label.add_theme_constant_override("shadow_offset_x", 0)
 	label.add_theme_constant_override("shadow_offset_y", shadow_offset_y)
-
-
-func _refresh_debug_summary() -> void:
-	if not is_instance_valid(debug_summary_label):
-		return
-
-	debug_summary_label.text = "phase: %s\nroom: %s\nscore: %d / %d\ntime: %d\nplayers: %d\nducklings: %d\njailed: %d" % [
-		GameData.phase,
-		GameData.room_id,
-		GameData.score,
-		GameData.target_score,
-		GameData.remaining_seconds,
-		GameData.players.size(),
-		GameData.ducklings.size(),
-		_jailed_duck_count(),
-	]
-
-
-func _jailed_duck_count() -> int:
-	var count := 0
-	for player in GameData.players:
-		if str(player.get("team", "")) == "duck" and str(player.get("state", "")) == "jailed":
-			count += 1
-	return count
 
 
 func _event_message(event: String, data: Dictionary) -> String:

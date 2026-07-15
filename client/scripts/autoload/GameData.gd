@@ -16,9 +16,8 @@ var target_score: int = 5
 var winner = null # "duck" | "tagger" | null
 var end_reason: String = ""
 var menu_entry_view: String = "menu"
-var players: Array = [] # [{playerId, nickname, team, character, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
+var players: Array = [] # [{playerId, nickname, team, character, ready, position:{x,y,z}, rotationY, state, carryingDucklingId, jailedUntil}]
 var ducklings: Array = [] # [{ducklingId, position:{x,y,z}, state, carrierPlayerId}]
-var debug_mode_enabled: bool = false
 var rescue_progress: float = 0.0   # 0.0 ~ 1.0, 구출 진행률
 var active_rescuer_id: String = "" # 현재 탈옥 시도 중인 플레이어 id
 var dash_cooldown_remaining: float = 0.0 # 경찰(악어) 대시 쿨타임 잔여 시간(초)
@@ -26,11 +25,12 @@ var dash_cooldown_duration: float = 5.0  # 경찰(악어) 대시 쿨타임 총 �
 var local_duck_character: String = "duck"       # 인벤토리에서 고른 오리 팀 장착 스킨(character 키)
 var local_tagger_character: String = "aligator" # 인벤토리에서 고른 경찰 팀 장착 스킨(character 키)
 var is_host: bool = false # 현재 방의 호스트인지 여부 (room:joined 응답의 isHost를 저장)
+var mobile_move_input: Vector2 = Vector2.ZERO
+var mobile_dash_requested: bool = false
 
 signal room_state_changed
 signal game_state_changed
 signal game_event(event: String, data: Dictionary)
-signal debug_mode_changed(enabled: bool)
 signal action_error(code: String, message: String) # 요청-응답 상관관계가 없는(fire-and-forget) 액션이 서버에서 거부됐을 때
 
 func register_local_player(team: String, character: String, nickname: String = "") -> void:
@@ -49,6 +49,7 @@ func register_local_player(team: String, character: String, nickname: String = "
 		"position": {"x": 0.0, "y": 0.0, "z": 0.0},
 		"rotationY": 0.0,
 		"state": "idle",
+		"ready": false,
 		"carryingDucklingId": null,
 		"jailedUntil": null,
 	})
@@ -63,8 +64,11 @@ func update_player_transform(player_id: String, pos: Vector3, rotation_y: float)
 			p["rotationY"] = rotation_y
 			return
 
-func set_debug_mode(enabled: bool) -> void:
-	if debug_mode_enabled == enabled:
-		return
-	debug_mode_enabled = enabled
-	debug_mode_changed.emit(debug_mode_enabled)
+func request_mobile_dash() -> void:
+	mobile_dash_requested = true
+
+func consume_mobile_dash_request() -> bool:
+	if not mobile_dash_requested:
+		return false
+	mobile_dash_requested = false
+	return true

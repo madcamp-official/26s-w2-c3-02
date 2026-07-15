@@ -17,26 +17,28 @@ function generateRoomCode() {
   return code;
 }
 
-function spawnPositionForCharacter(character) {
-  if (character === 'aligator') {
+function spawnPositionForTeam(team) {
+  if (team === 'tagger') {
     return { x: 40.0, y: 0.0, z: -40.0 };
   }
   return { x: -40.0, y: 0.0, z: 40.0 };
 }
 
-function makePlayer({ playerId, nickname, team, character, ws }) {
-  const spawn = spawnPositionForCharacter(character);
+function makePlayer({ playerId, nickname, team, character, taggerCharacter, ws }) {
+  const spawn = spawnPositionForTeam(team);
   return {
     playerId,
     nickname,
     team,
     duckSkin: team === 'tagger' ? 'duck' : character || 'duck',
+    taggerSkin: taggerCharacter || 'aligator',
     character,
     position: spawn,
     rotationY: 0.0,
     state: 'idle',
     jailRemaining: null,
     deliveredDucklings: 0,
+    ready: false,
     ws,
   };
 }
@@ -54,6 +56,7 @@ function serializePlayer(player) {
     carryingDucklingId: null,
     jailedUntil: null,
     deliveredDucklings: Number(player.deliveredDucklings || 0),
+    ready: !!player.ready,
   };
   if (player.jailRemaining !== null && player.jailRemaining !== undefined) {
     out.jailRemaining = player.jailRemaining;
@@ -130,7 +133,7 @@ function makeDefaultRoomName(isPrivate) {
   return name;
 }
 
-function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
+function createRoom({ nickname, roomName, isPrivate, characterSkin, taggerSkin, ws }) {
   // 방의 참가코드는 별도로 관리하지 않고, 서버가 항상 무작위로 배정하는 4자리 roomId를
   // 그대로 참가코드로 사용한다(공개/비공개 모두 코드 자체는 존재).
   const roomId = generateRoomCode();
@@ -150,7 +153,14 @@ function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
 
   const playerId = crypto.randomUUID();
   const nick = (nickname || '').trim() || 'Player';
-  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  const player = makePlayer({
+    playerId,
+    nickname: nick,
+    team: 'duck',
+    character: characterSkin || 'duck',
+    taggerCharacter: taggerSkin || 'aligator',
+    ws,
+  });
   room.players.set(playerId, player);
   room.hostPlayerId = playerId;
 
@@ -162,7 +172,6 @@ function createRoom({ nickname, roomName, isPrivate, characterSkin, ws }) {
 function listRooms() {
   const out = [];
   for (const room of rooms.values()) {
-    if (room.phase !== 'lobby') continue;
     const host = room.players.get(room.hostPlayerId);
     out.push({
       roomId: room.roomId,
@@ -170,12 +179,15 @@ function listRooms() {
       hostNickname: host ? host.nickname : '',
       playerCount: room.players.size,
       isPrivate: room.isPrivate,
+      // 'lobby' | 'countdown' | 'playing' — 목록 화면에서 이미 시작된 방도 보여주되
+      // 입장은 막아야 하므로(joinRoom의 GAME_ALREADY_STARTED와 동일 기준) phase 그대로 보낸다.
+      phase: room.phase,
     });
   }
   return out;
 }
 
-function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
+function joinRoom({ roomId, nickname, joinCode, characterSkin, taggerSkin, ws }) {
   const room = rooms.get(roomId);
   if (!room) {
     return { ok: false, code: 'ROOM_NOT_FOUND', message: '존재하지 않는 방입니다.' };
@@ -192,7 +204,14 @@ function joinRoom({ roomId, nickname, joinCode, characterSkin, ws }) {
 
   const playerId = crypto.randomUUID();
   const nick = (nickname || '').trim() || 'Player';
-  const player = makePlayer({ playerId, nickname: nick, team: 'duck', character: characterSkin || 'duck', ws });
+  const player = makePlayer({
+    playerId,
+    nickname: nick,
+    team: 'duck',
+    character: characterSkin || 'duck',
+    taggerCharacter: taggerSkin || 'aligator',
+    ws,
+  });
   room.players.set(playerId, player);
 
   return { ok: true, room, player };
@@ -213,15 +232,12 @@ function assignRandomRoles(room) {
     const j = Math.floor(Math.random() * (i + 1));
     [players[i], players[j]] = [players[j], players[i]];
   }
-  // 1인 디버그 모드에서는 TAGGER_COUNT(1)가 인원수(1)와 같아 슬라이스 방식이 항상
-  // 그 한 명을 경찰로 고정시켜버린다. 이 경우엔 50% 확률로 아예 경찰을 안 뽑아
-  // 오리/경찰이 랜덤으로 나오게 한다.
-  const taggerCount = players.length <= C.TAGGER_COUNT && Math.random() < 0.5 ? 0 : C.TAGGER_COUNT;
+  const taggerCount = Math.min(C.TAGGER_COUNT, Math.max(0, players.length - 1));
   const taggerIds = new Set(players.slice(0, taggerCount).map((p) => p.playerId));
   for (const p of players) {
     if (taggerIds.has(p.playerId)) {
       p.team = 'tagger';
-      p.character = 'aligator';
+      p.character = p.taggerSkin || 'aligator';
     } else {
       p.team = 'duck';
       p.character = p.duckSkin || 'duck';
@@ -235,11 +251,20 @@ function setNickname(room, playerId, nickname) {
   player.nickname = (nickname || '').trim() || 'Player';
 }
 
+function setReady(room, playerId, ready) {
+  const player = room.players.get(playerId);
+  if (!player || room.phase !== 'lobby') return;
+  player.ready = !!ready;
+}
+
 // 역할은 게임 시작 시 무작위로 배정되므로, 시작 조건은 팀 구성이 아니라 인원수로만 판단한다.
 function canStartGame(room) {
   const count = room.players.size;
-  // Temporary solo-test mode: allow starting with one player while UI/gameplay is being tuned.
-  return count >= 1 && count <= C.MAX_PLAYERS;
+  if (count < C.MIN_PLAYERS || count > C.MAX_PLAYERS) return false;
+  for (const player of room.players.values()) {
+    if (!player.ready) return false;
+  }
+  return true;
 }
 
 function removePlayer(room, playerId) {
@@ -322,6 +347,7 @@ module.exports = {
   joinRoom,
   assignRandomRoles,
   setNickname,
+  setReady,
   canStartGame,
   removePlayer,
   findRoomAndPlayerBySocket,
@@ -331,6 +357,6 @@ module.exports = {
   serializeDuckling,
   serializeRoomState,
   serializeGameState,
-  spawnPositionForCharacter,
+  spawnPositionForTeam,
   countTeam,
 };
