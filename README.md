@@ -14,7 +14,7 @@
 
 > *데스크톱 앱 ↔ 모바일 앱; 혹은 다른 폼팩터에서의 앱; 웹만/웹 기반 프레임워크(Electron, Tauri 등) 대신 다른 프레임워크를 시도해보는 것을 적극 권장
 
-**결과물:https://madcamp-official.github.io/26s-w2-c3-02/** 
+**결과물: https://madcamp-official.github.io/26s-w2-c3-02/** 
 
 
 ---
