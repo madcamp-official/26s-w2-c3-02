@@ -78,7 +78,7 @@
 | 실시간 위치/상태 동기화 | 오리·악어(술래)의 이동, 포획, 구출, 새끼오리 획득 상태를 WebSocket으로 모든 클라이언트에 실시간 반영 | 필수 |
 | 크로스플랫폼 반응형 UI | PC 웹과 모바일 앱에서 가로 모드 고정, Anchor/Safe Area 기반 UI로 동일하게 동작 | 필수 |
 | 오리 & 악어 스킨 선택 | 로비에서 캐릭터 외형(스킨)을 선택할 수 있는 커스터마이징 기능 | 선택 |
-| 대기방(로비) 화면 | 참가자 목록, 준비 상태, 방 코드/초대 기능을 갖춘 로비 화면 | 선택 |
+| 대기방(로비) 화면 | 참가자 목록, 준비 상태, 공개/비공개 방, 참가 코드, 게임 시작 조건을 갖춘 로비 화면 | 선택 |
 | 대시 체포 판정 | 술래가 대시(가속 돌진)로 판정 폭(`DASH_CATCH_HALF_WIDTH`) 안의 오리를 체포, 쿨다운(5초) 적용 | 필수 |
 | 감옥 / 자동 탈출 | 체포된 오리는 감옥으로 이동, 오리가 1명만 남았을 때만 일정 시간(8초) 후 자동 탈출 | 필수 |
 | 협동 구출 | 감옥 반경 안에서 일정 시간(3초) 머물면 진행도(`rescueProgress`)가 쌓여 갇힌 오리를 구출 | 필수 |
@@ -88,6 +88,15 @@
 | 라운드 종료 조건 | 시간 종료(180초) / 목표 점수 달성 / 오리 전원 수감 중 하나로 승패 판정 | 필수 |
 | 카운트다운 시작 | 전원 준비(ready) 완료 시 10초 카운트다운 후 게임 시작 | 선택 |
 | 공개/비공개 방 & 참가 코드 | 방 목록에서 공개방은 바로 참가, 비공개방은 4자리 참가 코드로만 입장 | 선택 |
+| 모바일 터치 조작 | 모바일 앱에서는 화면 왼쪽 터치 영역에 이동 조이스틱을 표시하고, 악어 역할일 때 별도 대시 버튼으로 조작 | 필수 |
+| 방향 표시 HUD | 둥지와 감옥이 화면 밖에 있을 때 아이콘과 화살표로 위치 방향을 안내하고, 화면 안에 들어오면 숨김 | 선택 |
+| 이벤트 알림 / 목표 안내 | 수감·탈출·구출·새끼오리 배달 등 주요 이벤트를 토스트로 표시하고, 게임 시작 직후 역할별 목표 안내 제공 | 선택 |
+| 결과 팝업 | 게임 종료 시 별도 화면 전환 없이 현재 게임 화면 위에 승리 팀, 종료 이유, 최종 점수, 플레이어별 기록 표시 | 필수 |
+| 설정 / 사운드 제어 | 메인 화면과 인게임에서 설정 팝업을 열어 배경음악과 효과음 볼륨 조절 | 선택 |
+| 실시간 사운드 피드백 | 대시, 수감, 구출, 새끼오리 배달, 반복 울음소리 등 게임 이벤트에 맞춰 효과음 재생 | 선택 |
+| 메인 화면 3D 라이브 배경 | 메인 화면에서 실제 인게임 에셋을 활용한 3D 연못 배경과 오리·악어 애니메이션 표시 | 선택 |
+| 맵 경계 시각화 | 투명 충돌 벽 주변에 돌 에셋을 배치해 이동 가능한 맵 경계를 시각적으로 표현 | 선택 |
+| Web / Android 배포 | Godot Web Export와 Android APK Export를 지원하고, 서버는 Docker 기반으로 EC2에 배포 | 필수 |
 
 ---
 
@@ -240,7 +249,9 @@
   ]
 }
 ```
+
 ---
+
 ### 🔌 API 문서
 
 실시간 통신은 JSON 메시지 기반 WebSocket(`/ws`) 한 채널로 이루어지며, 별도 인증 없이 연결 시 전달하는 `roomId`로 방을 구분합니다. 각 메시지는 `type` 필드로 종류를 구분합니다.
@@ -286,33 +297,53 @@
 ## 산출물 및 실행 방법
 
 - **산출물 설명:** 악어(경찰)가 술래, 오리가 도망자가 되어 3D 연못 위에서 새끼오리 구출/체포를 겨루는 실시간 멀티플레이 캐주얼 게임
-- **실행 환경:** PC 웹 브라우저(WASM) / 모바일 앱(Android), Node.js 웹소켓 서버
-- **실행 방법:** 배포된 웹 링크 접속 또는 모바일 앱 실행 → 방 만들기/참가 → 로비에서 준비 완료 → 게임 시작
+- **실행 환경:** PC 웹 브라우저(WASM) / 모바일 앱(Android APK), Node.js 웹소켓 서버
+- **실행 방법:** 배포된 웹 링크 접속 또는 Android APK 설치 후 실행 → 방 만들기/참가 → 로비에서 준비 완료 → 게임 시작
 - **시연 영상 / 이미지:** (선택)
 
 ### 실행 방법
 
-단순 실행: https://madcamp-official.github.io/26s-w2-c3-02/
+단순 실행: https://cops-and-ducks.madcamp-kaist.org/
 
 ```bash
-# 1) 서버 (Node.js + ws) — 기본 ws://localhost:8080/ws
+# 1) 서버 로컬 실행 (Node.js + ws)
 cd server
 npm install
 npm run dev        # node --watch src/index.js (파일 변경 시 자동 재시작)
 # npm start        # 프로덕션 실행
 # npm run smoke-test  # 방 생성→참가→시작→획득→반납→대시 수감까지 자동 점검
 
-# 2) 클라이언트 (Godot 4.7)
+# 기본 WebSocket 주소
+# ws://localhost:8080/ws
+
+# 2) 클라이언트 로컬 실행 (Godot 4.7)
 # Godot 4.7 에디터로 client/project.godot 열고 F5로 실행.
 # 로컬 서버에 붙이려면 client/scripts/autoload/MockServer.gd 의
-#   SERVER_URL 을 "ws://127.0.0.1:8080/ws" 로 바꾼다(기본값은 배포 서버).
-# 웹 빌드: Project > Export > "Web" 프리셋으로 web/index.html 내보내기.
+#   SERVER_URL 을 "ws://127.0.0.1:8080/ws" 로 바꾼다.
+# 배포 서버에 붙일 때는
+#   SERVER_URL 을 "wss://cops-and-ducks.madcamp-kaist.org/ws" 로 둔다.
 
-# (선택) Docker로 서버+웹 한 번에
-docker compose up --build   # http/ws 모두 8080 포트
+# 3) Web 빌드
+# Godot Editor:
+# Project > Export > Web 프리셋 선택 > Export Project
+# 결과물은 web/ 디렉터리에 생성된다.
+
+# 4) Android APK 빌드
+# Godot Editor:
+# Project > Export > Android 프리셋 선택 > Export Project
+# 최종 배포용 APK는 release keystore로 서명한다.
+
+# 5) Docker로 서버+웹 한 번에 실행
+docker compose up --build   # HTTP/WebSocket 모두 8080 포트
 ```
 
 > 서버 포트는 `PORT` 환경변수로 바꿀 수 있고(`PORT=9000 npm run dev`), 헬스체크는 `GET /healthz` → `200 ok`. 별도 `.env` 파일이나 외부 API 키는 필요 없다.
+
+### 배포 참고
+
+Web 빌드는 Godot Export를 통해 `web/`에 생성한다. 서버는 Node.js + `ws` 기반이며, 운영 환경에서는 Docker 이미지로 빌드해 AWS EC2에서 실행한다. EC2 앞단의 Nginx가 HTTPS 요청을 받아 정적 웹 파일과 WebSocket 요청을 처리하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다.
+
+Android APK는 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으므로 Git에 직접 커밋하지 않는다. 배포용 APK는 GitHub Releases, Google Drive 등 별도 공유 경로를 통해 전달한다. 업데이트 APK는 기존 APK와 같은 release keystore로 서명해야 한다.
 
 ### 기술 구성
 
