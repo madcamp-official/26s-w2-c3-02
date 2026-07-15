@@ -170,7 +170,6 @@ function createRoom({ nickname, roomName, isPrivate, characterSkin, taggerSkin, 
 function listRooms() {
   const out = [];
   for (const room of rooms.values()) {
-    if (room.phase !== 'lobby') continue;
     const host = room.players.get(room.hostPlayerId);
     out.push({
       roomId: room.roomId,
@@ -178,6 +177,9 @@ function listRooms() {
       hostNickname: host ? host.nickname : '',
       playerCount: room.players.size,
       isPrivate: room.isPrivate,
+      // 'lobby' | 'countdown' | 'playing' — 목록 화면에서 이미 시작된 방도 보여주되
+      // 입장은 막아야 하므로(joinRoom의 GAME_ALREADY_STARTED와 동일 기준) phase 그대로 보낸다.
+      phase: room.phase,
     });
   }
   return out;

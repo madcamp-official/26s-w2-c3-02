@@ -17,6 +17,14 @@ const INPUT_SEND_INTERVAL := 1.0 / 30.0 # player:input 전송 주기(초)
 const RECONNECT_INTERVAL := 2.0
 const REQUEST_TIMEOUT_SECONDS := 8.0 # 연결이 끊긴 채로 요청이 걸려 있을 때 무한 대기하지 않도록
 
+# 로비처럼 서버가 먼저 보낼 브로드캐스트가 없는 상황에서는 연결이 조용히 끊겨도(와이파이
+# 드롭 등) get_ready_state()가 한참 동안 STATE_OPEN인 채로 남아있을 수 있다(TCP 자체의
+# 끊김 감지는 OS 기본값이 수십 분 단위). 그래서 애플리케이션 레벨로 주기적인 ping을 보내고,
+# CONNECTION_TIMEOUT_SECONDS 동안 서버로부터 아무 응답도 못 받으면 죽은 연결로 간주해 직접
+# 끊고 재연결한다.
+const PING_INTERVAL := 2.0
+const CONNECTION_TIMEOUT_SECONDS := 5.0
+
 signal _response_received(request_id: String, result: Dictionary)
 
 var _peer := WebSocketPeer.new()
@@ -28,6 +36,9 @@ var _pending_rotation_y := 0.0
 var _has_pending_input := false
 var _input_send_timer := 0.0
 
+var _ping_timer := 0.0
+var _time_since_last_receive := 0.0
+
 func _ready() -> void:
 	_peer.connect_to_url(SERVER_URL)
 
@@ -37,13 +48,31 @@ func _process(delta: float) -> void:
 	if state == WebSocketPeer.STATE_OPEN:
 		while _peer.get_available_packet_count() > 0:
 			_handle_packet(_peer.get_packet())
+			_time_since_last_receive = 0.0
 		_flush_pending_input(delta)
+		_check_connection_alive(delta)
 	elif state == WebSocketPeer.STATE_CLOSED:
+		_time_since_last_receive = 0.0
+		_ping_timer = 0.0
 		_reconnect_timer += delta
 		if _reconnect_timer >= RECONNECT_INTERVAL:
 			_reconnect_timer = 0.0
 			_peer = WebSocketPeer.new()
 			_peer.connect_to_url(SERVER_URL)
+
+func _check_connection_alive(delta: float) -> void:
+	_ping_timer += delta
+	if _ping_timer >= PING_INTERVAL:
+		_ping_timer = 0.0
+		_send("ping", {})
+
+	_time_since_last_receive += delta
+	if _time_since_last_receive >= CONNECTION_TIMEOUT_SECONDS:
+		# 서버가 조용히 사라진 경우(정상 종료 프레임 없이): get_ready_state()가 스스로
+		# STATE_CLOSED로 바뀌길 기다리지 않고 직접 끊어서, 다음 프레임부터 위 STATE_CLOSED
+		# 분기의 재연결 루프가 바로 돌기 시작하게 한다.
+		_time_since_last_receive = 0.0
+		_peer.close()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # 저수준 송수신
@@ -217,6 +246,7 @@ func list_rooms() -> Array:
 			"host_nickname": str(r.get("hostNickname", "")),
 			"player_count": int(r.get("playerCount", 0)),
 			"is_private": bool(r.get("isPrivate", false)),
+			"phase": str(r.get("phase", "lobby")),
 		})
 	return out
 
