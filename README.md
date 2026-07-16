@@ -336,7 +336,7 @@ Export Project로 APK 생성
 
 ### 실행 방법
 
-단순 실행: https://cops-and-ducks.madcamp-kaist.org/
+단순 실행: https://madcamp-official.github.io/26s-w2-c3-02/
 
 ```bash
 # 1) 서버 로컬 실행 (Node.js + ws)
