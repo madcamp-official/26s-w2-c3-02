@@ -14,7 +14,7 @@
 
 > *데스크톱 앱 ↔ 모바일 앱; 혹은 다른 폼팩터에서의 앱; 웹만/웹 기반 프레임워크(Electron, Tauri 등) 대신 다른 프레임워크를 시도해보는 것을 적극 권장
 
-**결과물:https://madcamp-official.github.io/26s-w2-c3-02/** 
+**결과물: https://madcamp-official.github.io/26s-w2-c3-02/** 
 
 
 ---
@@ -23,10 +23,8 @@
 
 | 이름 | 학교 | GitHub | 역할 |
 |---|---|---|---|
-| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 & 서버 내부로직 파트, 게임 에셋|
-| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 & 서버 UI 파트, 배포 |
-
-> 서버 착수 전까지는 [Docs/Plan.md](Docs/Plan.md)의 클라이언트 병렬 개발 계획을 따른다: 박수현이 B 트랙(인게임 월드·캐릭터), 조예준이 A 트랙(화면 흐름·UI)을 담당한다.
+| 박수현 | 한양대학교 | [suh1088](https://github.com/suh1088) | 클라이언트 & 서버 내부로직 파트, 게임 에셋, PC 웹 버전 배포 |
+| 조예준 | KAIST | [jossi-jossi](https://github.com/jossi-jossi) | 클라이언트 & 서버 UI 파트, 모바일 버전 배포 |
 
 ---
 
@@ -47,8 +45,16 @@
   - 오리(도망자) / 악어(술래·경찰) 역할 기반 실시간 멀티플레이 동기화 (위치, 포획, 구출, 새끼오리 획득 상태)
   - 가로 모드 고정 + Anchor/Safe Area 기반 반응형 UI로 PC 웹·모바일 앱 동시 대응
   - 연못 위 새끼오리 스폰 및 둥지 인솔, 감옥/구출 기믹을 포함한 게임 규칙 구현
-- **사용 / 시연 시나리오:** 플레이어가 방을 만들거나 방 코드로 참가 → 로비에서 캐릭터(오리/악어 스킨) 선택 및 준비 → 게임 시작 시 서버가 오리/술래 역할을 무작위 배정 → 오리는 제한 시간 내 새끼오리를 둥지로 인솔, 악어(술래)는 오리를 체포해 감옥에 가두며 방해 → 시간 종료 또는 승리 조건 달성 시 결과 화면에서 승패 및 개인 기록 확인
+- **사용 / 시연 시나리오:** 메인 화면에서 캐릭터(오리/악어) 스킨 선택 
 
+  → 플레이어가 방을 만들거나 생성된 방을 참가(비공개 방의 경우 방 코드 입력 필요) 
+
+  → 게임 시작 시 서버가 오리/술래 역할을 무작위 배정 
+
+  → 오리는 제한 시간 내 새끼오리를 둥지로 인솔, 악어(술래)는 오리를 체포해 감옥에 가두며 방해 
+  
+  → 시간 종료 또는 승리 조건 달성 시 결과 화면에서 승패 및 개인 기록 확인
+- **팀원별 역할:** 박수현(클라이언트 & 서버 내부로직 파트, 게임 에셋, PC 웹 버전 배포), 조예준(클라이언트 & 서버 UI 파트, 모바일 버전 배포)
 
 ### 개발 일정
 
@@ -71,7 +77,7 @@
 | 실시간 위치/상태 동기화 | 오리·악어(술래)의 이동, 포획, 구출, 새끼오리 획득 상태를 WebSocket으로 모든 클라이언트에 실시간 반영 | 필수 |
 | 크로스플랫폼 반응형 UI | PC 웹과 모바일 앱에서 가로 모드 고정, Anchor/Safe Area 기반 UI로 동일하게 동작 | 필수 |
 | 오리 & 악어 스킨 선택 | 로비에서 캐릭터 외형(스킨)을 선택할 수 있는 커스터마이징 기능 | 선택 |
-| 대기방(로비) 화면 | 참가자 목록, 준비 상태, 방 코드/초대 기능을 갖춘 로비 화면 | 선택 |
+| 대기방(로비) 화면 | 참가자 목록, 준비 상태, 공개/비공개 방, 참가 코드, 게임 시작 조건을 갖춘 로비 화면 | 선택 |
 | 대시 체포 판정 | 술래가 대시(가속 돌진)로 판정 폭(`DASH_CATCH_HALF_WIDTH`) 안의 오리를 체포, 쿨다운(5초) 적용 | 필수 |
 | 감옥 / 자동 탈출 | 체포된 오리는 감옥으로 이동, 오리가 1명만 남았을 때만 일정 시간(8초) 후 자동 탈출 | 필수 |
 | 협동 구출 | 감옥 반경 안에서 일정 시간(3초) 머물면 진행도(`rescueProgress`)가 쌓여 갇힌 오리를 구출 | 필수 |
@@ -81,6 +87,15 @@
 | 라운드 종료 조건 | 시간 종료(180초) / 목표 점수 달성 / 오리 전원 수감 중 하나로 승패 판정 | 필수 |
 | 카운트다운 시작 | 전원 준비(ready) 완료 시 10초 카운트다운 후 게임 시작 | 선택 |
 | 공개/비공개 방 & 참가 코드 | 방 목록에서 공개방은 바로 참가, 비공개방은 4자리 참가 코드로만 입장 | 선택 |
+| 모바일 터치 조작 | 모바일 앱에서는 화면 왼쪽 터치 영역에 이동 조이스틱을 표시하고, 악어 역할일 때 별도 대시 버튼으로 조작 | 필수 |
+| 방향 표시 HUD | 둥지와 감옥이 화면 밖에 있을 때 아이콘과 화살표로 위치 방향을 안내하고, 화면 안에 들어오면 숨김 | 선택 |
+| 이벤트 알림 / 목표 안내 | 수감·탈출·구출·새끼오리 배달 등 주요 이벤트를 토스트로 표시하고, 게임 시작 직후 역할별 목표 안내 제공 | 선택 |
+| 결과 팝업 | 게임 종료 시 별도 화면 전환 없이 현재 게임 화면 위에 승리 팀, 종료 이유, 최종 점수, 플레이어별 기록 표시 | 필수 |
+| 설정 / 사운드 제어 | 메인 화면과 인게임에서 설정 팝업을 열어 배경음악과 효과음 볼륨 조절 | 선택 |
+| 실시간 사운드 피드백 | 대시, 수감, 구출, 새끼오리 배달, 반복 울음소리 등 게임 이벤트에 맞춰 효과음 재생 | 선택 |
+| 메인 화면 3D 라이브 배경 | 메인 화면에서 실제 인게임 에셋을 활용한 3D 연못 배경과 오리·악어 애니메이션 표시 | 선택 |
+| 맵 경계 시각화 | 투명 충돌 벽 주변에 돌 에셋을 배치해 이동 가능한 맵 경계를 시각적으로 표현 | 선택 |
+| Web / Android 배포 | Godot Web Export와 Android APK Export를 지원하고, 서버는 Docker 기반으로 EC2에 배포 | 필수 |
 
 ---
 
@@ -91,7 +106,21 @@
 - **클라이언트:** Godot Engine (GDScript) → PC 웹(WebGL/WASM 빌드) & 모바일 앱으로 동일 코드베이스 내보내기
 - **서버:** Node.js + `ws` 라이브러리 기반 순수 웹소켓 서버, 방(room) 단위 인메모리 상태 관리
 - **통신:** 클라이언트 ↔ 서버 간 JSON 메시지 기반 WebSocket 양방향 통신 (위치 갱신, 포획/구출 판정, 새끼오리 획득 이벤트 브로드캐스트)
-- **배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**(`https://madcamp-official.github.io/26s-w2-c3-02/`)에 자동 배포. Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
+- **웹 배포:** Godot Web(WASM) 빌드(`web/`)를 GitHub Actions로 **GitHub Pages**(`https://madcamp-official.github.io/26s-w2-c3-02/`)에 자동 배포. Node.js 서버는 **Docker 이미지**로 빌드해 GitHub Actions(SSH)로 **AWS EC2**에 배포하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다. EC2 컨테이너 이미지에는 웹 빌드(`web/`)도 함께 담겨 있어, 필요 시 정적 파일과 WebSocket을 같은 origin에서 서빙할 수 있다.
+
+### Android APK 배포
+
+Android 버전은 Godot의 Android Export 프리셋으로 APK를 생성해 배포한다. 최종 배포용 APK는 debug keystore가 아니라 직접 생성한 release keystore로 서명해야 하며, 이후 업데이트 APK도 반드시 같은 keystore와 alias로 서명해야 한다. 서명 키가 달라지면 기존 앱 위에 업데이트 설치가 되지 않을 수 있다.
+
+APK 파일은 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으므로 Git 저장소에 직접 커밋하지 않는다. 배포용 APK는 GitHub Releases, Google Drive, Notion, Slack 등 별도 공유 경로를 통해 전달한다.
+
+```bash
+# Godot Editor 기준
+Project > Export > Android 프리셋 선택
+Export With Debug 해제
+Keystore > Release 항목에 release keystore 경로/alias/password 설정
+Export Project로 APK 생성
+```
 
 ---
 
@@ -109,21 +138,22 @@
 게임 실행
 ├─ 로딩
 ├─ 메인 화면
-│  ├─ 빠른 참가 / 방 만들기 / 방 코드 참가
+│  ├─ 빠른 참가 / 방 만들기 / 닉네임 설정 / 방 코드 참가
 │  ├─ 캐릭터 꾸미기
+│  ├─ 게임 규칙 
 │  └─ 설정
 ├─ 로비
-│  ├─ 참가자 목록 / 준비 상태 / 방 설정
-│  ├─ 초대 / 방 코드
+│  ├─ 참가자 목록 / 준비 상태 / 닉네임 설정
+│  ├─ 방 코드
 │  └─ 게임 시작
-├─ 역할 안내 (오리 역할 / 술래 역할)
 ├─ 인게임
-│  ├─ 일반 플레이 / 오리 새끼 인솔 / 체포 시도
+│  ├─ 역할 안내 (오리 역할 / 술래 역할)
+│  ├─ 일반 플레이 / 오리 새끼 인솔 / 수감 시도
 │  ├─ 수감 상태 / 구출 상태
 │  └─ 일시정지 / 연결 끊김
 └─ 결과 화면
    ├─ 승리 / 패배 / 개인 기록
-   └─ 다시 하기 / 로비로 돌아가기 / 메인 화면
+   └─ 로비로 돌아가기 / 메인 화면
 ```
 
 화면 레이아웃은 가로 모드 고정, 좌측 이동 입력 / 중앙 게임 시야 / 우측 행동 버튼 3분할 구조를 기준으로 하며, 상단 상태 바(남은 시간, 목표 진행도)는 Safe Area 안쪽에 배치한다.
@@ -132,7 +162,71 @@
 
 <!-- DB 스키마, JSON 구조, 파일 저장 방식 등 -->
 
-별도 DB 없이 Node.js 서버 인메모리(`Map<roomId, Room>`)로 방 단위 상태를 관리한다. 서버는 매 틱 시뮬레이션 후 아래 형태의 `game:state`를 같은 방 전체에 브로드캐스트한다(30Hz). 판정과 무관한 장식 오브젝트(물고기·연잎·물결 등)는 동기화하지 않고 각 클라이언트가 로컬로 처리하며, 운반 중(`carried`) 새끼오리의 좌표도 서버 판정에 쓰이지 않으므로 순서(`queueIndex`)만 내려주고 실제 대열 좌표는 각 클라이언트가 로컬 계산한다.
+별도 DB 없이 Node.js 서버 인메모리(`Map<roomId, Room>`)로 방 단위 상태를 관리한다. 방은 공개/비공개 여부, 방 이름, 참가코드, 참가자 준비 상태를 포함하며, 게임 중에는 서버가 매 틱 시뮬레이션 후 같은 방 전체에 `game:state`를 브로드캐스트한다(30Hz). 판정과 무관한 장식 오브젝트(물고기·연잎·물결 등)는 동기화하지 않고 각 클라이언트가 로컬로 처리한다.
+
+방 목록(`room:list`)에는 참가 가능한 방의 요약 정보만 내려간다. 비공개방은 방 목록에 참가코드를 노출하지 않고, 클라이언트가 선택한 뒤 입력한 참가코드로 `room:join`을 요청한다.
+
+```json
+{
+  "rooms": [
+    {
+      "roomId": "0427",
+      "roomName": "공개방 #1",
+      "isPrivate": false,
+      "playerCount": 1,
+      "maxPlayers": 5,
+      "phase": "lobby"
+    },
+    {
+      "roomId": "8315",
+      "roomName": "비공개방 #1",
+      "isPrivate": true,
+      "playerCount": 2,
+      "maxPlayers": 5,
+      "phase": "lobby"
+    }
+  ]
+}
+```
+
+방 생성(`room:create`) 시에는 `roomName`, `isPrivate`, `joinCode`를 함께 보낸다. 공개방은 `joinCode`를 `null`로 저장하고, 방 이름을 입력하지 않으면 서버가 `공개방 #1`, `비공개방 #1` 같은 기본 이름을 부여한다.
+
+```json
+{
+  "nickname": "Player",
+  "roomName": "친구방",
+  "isPrivate": true,
+  "joinCode": "1234"
+}
+```
+
+대기실 상태(`room:state`)는 방 이름, 참가코드 표시값, 참가자 목록, 준비 여부를 포함한다. 모든 참가자가 준비 완료 상태가 되어야 방장이 게임을 시작할 수 있다.
+
+```json
+{
+  "roomId": "8315",
+  "roomName": "친구방",
+  "isPrivate": true,
+  "joinCode": "1234",
+  "phase": "lobby",
+  "players": [
+    {
+      "playerId": "uuid-host",
+      "nickname": "Jossi",
+      "isHost": true,
+      "ready": true
+    },
+    {
+      "playerId": "uuid-guest",
+      "nickname": "James",
+      "isHost": false,
+      "ready": false
+    }
+  ]
+}
+```
+
+게임 상태(`game:state`)는 점수, 남은 시간, 승리 팀, 종료 이유, 플레이어별 역할/위치/수감 상태/반납 기록을 포함한다. 결과 팝업은 `winner`, `endReason`, `players[].deliveredDucklings`를 사용해 승리 팀, 종료 사유, 플레이어별 모은 새끼오리 수를 표시한다. 운반 중(`carried`) 새끼오리의 좌표는 서버 판정에 직접 쓰이지 않으므로 순서(`queueIndex`)만 내려주고, 실제 대열 좌표는 각 클라이언트가 로컬 계산한다.
 
 ```json
 {
@@ -152,6 +246,8 @@
       "position": { "x": 0, "y": 0, "z": 0 },
       "rotationY": 0.0,
       "state": "idle | jailed",
+      "ready": true,
+      "isHost": true,
       "deliveredDucklings": 2
     }
   ],
@@ -166,7 +262,9 @@
   ]
 }
 ```
+
 ---
+
 ### 🔌 API 문서
 
 실시간 통신은 JSON 메시지 기반 WebSocket(`/ws`) 한 채널로 이루어지며, 별도 인증 없이 연결 시 전달하는 `roomId`로 방을 구분합니다. 각 메시지는 `type` 필드로 종류를 구분합니다.
@@ -238,37 +336,58 @@
 
 ### 실행 방법
 
-단순 실행: https://madcamp-official.github.io/26s-w2-c3-02/
+단순 실행: https://cops-and-ducks.madcamp-kaist.org/
 
 ```bash
-# 1) 서버 (Node.js + ws) — 기본 ws://localhost:8080/ws
+# 1) 서버 로컬 실행 (Node.js + ws)
 cd server
 npm install
 npm run dev        # node --watch src/index.js (파일 변경 시 자동 재시작)
 # npm start        # 프로덕션 실행
 # npm run smoke-test  # 방 생성→참가→시작→획득→반납→대시 수감까지 자동 점검
 
-# 2) 클라이언트 (Godot 4.7)
+# 기본 WebSocket 주소
+# ws://localhost:8080/ws
+
+# 2) 클라이언트 로컬 실행 (Godot 4.7)
 # Godot 4.7 에디터로 client/project.godot 열고 F5로 실행.
 # 로컬 서버에 붙이려면 client/scripts/autoload/MockServer.gd 의
-#   SERVER_URL 을 "ws://127.0.0.1:8080/ws" 로 바꾼다(기본값은 배포 서버).
-# 웹 빌드: Project > Export > "Web" 프리셋으로 web/index.html 내보내기.
+#   SERVER_URL 을 "ws://127.0.0.1:8080/ws" 로 바꾼다.
+# 배포 서버에 붙일 때는
+#   SERVER_URL 을 "wss://cops-and-ducks.madcamp-kaist.org/ws" 로 둔다.
 
-# (선택) Docker로 서버+웹 한 번에
-docker compose up --build   # http/ws 모두 8080 포트
+# 3) Web 빌드
+# Godot Editor:
+# Project > Export > Web 프리셋 선택 > Export Project
+# 결과물은 web/ 디렉터리에 생성된다.
+
+# 4) Android APK 빌드
+# Godot Editor:
+# Project > Export > Android 프리셋 선택 > Export Project
+# 최종 배포용 APK는 release keystore로 서명한다.
+
+# 5) Docker로 서버+웹 한 번에 실행
+docker compose up --build   # HTTP/WebSocket 모두 8080 포트
 ```
 
 > 서버 포트는 `PORT` 환경변수로 바꿀 수 있고(`PORT=9000 npm run dev`), 헬스체크는 `GET /healthz` → `200 ok`. 별도 `.env` 파일이나 외부 API 키는 필요 없다.
+
+### 배포 참고
+
+Web 빌드는 Godot Export를 통해 `web/`에 생성한다. 서버는 Node.js + `ws` 기반이며, 운영 환경에서는 Docker 이미지로 빌드해 AWS EC2에서 실행한다. EC2 앞단의 Nginx가 HTTPS 요청을 받아 정적 웹 파일과 WebSocket 요청을 처리하며, 클라이언트는 `wss://cops-and-ducks.madcamp-kaist.org/ws`로 접속한다.
+
+Android APK는 용량이 크고 GitHub 파일 크기 제한에 걸릴 수 있으므로 Git에 직접 커밋하지 않는다. 배포용 APK는 GitHub Releases, Google Drive 등 별도 공유 경로를 통해 전달한다. 업데이트 APK는 기존 APK와 같은 release keystore로 서명해야 한다.
 
 ### 기술 구성
 
 | 분류 | 사용 기술 |
 |---|---|
-| 핵심 기술 | Godot Engine (GDScript), Node.js, WebSocket (`ws`) |
-| 실행 환경 | PC 웹(WASM), 모바일 앱(Android), Node.js 서버 |
-| 데이터 저장 | 인메모리 (Node.js `Map<roomId, Room>`), 별도 DB 미사용 (추후 필요 시 Redis 검토) |
-| 외부 API / 서비스 | 없음 (프로토타입 단계 미도입) |
-| 기타 | Kenney / Sketchfab / Poly Pizza 무료 3D 에셋(.gltf/.glb), GitHub Pages(웹, 커스텀 도메인) + AWS EC2 Docker(서버) 배포, GitHub Actions CI/CD |
+| 핵심 기술 | Godot Engine 4.7 (GDScript), Node.js, WebSocket (`ws`) |
+| 실행 환경 | PC 웹 브라우저(WASM), Android APK, Node.js 서버 |
+| 데이터 저장 | 인메모리 (Node.js `Map<roomId, Room>`), 별도 DB 미사용 |
+| 외부 API / 서비스 | 없음 |
+| 배포 / 운영 | Godot Web Export(`web/`), Android Export(APK), Docker, AWS EC2, Nginx, GitHub Actions |
+| 에셋 / 리소스 | Kenney / Sketchfab / Poly Pizza 무료 3D 에셋(.gltf/.glb), 커스텀 UI 이미지·사운드 에셋 |
 
 ---
 
@@ -304,7 +423,7 @@ docker compose up --build   # http/ws 모두 8080 포트
 
 **조예준:**
 
-> 
+> 저번 주에 2D 게임을 만들다가 3D 게임을 만드니 익숙하면서도 새롭다. 게임에 대한 긍정적인 피드백을 많이 받아서 힘이 났다. 저번 프로젝트 때보다 AI를 더 잘 활용할 수 있게 된 것 같다. UI 틀과 기능을 처음에 확실하게 잡고 시작해야 겠다. 짧은 시간이지만 내 자신이 발전하고 있다고 느꼈다. 
 
 ---
 
