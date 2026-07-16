@@ -53,9 +53,13 @@ func _input(event: InputEvent) -> void:
 func _process(_delta: float) -> void:
 	if _dash_button == null:
 		return
-	var should_show_dash := visible and GameData.phase == "playing" and _local_player_can_dash()
+	var should_show_dash := visible and _local_player_can_dash()
 	_dash_button.visible = should_show_dash
-	_dash_button.disabled = not should_show_dash
+	# 표시는 조이스틱과 동일하게 phase 무관(터치스크린 + 술래 팀이면 항상)이지만, 실제 대시는
+	# playing 단계에서만 의미가 있다(player.gd의 _update_dash가 playing에서만 돎). 로비/카운트다운
+	# 중에도 클릭 가능하게 두면 GameData.mobile_dash_requested가 소비되지 않고 남아있다가,
+	# 게임이 실제로 시작되는 순간 플레이어가 의도치 않은 대시가 터지므로 여기서 막는다.
+	_dash_button.disabled = not (should_show_dash and GameData.phase == "playing")
 	_update_dash_cooldown_ring()
 
 
@@ -155,7 +159,7 @@ func _position_dash_button() -> void:
 func _update_dash_cooldown_ring() -> void:
 	if _dash_cooldown_ring == null:
 		return
-	var should_show := visible and _dash_button.visible and GameData.phase == "playing" and _local_player_can_dash()
+	var should_show := visible and _dash_button.visible and _local_player_can_dash()
 	_dash_cooldown_ring.visible = should_show
 	if not should_show:
 		return
