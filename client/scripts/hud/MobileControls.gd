@@ -51,6 +51,16 @@ func _input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	# GameHUD는 CanvasLayer(layer=1)라 Result 오버레이(layer 0의 일반 Control)보다 항상 위에
+	# 그려진다. 게임 종료 후에도 GameHUD/Game 씬은 그대로 남아있고 Result가 그 위에 겹쳐 뜨는
+	# 구조라(SceneRouter.show_overlay는 기존 화면을 안 지움), MobileControls를 phase 무관하게
+	# 계속 visible로 두면 이 화면 전체를 덮는 터치 레이어가 Result 버튼의 입력을 가로챈다.
+	# 게임이 끝나면 조이스틱/대시 버튼 레이어 자체를 숨겨서 Result가 터치를 받게 한다.
+	var should_show_controls := _should_show_mobile_controls() and GameData.phase != "ended"
+	if should_show_controls != visible:
+		visible = should_show_controls
+		if not visible:
+			_reset_joystick()
 	if _dash_button == null:
 		return
 	var should_show_dash := visible and _local_player_can_dash()
