@@ -47,6 +47,7 @@ function serveStatic(req, res) {
 
 const server = http.createServer((req, res) => {
   if (req.url === '/healthz') {
+    // 배포 트리거용(기능 변경 없음)
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
     return;
